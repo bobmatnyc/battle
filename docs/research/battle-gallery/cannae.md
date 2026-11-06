@@ -1,0 +1,24 @@
+# Cannae • visual research for the game pack
+
+**Apulia, southern Italy, 216 BCE · Second Punic War.** Both pictures are AI reconstructions for the scenario gallery. The first uses an elevated explanatory viewpoint. The second puts the viewer behind a local cavalry attack. Neither viewpoint represents information automatically available to an in-game commander.
+
+## What the two views depict
+
+**The projecting center.** Polybius places the Iberian and Celtic infantry in the middle of Hannibal’s line, with African heavy infantry held back on its shoulders. The central companies went forward far enough to meet the Romans first. As Roman infantry pressed in and the center gave ground, the Romans moved beyond the African infantry on both sides. This sequence makes the pincer intelligible. The formation in the image represents relative depth. The length and curvature of the line and the spacing of each file are artistic choices. [Polybius, Histories III.113–115](https://penelope.uchicago.edu/thayer/e/roman/texts/polybius/3%2A.html#113)
+
+**The rear comes under pressure.** In Polybius’s account, the African infantry turned inward against the Roman flanks. Hasdrubal’s horsemen, after fighting the opposing cavalry, made repeated attacks from the rear. The second view shows one approach, when a local gap can still exist in front of the riders. A single still cannot establish that every route out was closed. For the game, track escape capacity during the attacks and the delay before either headquarters learns what has happened. [Polybius, III.115–116](https://penelope.uchicago.edu/thayer/e/roman/texts/polybius/3%2A.html#115) · [Livy, History of Rome XXII.47–49](https://facultystaff.richmond.edu/~wstevens/romanhistory/history222texts/livycannae.pdf)
+
+## Material and terrain decisions
+
+| Detail | Evidence | Treatment in this pack |
+|---|---|---|
+| Infantry dress and arms | Polybius distinguishes Iberian clothing and shields from Celtic dress. Both writers describe African infantry equipped with captured Roman arms. [Polybius III.114](https://penelope.uchicago.edu/thayer/e/roman/texts/polybius/3%2A.html#114) · [Livy XXII.46](https://facultystaff.richmond.edu/~wstevens/romanhistory/history222texts/livycannae.pdf) | Depict variation within formations. Similar arms on opposing sides make identification from dress alone unreliable. Colors, faces, officer identities, shield devices and precise equipment ratios remain inferred. |
+| Ground | The archaeological park connects the site with the hills overlooking the Ofanto valley. A comparative landscape study reproduces eight proposed battle locations based on literary reconstruction. [Italian Ministry of Culture • site description](https://museipuglia.cultura.gov.it/musei-puglia/museo-e-parco-archeologico-canne-della-battaglia/) · [University of Liverpool, Collecting the Field, fig. 4](https://livrepository.liverpool.ac.uk/3000526/1/200272740_Feb2016.pdf) | Show an open plain with low relief. No precise river course, map registration, camp location or camera coordinates are asserted. Later structures visible in the archaeological park belong to separate periods. |
+| Weather and visibility | Livy reports wind carrying dust toward the Romans. His narrative provides qualitative conditions. [Livy XXII.43, 46](https://facultystaff.richmond.edu/~wstevens/romanhistory/history222texts/livycannae.pdf) | The first scene prioritizes the readability of the line. The cavalry scene allows dust close to moving horses. Wind speed, visibility range and sun angle are unspecified. |
+| Scale and timing | The ancient accounts describe a large defeat and a sequence of actions. They give no per-formation time series. [Polybius III.115–117](https://penelope.uchicago.edu/thayer/e/roman/texts/polybius/3%2A.html#115) · [Livy XXII.47–50](https://facultystaff.richmond.edu/~wstevens/romanhistory/history222texts/livycannae.pdf) | Figure counts, elapsed minutes and distances cannot be read from either image. Treat the degree of control over the yielding center as a scenario assumption to vary. |
+
+## Sources and limits
+
+Reviewed November 5, 2026. Polybius is the earlier surviving narrative used here. Livy is a later Roman account. Agreement in their descriptions does not establish two independent eyewitnesses. Section numbers refer to the linked English translations. The ministry describes the present archaeological setting, and the Liverpool thesis supplies a comparison of competing location proposals. Only original reconstruction art is distributed in the pack.
+
+The accompanying game-pack manifest records the two captions, source links, image dimensions and file hashes. Both images are for briefing or after-action use. Tactical judgments about visibility, flank pressure and escape remain the responsibility of the simulation.

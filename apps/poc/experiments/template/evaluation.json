@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "case_id": null,
+  "historical_outcome": {"sources": [], "ground": null, "timing": null, "force_condition": null, "uncertainty": []},
+  "baseline_run": {"command": null, "rules_version": null, "initial_hash": null, "audit_ref": null, "replay_result": null},
+  "observed_outcome": null,
+  "differences": [],
+  "sensitivity_runs": [],
+  "deterministic_gaps": [],
+  "scenario_or_translation_gaps": [],
+  "inference_gaps_with_separate_model_evidence": [],
+  "unmeasurable_factors": []
+}

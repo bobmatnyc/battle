@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "case_id": "little-round-top",
+  "battle": "Little Round Top",
+  "era": "American Civil War",
+  "setting": "Gettysburg, Pennsylvania  /  July 2, 1863",
+  "classification": "AI reconstruction",
+  "use": "briefing gallery / after-action illustration",
+  "limits": "Clothing, stonework, exact positions and group sizes are inferred.",
+  "sources": [
+    {
+      "title": "Morrill’s account • NPS landscape report, fig. 4.13",
+      "url": "https://www.nps.gov/gett/getinvolved/upload/FinalCLR_LittleRoundTop_AllSections-508.pdf"
+    },
+    {
+      "title": "Oates’s report • August 8, 1863",
+      "url": "https://www.nps.gov/gett/learn/historyculture/official-report-of-colonel-william-c-oates.htm"
+    }
+  ],
+  "images": [
+    {
+      "file": "01.jpg",
+      "title": "The detached flank guard",
+      "caption": "Morrill’s Company B watches from a stone wall, separated from the main Union line.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "593e714f14fcfb20dbc09be750784e3b8f543e6c323d087abd71770f1b031436",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "prompt": "Create a photorealistic historical reconstruction for a Civil War game unit profile. Little Round Top, Pennsylvania, July 2, 1863. A small anonymous group of Union infantry skirmishers from Company B of the 20th Maine watches a wooded flank from a low fieldstone wall. Summer oak leaves and granite, dark blue sack coats, light-blue trousers, forage caps and long percussion rifle muskets. A restrained color photograph of a plausible reenactment, wide composition, human scale, seen from behind. No identifiable historical portraits, flags, text, modern equipment, injury, frame, or faux archival marks. Group size in the composition is illustrative.",
+      "provider_image_sha256": "30f7bcb43c964a772e44bab88e61daf356db21298c56eb002b58f55b334e7793"
+    },
+    {
+      "file": "02.jpg",
+      "title": "The climb through the rocks",
+      "caption": "Oates’s Alabama infantry climbs through broken ground. The slope helps explain why a simple wheel was hard to execute.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "fa55c3f0eba8a5f143c1b63f04da05c7ce97133c30bedb5c2906354f8537b9bb",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.038745,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. July 2 1863, Little Round Top, Pennsylvania. Eye-level looking obliquely across a steep oak-covered rocky slope. Mid-distance from the side, several files of tired 15th Alabama infantry in grey and muted brown short wool jackets, mixed felt hats, 1860s percussion rifle muskets, moving UPHILL in loose alignment, clambering around large granite boulders. Summer green canopy; warm afternoon, no summit monuments, roads or flags.",
+      "provider_image_sha256": "cad231bc23432f7ee8232a9a2cc93d08b7f0b82228e212851774bc112cd6c2cc"
+    }
+  ]
+}

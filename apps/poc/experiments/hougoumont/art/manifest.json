@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "case_id": "hougoumont",
+  "battle": "The north gate at Hougoumont",
+  "era": "Napoleonic Wars",
+  "setting": "Waterloo, present-day Belgium  /  June 18, 1815",
+  "classification": "AI reconstruction",
+  "use": "briefing gallery / after-action illustration",
+  "limits": "Gate construction, the number of defenders and their positions are inferred.",
+  "sources": [
+    {
+      "title": "National Army Museum • Defence of Hougoumont",
+      "url": "https://www.nam.ac.uk/explore/battle-waterloo"
+    },
+    {
+      "title": "Age of Revolution • Closing the gates",
+      "url": "https://ageofrevolution.waterlooassociation.org.uk/200-object/closing-the-gates-at-hougoumont-1815/"
+    }
+  ],
+  "images": [
+    {
+      "file": "01.jpg",
+      "title": "The north entrance stands open",
+      "caption": "The farm’s north gate served as a supply entrance. From inside the courtyard, the open gateway is an obvious weakness.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "17f8e66e20317766bff933d8a42eb85c40279142eb8c5c1876c58088e429697b",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.038745,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Hougoumont farm, Waterloo Belgium, June 18 1815. Human eye level from INSIDE a walled Belgian brick farm courtyard toward an open tall double wooden carriage gate hung BETWEEN two square brick piers, continuous brick boundary wall adjoining them, no arch overhead. Red-coated British Guards with period black Belgic shakos, white crossbelts and flintlock muskets watching the entrance; no charging French yet. Damp dark ground, summer morning light, brick and timber outbuildings.",
+      "provider_image_sha256": "6a7d6323e9ec24be3204207ec426b2a008bb1b014cbd891d00d93db17b11e8b7"
+    },
+    {
+      "file": "02.jpg",
+      "title": "Shutting the gate",
+      "caption": "Guardsmen close the doors after a French party has entered, cutting it off from the troops outside.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "2fedf89c3ef663065b62b91f37cf7e8e4767ef3ddb5b27bd57ee2973775f4cc3",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387432,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Hougoumont farm, Waterloo 1815. Tight, low oblique view inside the north gate. A handful of British Guards infantry in worn red coatees, white belts and dark trousers pushing two enormous solid oak gate leaves nearly shut between square brick piers. Seen from the side at human height; a slim gap outside hints at French blue coats. Stress human weight against timber. No text, masonry arch, blood, later bearskin parade uniforms or modern fittings.",
+      "provider_image_sha256": "9779535aa3a99207b6b19f8ec219ef9ea0bd8254d0beb07739aa6d434e9a8a1d"
+    }
+  ]
+}

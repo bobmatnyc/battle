@@ -1,0 +1,15 @@
+{
+  "scenario": "Little Round Top, Gettysburg, July 2, 1863",
+  "local_time": "16:32:00",
+  "viewpoint": {"source": "direct observation by Union headquarters", "origin_hex": [11, 15], "target_hex": [10, 19], "bearing_degrees_from_map_north": 196, "field_of_view_degrees": 30},
+  "weather": {"season": "summer", "conditions": "dry, clear"},
+  "terrain_along_sightline": [
+    {"hex": [11, 15], "elevation_m": 187, "ground": "rocky"},
+    {"hex": [11, 16], "elevation_m": 184, "ground": "rocky"},
+    {"hex": [11, 17], "elevation_m": 181, "ground": "woods"},
+    {"hex": [11, 18], "elevation_m": 176, "ground": "woods"},
+    {"hex": [10, 19], "elevation_m": 169, "ground": "woods"}
+  ],
+  "contacts": [{"distance_hexes": 4, "direction": "center", "type": "unidentified troops", "confidence": "low", "depiction": "indistinct distant movement only"}],
+  "visible_structures": []
+}

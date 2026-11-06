@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "case_id": null,
+  "setting": {"date": null, "location": null, "sector_bounds": null, "historical_echelon_evidence": []},
+  "sources": [],
+  "initial_forces": [],
+  "terrain_and_weather": {},
+  "objectives_by_side": {},
+  "opening_brief_by_side": {},
+  "historical_intents": [],
+  "authored_assumptions": [],
+  "unsupported_actions": []
+}

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "case_id": "benouville",
+  "battle": "Pegasus Bridge",
+  "era": "World War II",
+  "setting": "Bénouville, Normandy  /  June 6, 1944",
+  "classification": "AI reconstruction",
+  "use": "briefing gallery / after-action illustration",
+  "limits": "Night exposure is adjusted for legibility. Glider and bridge silhouettes are representative.",
+  "sources": [
+    {
+      "title": "Airborne Assault Museum • Jim Wallwork’s account",
+      "url": "https://paradata.org.uk/content/4663334"
+    },
+    {
+      "title": "Airborne Assault Museum • Pegasus Bridge",
+      "url": "https://paradata.org.uk/content/4663998"
+    }
+  ],
+  "images": [
+    {
+      "file": "01.jpg",
+      "title": "Gliders by the canal",
+      "caption": "The canal assault platoons came down close to the crossing. This view imagines the first moments on the landing ground.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "e6f9cb8be18f4f65737de60c2921945ccaf1748d8465536b84f7f3f6f14a082f",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387486,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Bénouville Normandy just after midnight on June 6 1944. Dark grassy landing field, 1944 British Airspeed Horsa wooden troop glider at rest, broad high straight wing and long fuselage, no engines or propellers. British glider-borne infantry silhouettes in 1944 battledress with webbing and helmets clambering away from it, low eye level, old steel canal bridge only faint in the background. Restrained blue-black tones, enough natural light to make out shapes, absolutely no parachutes or modern village lighting.",
+      "provider_image_sha256": "9cc51b331fae5ffca427c3f056e1ec81b995a7a4f52019d32c3ed3adcc82409f"
+    },
+    {
+      "file": "02.jpg",
+      "title": "The canal bank is held",
+      "caption": "British infantry establish a position at the far end of the intact crossing. The landing took place in darkness.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "2f534e311ff00b79f03ff69df96e7c30bce0441795c14d53b476048eae79ad0b",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387516,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Bénouville Normandy in the dark early hours of June 6 1944. Side view: three British airborne infantrymen of the Ox and Bucks in 1944 battledress, British steel helmets and tan webbing, establishing a crouched defensive position in the low grassy canal bank. Riflemen look outward along the road. Beyond them still canal water, and only the low dark silhouette of the bridge roadway at the EDGE of the frame. NO visible tall bridge superstructure. Night blue darkness, silhouettes readable, little artificial light. No glider and no parachutes, street lamps, signage or modern features.",
+      "provider_image_sha256": "3d1b920e9055f4ed2ec13e76d19d434cc6ce4fd4398a94b58689f1a50e403f05"
+    }
+  ]
+}

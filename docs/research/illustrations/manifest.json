@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "case_id": "research-illustrations",
+  "battle": "Little Round Top",
+  "era": "American Civil War",
+  "setting": "Gettysburg, Pennsylvania  /  July 2, 1863",
+  "classification": "AI reconstruction",
+  "use": "research illustration",
+  "limits": "Clothing, spacing, figures and viewpoint are inferred. Group sizes and poses are illustrative.",
+  "sources": [
+    {
+      "title": "Morrill’s account • NPS landscape report, fig. 4.13",
+      "url": "https://www.nps.gov/gett/getinvolved/upload/FinalCLR_LittleRoundTop_AllSections-508.pdf"
+    }
+  ],
+  "images": [
+    {
+      "file": "company-b-openrouter.png",
+      "title": "Company B, 20th Maine, watching a wooded flank",
+      "caption": "AI reconstruction of Company B, 20th Maine, watching a wooded flank from behind a stone wall.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "30f7bcb43c964a772e44bab88e61daf356db21298c56eb002b58f55b334e7793",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "model_returned": "unknown (absent from the provider response)",
+      "provider_cost_usd": 0.038793,
+      "prompt": "Create a photorealistic historical reconstruction for a Civil War game unit profile. Little Round Top, Pennsylvania, July 2, 1863. A small anonymous group of Union infantry skirmishers from Company B of the 20th Maine watches a wooded flank from a low fieldstone wall. Summer oak leaves and granite, dark blue sack coats, light-blue trousers, forage caps and long percussion rifle muskets. A restrained color photograph of a plausible reenactment, wide composition, human scale, seen from behind. No identifiable historical portraits, flags, text, modern equipment, injury, frame, or faux archival marks. Group size in the composition is illustrative.",
+      "provider_image_sha256": "30f7bcb43c964a772e44bab88e61daf356db21298c56eb002b58f55b334e7793",
+      "provenance": "docs/research/33-openrouter-unit-images.md; apps/poc/skills/illustrate-unit/example-request.json",
+      "generated_on": "2026-11-05"
+    },
+    {
+      "file": "15th-alabama-dress-variation.png",
+      "title": "15th Alabama infantry, dress variation on a dry march",
+      "caption": "AI reconstruction of 15th Alabama infantry wearing a sampled mix of jackets in a dry-march example.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "a85c960f0a94ee011ee8a7630f43413bc8ea4b5b5702ae5aa7ce63689d147e53",
+      "provider": "OpenRouter",
+      "model_requested": "unknown (not recorded)",
+      "model_returned": "unknown",
+      "provider_cost_usd": 0.0387417,
+      "prompt": "unknown (not recorded in the repository)",
+      "provider_image_sha256": "unknown",
+      "provenance": "docs/research/35-field-glasses-and-appearance.md",
+      "generated_on": "unknown (live gallery trial, undated in the record)"
+    }
+  ]
+}

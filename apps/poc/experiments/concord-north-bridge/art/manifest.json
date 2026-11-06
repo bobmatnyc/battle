@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "case_id": "concord-north-bridge",
+  "battle": "Concord’s North Bridge",
+  "era": "American Revolutionary War",
+  "setting": "Concord, Massachusetts  /  April 19, 1775",
+  "classification": "AI reconstruction",
+  "use": "briefing gallery / after-action illustration",
+  "limits": "Bridge carpentry, clothing and the distribution of smoke are illustrative.",
+  "sources": [
+    {
+      "title": "Minute Man NHP • The events of April 19",
+      "url": "https://www.nps.gov/mima/learn/historyculture/april-19-1775.htm"
+    },
+    {
+      "title": "National Park Service • Captain Isaac Davis",
+      "url": "https://www.nps.gov/people/captain-isaac-davis.htm"
+    }
+  ],
+  "images": [
+    {
+      "file": "01.jpg",
+      "title": "Approach from the muster field",
+      "caption": "Acton’s minute company leads the provincial column toward the river. The officers have yet to order a volley.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "2da58b7a2813446ed902d85da5e22433fb879c6364b30ea6606f9a8265f873d7",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387444,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Concord Massachusetts April 19 1775 morning. From behind the head of a modest Massachusetts militia column walking downslope across open farm pasture, mostly leafless early-spring trees. Mixed civilian wool and linen coats, round felt hats and some modest cocked hats, plain flintlock muskets carried upright and safely at the shoulder. Narrow, low wooden road bridge over gentle Concord River in the middle distance. Emphasize citizen-soldiers, no standardized blue uniforms or flags.",
+      "provider_image_sha256": "1d43a5d267cbce828e58c3fd3f7d1b868b574e8ef4afcfbf9b15215e9bcf8027"
+    },
+    {
+      "file": "02.jpg",
+      "title": "Return fire at the crossing",
+      "caption": "A provincial volley answers British fire. Powder smoke makes the far bank harder to read.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "460ed0acfdae41158c5e6c776cbbc82a96053ab5c3f04e4f080b71ae99a97c6c",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387429,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Concord Massachusetts April 19 1775 morning. Sideways view from the grassy riverbank across a simple low narrow wooden road bridge, tense instant after musket fire. In foreground a few British light infantry regulars in short red coats and small leather light infantry caps fall back from the bridge, across the water provincial militia barely visible through patchy white black-powder smoke. Early leafless spring growth. No dead, monuments, flags or modern handrails.",
+      "provider_image_sha256": "42f59dc2c6372283c86819cf0bb993c52542c628e719cb81c51c36ab389816af"
+    }
+  ]
+}

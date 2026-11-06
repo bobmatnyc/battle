@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "case_id": "hill-223",
+  "battle": "The ravine west of Hill 223",
+  "era": "World War I",
+  "setting": "Châtel-Chéhéry, France  /  October 8, 1918",
+  "classification": "AI reconstruction",
+  "use": "briefing gallery / after-action illustration",
+  "limits": "The precise patrol route and prisoner count are disputed. Figures and kit are representative.",
+  "sources": [
+    {
+      "title": "U.S. Army History • Field study of Hill 223",
+      "url": "https://history.army.mil/Portals/143/Images/Publications/ArmyHistoryMag/pdf/20002009/AH50newOCR.pdf"
+    },
+    {
+      "title": "U.S. Army History • The other sixteen",
+      "url": "https://www.lineofdeparture.army.mil/Journals/Army-History/Archive/Spring-2026/Unraveling-the-Myth-of-Sergeant/"
+    }
+  ],
+  "images": [
+    {
+      "file": "01.jpg",
+      "title": "Flanking the guns",
+      "caption": "A patrol from Company G leaves the direct approach and works through the wooded ravine.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "a283f87e869b1162ee2ad5fd6b05be252a1b248614d12b7106e3ba48ad20d2e8",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387495,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Meuse-Argonne near Châtel-Chéhéry France, October 8 1918. From behind a small U.S. infantry patrol slipping single file along a wooded ravine, early autumn foliage mottled green, ochre, slopes concealing the opposing guns, damp ground, subdued morning daylight. 1918 American olive-drab wool service coats, puttees, shallow round M1917 steel helmets, cartridge belts, long bolt-action service rifles. No 1940s helmets, modern packs, or trench skyline.",
+      "provider_image_sha256": "83c05120a305a02b90dc2984615957f0c61b6b3a8380343430a9010a0b5a260f"
+    },
+    {
+      "file": "02.jpg",
+      "title": "Collecting the surrendered weapons",
+      "caption": "The patrol has taken prisoners. Collecting arms and moving captives now occupy men who were sent to silence the guns.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "4506814bf9f6c77c930d11eec3a03316002cdfc2666d009af53986866ea7aab5",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387561,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. WWI Meuse-Argonne Forest France in October 1918. Close foreground study of DISCARDED German long bolt-action rifles resting horizontally against each other on the leaf-littered earth, stocks and barrels clearly visible beside a shallow earth bank. Mid-distance: unarmed, barehanded German POWs in wool field-grey caps sitting in a small group against the bank, empty hands visible, with no rifles slung on them. One standing American guard at the edge facing away wears a broad flat shallow brimmed 1917 Brodie helmet and carries the only raised rifle. No modern gear, no heroic protagonist. Somber, calm, autumn morning.",
+      "provider_image_sha256": "0c90a6af1b7f482ea88fffbb5839c040471b1c34cab6a47ce26cfd3b7aec2b1c"
+    }
+  ]
+}

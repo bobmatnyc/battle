@@ -1,0 +1,6 @@
+{
+  "model": "google/gemini-2.5-flash-image",
+  "prompt": "Create a photorealistic historical reconstruction for a Civil War game unit profile. Little Round Top, Pennsylvania, July 2, 1863. A small anonymous group of Union infantry skirmishers from Company B of the 20th Maine watches a wooded flank from a low fieldstone wall. Summer oak leaves and granite, dark blue sack coats, light-blue trousers, forage caps and long percussion rifle muskets. A restrained color photograph of a plausible reenactment, wide composition, human scale, seen from behind. No identifiable historical portraits, flags, text, modern equipment, injury, frame, or faux archival marks. Group size in the composition is illustrative.",
+  "aspect_ratio": "3:2",
+  "n": 1
+}

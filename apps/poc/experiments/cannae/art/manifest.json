@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "case_id": "cannae",
+  "battle": "Cannae",
+  "era": "Second Punic War",
+  "setting": "Apulia, Italy  /  216 BCE",
+  "classification": "AI reconstruction",
+  "use": "briefing gallery / after-action illustration",
+  "limits": "Frontage, terrain, spacing and equipment mix are inferred. Neither image establishes a sealed ring.",
+  "sources": [
+    {
+      "title": "Polybius • Histories III.113–117",
+      "url": "https://penelope.uchicago.edu/thayer/e/roman/texts/polybius/3%2A.html#113"
+    },
+    {
+      "title": "Livy • History of Rome XXII.45–50",
+      "url": "https://facultystaff.richmond.edu/~wstevens/romanhistory/history222texts/livycannae.pdf"
+    }
+  ],
+  "images": [
+    {
+      "file": "01.jpg",
+      "title": "The center projects forward",
+      "caption": "The advancing Iberian and Celtic center stands ahead of the African infantry on the wings. The first contact will come in the middle.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "3eb8b69f73c19ba09c670b3e7475416767c3059a7b4e39683032a807ad7b5bfb",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387618,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Cannae, Apulia, second Punic War, summer 216 BCE. Wide cinematic high oblique view from above one end of Hannibal’s line, looking along it. On an open dry river plain the long, relatively thin Iberian and Celtic infantry center bows outward in a broad shallow convex arc TOWARD a dense approaching Roman infantry block. The heavy African foot stand farther back at the shoulders. Human texture in nearest files: Iberian light short tunics with restrained dark purple edging, long shields; groups with varied dress beside them. Bronze and iron, tan fields, hazy low hills. A naturalistic museum reconstruction, army-level depth and distinct opposing formations. No icons, letters, elephants, flags, medieval or imperial gear, parade geometry, cauldron, or perfect ring.",
+      "provider_image_sha256": "868a20fd8eb6122c2f844345b02fcd9f2fdb741b6d1a69ced782da51d3adb685"
+    },
+    {
+      "file": "02.jpg",
+      "title": "Pressure on the Roman rear",
+      "caption": "As African infantry turns against the flanks, Hasdrubal’s horsemen attack the Roman infantry from behind. This view follows one local attack.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "aa5c446c13929386eaefb84e70a554ea97be92bffa5c21e9bd183dc04aef8f4f",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387597,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Cannae Apulia 216 BCE. A low mounted eye-level view from behind a few of Hasdrubal’s Iberian and Celtic horsemen sweeping obliquely into the rear of a large, compressed block of Roman Republican infantry. Beyond, on a flank, African heavy foot wearing captured Roman-style arms turn inward; emphasize cavalry closing distance, rear files twisting around in alarm, visible dusty gap between groups. Roman Republican oval curved shields, simple Montefortino helmets and mail or breastplates; horsemen on small unarmored horses with simple bridles, no stirrups or medieval saddles. Late summer plain, warm light, modest dust. No imperial eagles, lorica segmentata, elephants, blood or individuals posed as Hannibal.",
+      "provider_image_sha256": "d8bd0c6dfb518bf42b22e3ee68d246efa3f9271fdbe57c1328f946f0bb0fa789"
+    }
+  ],
+  "research": "research.md"
+}

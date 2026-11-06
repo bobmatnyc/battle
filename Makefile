@@ -1,0 +1,29 @@
+PYTHON ?= python3
+NODE ?= node
+POC_ARGS ?=
+
+.PHONY: poc poc-offline test-poc smoke-poc headless-poc
+
+poc:
+	cd apps/poc && $(PYTHON) -m battle $(POC_ARGS)
+
+poc-offline:
+	cd apps/poc && $(PYTHON) -m battle --offline $(POC_ARGS)
+
+test-poc:
+	cd apps/poc && $(PYTHON) -m unittest discover -s tests -q
+	cd apps/poc && $(NODE) scripts/smoke_ui.mjs
+	cd apps/poc && $(NODE) scripts/check_map_geometry.mjs
+
+smoke-poc:
+	cd apps/poc && $(PYTHON) scripts/smoke_http.py
+
+headless-poc:
+	@run_dir=$$(mktemp -d "$${TMPDIR:-/tmp}/battle-headless.XXXXXX") && \
+	  echo "Headless artifacts: $$run_dir" && \
+	  cd apps/poc && $(PYTHON) -m battle --headless --db "$$run_dir/battle.sqlite"
+
+# Prepare the designated Evo target without transferring secrets or local saves.
+.PHONY: package-evo
+package-evo:
+	$(PYTHON) apps/poc/scripts/package_evo.py

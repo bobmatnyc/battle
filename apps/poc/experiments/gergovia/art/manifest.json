@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "case_id": "gergovia",
+  "battle": "The recall at Gergovia",
+  "era": "Romans in Gaul",
+  "setting": "Gaul, present-day France  /  52 BCE",
+  "classification": "AI reconstruction",
+  "use": "briefing gallery / after-action illustration",
+  "limits": "Caesar supplies the Roman account. The rampart and the defenders’ viewpoint are reconstructed.",
+  "sources": [
+    {
+      "title": "Caesar • The Gallic War, VII.45–51",
+      "url": "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Caesar/Gallic_War/7D%2A.html"
+    },
+    {
+      "title": "Latin and English • VII.47, the recall",
+      "url": "https://lectito.app/caesar/gallic-war-7/47/"
+    }
+  ],
+  "images": [
+    {
+      "file": "01.jpg",
+      "title": "The recall across broken ground",
+      "caption": "Caesar says some forward troops missed the recall. The fold in the slope illustrates how a message could fail to reach them.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "33bc6d3b9136957608eb1df0cf3b8e9d43b229e46b029325e99d103ec253f100",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387555,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Gaul 52 BCE at Gergovia. Rear three-quarter view of a SMALL group of late Republican Roman infantry disappearing over a grassy fold in a climbing hillside, their back profiles and oval shields seen from an observer below. A dwindling line of heads disappearing behind the ridge. The hilltop itself and any walls are entirely screened by intervening terrain. Bronze Montefortino helmets with small neck guards, mail shirts or simple tunics, oval shields, javelins. Wind moving grass, diffuse sun. No architecture, no flags, no imperial armor, no rectangle shields or cavalry. Show why sound and sight can be lost on a broken slope. Wide landscape with tiny human figures.",
+      "provider_image_sha256": "fb409286daefefd4d1d8aa1e17fc3e7a6a2519c2536acc46e3ac9e1529a897d5"
+    },
+    {
+      "file": "02.jpg",
+      "title": "Defenders at the wall",
+      "caption": "Gallic defenders concentrate near the wall as isolated Roman parties reach it. The exact gate and positions are reconstructed.",
+      "width": 1248,
+      "height": 832,
+      "sha256": "e7cc48e7f647f3ea983e9df42023e1bc291408c69512ee661392176642efa656",
+      "provider": "OpenRouter",
+      "model_requested": "google/gemini-2.5-flash-image",
+      "provider_cost_usd": 0.0387815,
+      "prompt": "Create a single photorealistic, landscape-format historical reenactment still. Natural color as if professionally photographed on location; human, restrained, materially credible, candid composition. No captions, letters, maps, labels, watermark, collage or painted surface. Gergovia Gaul 52 BCE, view from just inside a late Iron Age oppidum rampart made of timber-laced stone and earth, rough open timber gateway. Gallic defenders with long oval wooden shields and spears moving sideways to reinforce the threatened entrance, a few Roman late Republican helmets and oval shields below the wall. Plausible trousers, tunics, cloak pins, simple iron helmets on some Gauls. No horned helmets, fantasy war paint, medieval masonry, imperial segmented armor, graphic injury or modern objects.",
+      "provider_image_sha256": "fa7d078660682836acc9d2c88c4cebe582f9a56b89ad170bb309a1871f106f98"
+    }
+  ]
+}
