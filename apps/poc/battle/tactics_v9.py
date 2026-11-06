@@ -11,13 +11,22 @@ POLICY='standing-contact-v3'
 
 
 def assault(s,u):
-    """Why: an attack on walls must close with the defenders it can see.
+    """Why: an attack on walls must close with the defenders it can see; a
+    defender moving about its own walls must not.
     What: True when ``u`` is on a ``move`` order whose destination lies in a
-    gated compound and that it has not reached, whatever its side.
-    Test: `test_assault_into_the_compound_continues_within_five_hexes`."""
+    gated compound that ``u`` stands outside, and that compound either holds
+    its side's attack objective or holds an enemy its headquarters knows of
+    (``s['contacts']``, never ground truth).
+    Test: `test_assault_into_the_compound_continues_within_five_hexes`,
+    `test_defender_redeploying_inside_its_own_walls_still_halts`."""
     target=u.get('target')
-    return (u.get('stance')=='move' and target is not None and list(u['pos'])!=list(target)
-            and gates.compound_of(s,target) is not None)
+    if u.get('stance')!='move' or target is None:return False
+    f=gates.compound_of(s,target)
+    if f is None or list(u['pos']) in f['compound']:return False
+    attacker=any(x['id']==u['side'] and x.get('role')=='attacker' for x in s.get('sides',()))
+    if attacker and list(s['objective']) in f['compound']:return True
+    inside={grid.key(p) for p in f['compound']}
+    return any(grid.key(c['pos']) in inside for c in s['contacts'].get(u['side'],{}).values())
 
 def decide(s,u,contacts):
     doctrine=standing.profile(u)

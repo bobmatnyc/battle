@@ -210,6 +210,14 @@ class AssaultHaltTests(unittest.TestCase):
         self.assertIn(decision(s, "G1")["action"], ("defend", "take_cover"))
         self.assertEqual(unit(s, "G1")["pos"], [15, 10])
 
+    def test_defender_redeploying_inside_its_own_walls_still_halts(self):
+        # B2 moves from the gateway to the back room, within its own compound,
+        # one hex from G1: not an assault, so it halts or takes cover.
+        s = held_gateway(farm=False, rules="poc-12")
+        unit(s, "B2").update(stance="move", target=list(BACK_ROOM))
+        s = advance(s)
+        self.assertIn(decision(s, "B2")["action"], ("defend", "take_cover"))
+
     def test_assault_below_its_withdrawal_threshold_still_withdraws(self):
         s = advance(assault_set_up(ammo=1))
         self.assertEqual(decision(s, "G1")["action"], "withdraw")

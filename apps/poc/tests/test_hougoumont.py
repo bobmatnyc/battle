@@ -268,10 +268,10 @@ class GateDefenderPolicyTests(unittest.TestCase):
                              {("scripted", "scripted-gate-defender-v1")})
             self.assertEqual((allied[0]["turn"], allied[0]["standing"]),
                              (0, [{"unit_id": "A1", "profile_id": "close_on_breach"}]))
-            # Issued once per unit, through courier or voice delivery like a player's.
+            # Issued once, through courier or voice delivery like a player's.
             self.assertEqual([(o["unit_id"], o["profile_id"], o["sent_turn"], o["status"])
                               for o in final["standing_orders"]],
-                             [("A1", "close_on_breach", 0, "delivered"), ("A2", "close_on_breach", 9, "delivered")])
+                             [("A1", "close_on_breach", 0, "delivered")])
             self.assertEqual(result["replay"]["status"], "identical")
             # A fresh replay service has no provider and re-runs no policy.
             self.assertEqual(build_replay(db).verify(result["game_id"])["status"], "identical")
@@ -412,9 +412,8 @@ class GateAttackerPolicyTests(unittest.TestCase):
 class HoldCompoundEngineTests(unittest.TestCase):
     def test_gate_closes_with_french_inside_and_cuts_them_off(self):
         # The garrison inside has no cartridges, so the French get in; the
-        # gate party works the gate under its delivered standing order. poc-11:
-        # in poc-12 F1 wins the gateway hex F2 also wants and stands in it, so
-        # the gate stays blocked (docs/research/45).
+        # gate party works the gate under its delivered standing order. poc-11,
+        # where F1 and F2 stall over one hex; the poc-12 runs follow.
         run = EngineRun(arranged(
             "poc-11",
             A1={"pos": [12, 10], "strength": 60, "initial": 60, "ammo": 0},
@@ -442,6 +441,63 @@ class HoldCompoundEngineTests(unittest.TestCase):
         self.assertEqual(run.state["capture"], 0)
         self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
 
+    def assert_cut_off_inside(self, run, start, uid, turn):
+        """``uid`` is inside the shut gate, cut off at ``turn`` and still
+        standing; possession is contested; strength is conserved (the start
+        total less recorded casualties); the replay matches."""
+        self.assertEqual(run.gate()["state"], "closed")
+        cut = [e for e in run.state["events"] if e["kind"] == "units_cut_off"]
+        self.assertEqual([(e["turn"], e["unit_ids"]) for e in cut], [(turn, [uid])])
+        self.assertEqual(run.unit(uid)["cut_off"]["turn"], turn)
+        self.assertIn(list(run.unit(uid)["pos"]), COMPOUND)
+        self.assertGreater(run.unit(uid)["strength"], 0)
+        self.assertEqual(run.unit("A1")["status"], "ready")
+        self.assertEqual(run.state["capture"], 0)
+        losses = sum(e["count"] for e in run.state["events"] if e["kind"] == "casualties")
+        self.assertEqual(sum(u["strength"] for u in run.state["units"]), start - losses)
+        self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+
+    def test_poc12_gate_closes_behind_the_french_and_cuts_them_off(self):
+        # The arrangement above on poc-12: F1 waits in the gateway while the
+        # gate party works (the gate cannot shut on it), steps into the
+        # courtyard at turn 4, and the gate shuts behind it (docs/research/45).
+        s = arranged(
+            "poc-12",
+            A1={"pos": [12, 10], "strength": 60, "initial": 60, "ammo": 0},
+            A2={"ammo": 0}, A3={"pos": [11, 3]},
+            F1={"pos": [11, 8], "stance": "move", "target": [11, 10]},
+            F2={"pos": [11, 7], "stance": "move", "target": [10, 10]},
+        )
+        start = sum(u["strength"] for u in s["units"])
+        run = EngineRun(s)
+        run.step({"type": "standing", "instruction": {"unit_id": "A1", "profile_id": "close_on_breach"}})
+        while run.gate()["state"] not in ("closed", "barred") and run.state["turn"] < 12:
+            run.advance()
+        self.assertIn("standing_gate_close", [e["kind"] for e in run.state["events"]])
+        self.assertEqual(run.unit("F1")["pos"], [11, 10])
+        self.assert_cut_off_inside(run, start, "F1", 4)
+
+    def test_poc12_gate_closes_behind_a_party_ordered_through_the_held_gateway(self):
+        # The gate-attacker start (A1 in the gateway, F1 on the outside hex) on
+        # poc-12, with A2 posted at the back of the compound so the courtyard
+        # beside the gateway has room. F1's courier order into the farm is
+        # delivered; it stands in the gateway (gate_blocked), then moves on
+        # and the gate party shuts the gate behind it.
+        s = arranged("poc-12", A1={"ammo": 0, "strength": 80, "initial": 80}, A2={"ammo": 0, "pos": [10, 11]},
+                     A3={"pos": [20, 2]}, F1={"pos": OUTSIDE, "strength": 60, "initial": 60})
+        start = sum(u["strength"] for u in s["units"])
+        run = EngineRun(s)
+        run.step({"type": "standing", "instruction": {"unit_id": "A1", "profile_id": "close_on_breach"}})
+        run.step({"type": "advance", "decision": {"side": "french", "source": "scripted", "orders": [
+            {"unit_id": "F1", "stance": "move", "destination": [10, 10]}]}})
+        while run.gate()["state"] not in ("closed", "barred") and run.state["turn"] < 12:
+            run.advance()
+        kinds = [e["kind"] for e in run.state["events"]]
+        self.assertIn("gate_blocked", kinds)
+        self.assertNotIn("gateway_carried", kinds)
+        self.assertEqual(run.unit("F1")["pos"], [10, 9])
+        self.assert_cut_off_inside(run, start, "F1", 6)
+
     def test_capture_counter_resets_after_a_partial_hold(self):
         run = EngineRun(arranged(A1={"pos": [12, 5]}, A2={"pos": [11, 6]}, A3={"pos": [12, 6]},
                                  F1={"pos": [11, 10], "ammo": 0}))
@@ -451,7 +507,8 @@ class HoldCompoundEngineTests(unittest.TestCase):
         while run.state["capture"] and run.state["status"] == "active":
             counts.append(run.advance()["capture"])
         self.assertEqual(run.state["status"], "active")
-        # poc-12: A2's move into the walls presses on under fire (docs/research/45).
+        # poc-12: allied headquarters knows F1 is inside, so A2's move back into the
+        # walls is an assault and presses on under fire (docs/research/45).
         self.assertEqual(counts, [1, 2, 3, 4, 0])
         self.assertIn(list(run.unit("A2")["pos"]), COMPOUND)
         self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")

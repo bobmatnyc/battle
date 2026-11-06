@@ -149,13 +149,16 @@ class HougoumontPushTests(unittest.TestCase):
             final = build_replay(db).repository.load(result["game_id"])
         self.assertEqual(result["replay"]["status"], "identical")
         # Both gate-aware controls. poc-12 (docs/research/45): Legros's party presses on
-        # under fire and breaks at turn 3 short of the gate, so nobody pushes; the
-        # garrison is shot away from outside the walls (poc-11: turn 58).
+        # under fire and breaks at turn 4 short of the gate; F2 carries the gateway at
+        # turn 17 (A1, routed, gives way one step), but A3 holds inside and the garrison
+        # holds to the deadline (poc-11: french at turn 58).
         self.assertEqual(result["run"]["opponent"], "scripted-gate-attacker-v1")
-        self.assertEqual((final["rules"], final["winner"], final["turn"]), ("poc-12", "french", 40))
-        self.assertEqual([e["turn"] for e in events(final, "unit_routed") if e["unit_id"] == "F1"], [3])
-        self.assertEqual(final["reason"], "Allied formations can no longer hold the farm.")
-        self.assertEqual((events(final, "gateway_push"), final["push_effort"]), ([], {}))
+        self.assertEqual((final["rules"], final["winner"], final["turn"]), ("poc-12", "allied", 60))
+        self.assertEqual([e["turn"] for e in events(final, "unit_routed") if e["unit_id"] == "F1"], [4])
+        self.assertEqual(final["reason"], "The Allied garrison held the farm until the scenario deadline.")
+        self.assertEqual([(e["turn"], e["unit_id"], e["holder_id"], e["outcome"], e["holder_pos"])
+                          for e in events(final, "gateway_carried")], [(17, "F2", "A1", "displaced", [10, 9])])
+        self.assertEqual(events(final, "gateway_push_stalled"), [])
         farm = next(f for f in final["map_features"] if f["id"] == "hougoumont")
         self.assertEqual(farm["openings"][0]["state"], "open")
         self.assertEqual((events(final, "units_cut_off"), final["capture"]), ([], 0))
