@@ -123,3 +123,5 @@ Historical calibration is much less complete than the game-system survey. One in
 [38 — Scenario catalog](38-scenario-catalog.md) defines the scenario-entry format, how the catalog resolves new and saved games, the `poc-9` limits an entry must respect, and what each planned battle still needs beyond data.
 
 [39 — Scenario-defined sides and victory kinds](39-scenario-sides-and-victory-kinds.md) records the `poc-9` edition: side ids, names, roles, the player side and a pluggable victory kind come from the scenario entry, with `poc-8` frozen for replay and Little Round Top unchanged.
+
+[40 — Batch A: model baseline on Little Round Top](40-batch-a-lrt-model-baseline.md) records 14 live model runs and 2 scripted controls on `poc-8`, with per-run outcomes, casualties, tokens, latency and cost, a comparability statement, stated limits and a local artifact manifest. Data: [`summary.json`](../../apps/poc/experiments/batch-a/summary.json).

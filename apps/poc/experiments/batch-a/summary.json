@@ -1,0 +1,1683 @@
+{
+ "title": "Batch A: model baseline on Little Round Top",
+ "date": "2026-11-06",
+ "code_commit": "503d541",
+ "scenario": "little-round-top-v8",
+ "rules": "poc-8",
+ "prompt_version": "lrt-side-v2",
+ "effort": "high",
+ "opponent": "scripted-fallback-v1",
+ "models": [
+  "anthropic/claude-sonnet-5.5",
+  "openai/gpt-6-astra"
+ ],
+ "run_counts": {
+  "model_runs": 14,
+  "scripted_control_runs": 2,
+  "sonnet_union": 5,
+  "sonnet_confederate": 5,
+  "astra_union": 2,
+  "astra_confederate": 2
+ },
+ "casualty_definition": "starting strength minus final strength, summed over the side's units, read from the first and last stored snapshot",
+ "cost_definition": "sum of usage.cost recorded on the player's decisions (USD)",
+ "latency_definition": "decision latency_ms as recorded; per-run median over the player's decisions",
+ "decisions_total": 261,
+ "decisions_from_model": 261,
+ "decisions_fallback": 0,
+ "total_cost_usd": 11.68923,
+ "runs": [
+  {
+   "run": "astra-confederate-1",
+   "kind": "model",
+   "model_key": "astra",
+   "player_side": "confederate",
+   "n": 1,
+   "game_id": "2110ca78022f4927",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": false,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "openai/gpt-6-astra",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 89,
+     "lost": 31
+    },
+    "confederate": {
+     "start": 120,
+     "final": 79,
+     "lost": 41
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 37,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 28,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 27,
+     "status": "ready"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 28,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 124871,
+    "completion": 16791,
+    "reasoning": 14946
+   },
+   "latency_ms_median": 22838.1,
+   "latency_ms_max": 41225.8,
+   "cost_usd": 2.40029,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "openai/gpt-6-astra"
+   ]
+  },
+  {
+   "run": "astra-confederate-2",
+   "kind": "model",
+   "model_key": "astra",
+   "player_side": "confederate",
+   "n": 2,
+   "game_id": "1f671c4b20894061",
+   "winner": "union",
+   "turns": 50,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The attacking formations have broken.",
+   "objective_held_by_player_side": false,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "openai/gpt-6-astra",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 93,
+     "lost": 27
+    },
+    "confederate": {
+     "start": 120,
+     "final": 68,
+     "lost": 52
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 39,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 25,
+     "status": "routed"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 29,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "routed"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 19,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 34,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 17,
+    "model": 17,
+    "fallback": 0,
+    "source_openrouter": 17
+   },
+   "tokens": {
+    "prompt": 80535,
+    "completion": 5650,
+    "reasoning": 4496
+   },
+   "latency_ms_median": 7063.3,
+   "latency_ms_max": 19088.3,
+   "cost_usd": 1.24243,
+   "decisions_with_cost": 17,
+   "models_reported": [
+    "openai/gpt-6-astra"
+   ]
+  },
+  {
+   "run": "astra-union-1",
+   "kind": "model",
+   "model_key": "astra",
+   "player_side": "union",
+   "n": 1,
+   "game_id": "186c84e0b9b5492f",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": true,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "openai/gpt-6-astra",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 84,
+     "lost": 36
+    },
+    "confederate": {
+     "start": 120,
+     "final": 97,
+     "lost": 23
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 26,
+     "status": "routed"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 29,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 29,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 32,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 40,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 121323,
+    "completion": 16093,
+    "reasoning": 14240
+   },
+   "latency_ms_median": 18591.8,
+   "latency_ms_max": 39552.2,
+   "cost_usd": 2.32104,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "openai/gpt-6-astra"
+   ]
+  },
+  {
+   "run": "astra-union-2",
+   "kind": "model",
+   "model_key": "astra",
+   "player_side": "union",
+   "n": 2,
+   "game_id": "8ecb59c605fc44cf",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": true,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "openai/gpt-6-astra",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 101,
+     "lost": 19
+    },
+    "confederate": {
+     "start": 120,
+     "final": 104,
+     "lost": 16
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 26,
+     "status": "routed"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 39,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 36,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 40,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 40,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 115346,
+    "completion": 11705,
+    "reasoning": 10054
+   },
+   "latency_ms_median": 13302.0,
+   "latency_ms_max": 27619.7,
+   "cost_usd": 1.81526,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "openai/gpt-6-astra"
+   ]
+  },
+  {
+   "run": "scripted-confederate-1",
+   "kind": "scripted_control",
+   "model_key": "scripted",
+   "player_side": null,
+   "n": 1,
+   "game_id": "5cc9b75ca81c4485",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": null,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "scripted",
+    "model": null,
+    "effort": null,
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 80,
+     "lost": 40
+    },
+    "confederate": {
+     "start": 120,
+     "final": 82,
+     "lost": 38
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 30,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 26,
+     "status": "routed"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 23,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 35,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "control_note": "both sides scripted; the run name's side label is a file-name artifact"
+  },
+  {
+   "run": "scripted-union-1",
+   "kind": "scripted_control",
+   "model_key": "scripted",
+   "player_side": null,
+   "n": 1,
+   "game_id": "7f630c1726154f7b",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": null,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "scripted",
+    "model": null,
+    "effort": null,
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 80,
+     "lost": 40
+    },
+    "confederate": {
+     "start": 120,
+     "final": 82,
+     "lost": 38
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 30,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 26,
+     "status": "routed"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 23,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 35,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 20,
+   "decision_sides": [
+    "confederate"
+   ],
+   "control_note": "both sides scripted; the run name's side label is a file-name artifact"
+  },
+  {
+   "run": "sonnet-confederate-1",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "confederate",
+   "n": 1,
+   "game_id": "d50608cd28fe4c64",
+   "winner": "union",
+   "turns": 42,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The attacking formations have broken.",
+   "objective_held_by_player_side": false,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 98,
+     "lost": 22
+    },
+    "confederate": {
+     "start": 120,
+     "final": 65,
+     "lost": 55
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 33,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 31,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 34,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "routed"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 16,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 28,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 14,
+    "model": 14,
+    "fallback": 0,
+    "source_openrouter": 14
+   },
+   "tokens": {
+    "prompt": 96711,
+    "completion": 3654,
+    "reasoning": 1266
+   },
+   "latency_ms_median": 2122.3,
+   "latency_ms_max": 6945.0,
+   "cost_usd": 0.22996,
+   "decisions_with_cost": 14,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-confederate-2",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "confederate",
+   "n": 2,
+   "game_id": "b344cfcc925944a4",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": false,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 98,
+     "lost": 22
+    },
+    "confederate": {
+     "start": 120,
+     "final": 75,
+     "lost": 45
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 36,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 26,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 36,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "ready"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "routed"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 167707,
+    "completion": 14404,
+    "reasoning": 8587
+   },
+   "latency_ms_median": 7267.1,
+   "latency_ms_max": 8813.2,
+   "cost_usd": 0.47945,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-confederate-3",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "confederate",
+   "n": 3,
+   "game_id": "16a77351fdcc426a",
+   "winner": "union",
+   "turns": 43,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The attacking formations have broken.",
+   "objective_held_by_player_side": false,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 99,
+     "lost": 21
+    },
+    "confederate": {
+     "start": 120,
+     "final": 65,
+     "lost": 55
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 35,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 29,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 35,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "routed"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 16,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 30,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 15,
+    "model": 15,
+    "fallback": 0,
+    "source_openrouter": 15
+   },
+   "tokens": {
+    "prompt": 101267,
+    "completion": 3562,
+    "reasoning": 1136
+   },
+   "latency_ms_median": 2006.0,
+   "latency_ms_max": 6613.5,
+   "cost_usd": 0.23815,
+   "decisions_with_cost": 15,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-confederate-4",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "confederate",
+   "n": 4,
+   "game_id": "8e38de3fae9c465b",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": false,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 98,
+     "lost": 22
+    },
+    "confederate": {
+     "start": 120,
+     "final": 77,
+     "lost": 43
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 36,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 26,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 36,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "ready"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 28,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 169781,
+    "completion": 14304,
+    "reasoning": 8397
+   },
+   "latency_ms_median": 7053.9,
+   "latency_ms_max": 10079.7,
+   "cost_usd": 0.4826,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-confederate-5",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "confederate",
+   "n": 5,
+   "game_id": "7927c778a4754379",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": false,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 101,
+     "lost": 19
+    },
+    "confederate": {
+     "start": 120,
+     "final": 82,
+     "lost": 38
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 36,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 28,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 37,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 27,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 27,
+     "status": "ready"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 28,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 177870,
+    "completion": 15333,
+    "reasoning": 9297
+   },
+   "latency_ms_median": 7135.8,
+   "latency_ms_max": 9419.4,
+   "cost_usd": 0.50907,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-union-1",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "union",
+   "n": 1,
+   "game_id": "639c6265b6064f80",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": true,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 94,
+     "lost": 26
+    },
+    "confederate": {
+     "start": 120,
+     "final": 99,
+     "lost": 21
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 26,
+     "status": "routed"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 39,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 29,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 35,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 40,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 158007,
+    "completion": 10574,
+    "reasoning": 6397
+   },
+   "latency_ms_median": 4965.7,
+   "latency_ms_max": 8548.9,
+   "cost_usd": 0.42175,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-union-2",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "union",
+   "n": 2,
+   "game_id": "e93682a6ece745ae",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": true,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 83,
+     "lost": 37
+    },
+    "confederate": {
+     "start": 120,
+     "final": 91,
+     "lost": 29
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 27,
+     "status": "routed"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 32,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 32,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 19,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 40,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 152337,
+    "completion": 7877,
+    "reasoning": 3975
+   },
+   "latency_ms_median": 2834.2,
+   "latency_ms_max": 8369.8,
+   "cost_usd": 0.38344,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-union-3",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "union",
+   "n": 3,
+   "game_id": "519efe7f1f9641b6",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": true,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 89,
+     "lost": 31
+    },
+    "confederate": {
+     "start": 120,
+     "final": 100,
+     "lost": 20
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 29,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 36,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 38,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 22,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 40,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 160728,
+    "completion": 12347,
+    "reasoning": 7821
+   },
+   "latency_ms_median": 4978.3,
+   "latency_ms_max": 9143.5,
+   "cost_usd": 0.44493,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-union-4",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "union",
+   "n": 4,
+   "game_id": "ab8e9f14088b4853",
+   "winner": "confederate",
+   "turns": 43,
+   "final_status": "complete",
+   "battle_ended_winner": "confederate",
+   "outcome_reason": "The attackers held the summit uncontested for 90 seconds.",
+   "objective_held_by_player_side": false,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 80,
+     "lost": 40
+    },
+    "confederate": {
+     "start": 120,
+     "final": 87,
+     "lost": 33
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 27,
+     "status": "routed"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 29,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 29,
+     "status": "ready"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 19,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 39,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 30,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 15,
+    "model": 15,
+    "fallback": 0,
+    "source_openrouter": 15
+   },
+   "tokens": {
+    "prompt": 112918,
+    "completion": 7306,
+    "reasoning": 4109
+   },
+   "latency_ms_median": 4226.8,
+   "latency_ms_max": 8216.1,
+   "cost_usd": 0.2989,
+   "decisions_with_cost": 15,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  },
+  {
+   "run": "sonnet-union-5",
+   "kind": "model",
+   "model_key": "sonnet",
+   "player_side": "union",
+   "n": 5,
+   "game_id": "79f12e60aa154227",
+   "winner": "union",
+   "turns": 60,
+   "final_status": "complete",
+   "battle_ended_winner": "union",
+   "outcome_reason": "The Union held out until the scenario deadline.",
+   "objective_held_by_player_side": true,
+   "run_config": {
+    "rules": "poc-8",
+    "scenario": "little-round-top-v8",
+    "prompt_version": "lrt-side-v2",
+    "player_provider": "openrouter",
+    "model": "anthropic/claude-sonnet-5.5",
+    "effort": "high",
+    "opponent": "scripted-fallback-v1"
+   },
+   "casualties": {
+    "union": {
+     "start": 120,
+     "final": 92,
+     "lost": 28
+    },
+    "confederate": {
+     "start": 120,
+     "final": 64,
+     "lost": 56
+    }
+   },
+   "units": {
+    "U1": {
+     "side": "union",
+     "start": 40,
+     "final": 27,
+     "status": "ready"
+    },
+    "U2": {
+     "side": "union",
+     "start": 40,
+     "final": 32,
+     "status": "ready"
+    },
+    "U3": {
+     "side": "union",
+     "start": 40,
+     "final": 33,
+     "status": "ready"
+    },
+    "C1": {
+     "side": "confederate",
+     "start": 40,
+     "final": 24,
+     "status": "routed"
+    },
+    "C2": {
+     "side": "confederate",
+     "start": 40,
+     "final": 15,
+     "status": "routed"
+    },
+    "C3": {
+     "side": "confederate",
+     "start": 40,
+     "final": 25,
+     "status": "ready"
+    }
+   },
+   "exit_code": 0,
+   "decisions_recorded_total": 40,
+   "decision_sides": [
+    "confederate",
+    "union"
+   ],
+   "player_decisions": {
+    "total": 20,
+    "model": 20,
+    "fallback": 0,
+    "source_openrouter": 20
+   },
+   "tokens": {
+    "prompt": 160591,
+    "completion": 10078,
+    "reasoning": 5676
+   },
+   "latency_ms_median": 4980.1,
+   "latency_ms_max": 7699.4,
+   "cost_usd": 0.42196,
+   "decisions_with_cost": 20,
+   "models_reported": [
+    "anthropic/claude-sonnet-5.5"
+   ]
+  }
+ ],
+ "aggregates": {
+  "all_model_runs": {
+   "runs": 14,
+   "player_side_wins": 6,
+   "mean_union_lost": 27.21,
+   "mean_confederate_lost": 37.64,
+   "mean_turns": 55.57,
+   "decisions": 261,
+   "model_decisions": 261,
+   "mean_cost_usd_per_run": 0.8349,
+   "total_cost_usd": 11.6892,
+   "mean_prompt_tokens_per_run": 135714,
+   "mean_completion_tokens_per_run": 10691,
+   "pooled_latency_ms_median": 6406.8
+  },
+  "scripted_control": {
+   "runs": 2,
+   "mean_union_lost": 40.0,
+   "mean_confederate_lost": 38.0,
+   "mean_turns": 60.0,
+   "union_wins": 2
+  },
+  "model_as_union": {
+   "runs": 7,
+   "player_side_wins": 6,
+   "mean_union_lost": 31.0,
+   "mean_confederate_lost": 28.29,
+   "mean_turns": 57.57,
+   "decisions": 135,
+   "model_decisions": 135,
+   "mean_cost_usd_per_run": 0.8725,
+   "total_cost_usd": 6.1073,
+   "mean_prompt_tokens_per_run": 140179,
+   "mean_completion_tokens_per_run": 10854,
+   "pooled_latency_ms_median": 5833.3
+  },
+  "sonnet_as_union": {
+   "runs": 5,
+   "player_side_wins": 4,
+   "mean_union_lost": 32.4,
+   "mean_confederate_lost": 31.8,
+   "mean_turns": 56.6,
+   "decisions": 95,
+   "model_decisions": 95,
+   "mean_cost_usd_per_run": 0.3942,
+   "total_cost_usd": 1.971,
+   "mean_prompt_tokens_per_run": 148916,
+   "mean_completion_tokens_per_run": 9636,
+   "pooled_latency_ms_median": 4892.6
+  },
+  "astra_as_union": {
+   "runs": 2,
+   "player_side_wins": 2,
+   "mean_union_lost": 27.5,
+   "mean_confederate_lost": 19.5,
+   "mean_turns": 60.0,
+   "decisions": 40,
+   "model_decisions": 40,
+   "mean_cost_usd_per_run": 2.0682,
+   "total_cost_usd": 4.1363,
+   "mean_prompt_tokens_per_run": 118334,
+   "mean_completion_tokens_per_run": 13899,
+   "pooled_latency_ms_median": 15677.2
+  },
+  "model_as_confederate": {
+   "runs": 7,
+   "player_side_wins": 0,
+   "mean_union_lost": 23.43,
+   "mean_confederate_lost": 47.0,
+   "mean_turns": 53.57,
+   "decisions": 126,
+   "model_decisions": 126,
+   "mean_cost_usd_per_run": 0.7974,
+   "total_cost_usd": 5.5819,
+   "mean_prompt_tokens_per_run": 131249,
+   "mean_completion_tokens_per_run": 10528,
+   "pooled_latency_ms_median": 6968.9
+  },
+  "sonnet_as_confederate": {
+   "runs": 5,
+   "player_side_wins": 0,
+   "mean_union_lost": 21.2,
+   "mean_confederate_lost": 47.2,
+   "mean_turns": 53.0,
+   "decisions": 89,
+   "model_decisions": 89,
+   "mean_cost_usd_per_run": 0.3878,
+   "total_cost_usd": 1.9392,
+   "mean_prompt_tokens_per_run": 142667,
+   "mean_completion_tokens_per_run": 10251,
+   "pooled_latency_ms_median": 6087.4
+  },
+  "astra_as_confederate": {
+   "runs": 2,
+   "player_side_wins": 0,
+   "mean_union_lost": 29.0,
+   "mean_confederate_lost": 46.5,
+   "mean_turns": 55.0,
+   "decisions": 37,
+   "model_decisions": 37,
+   "mean_cost_usd_per_run": 1.8214,
+   "total_cost_usd": 3.6427,
+   "mean_prompt_tokens_per_run": 102703,
+   "mean_completion_tokens_per_run": 11220,
+   "pooled_latency_ms_median": 13275.3
+  },
+  "sonnet_all": {
+   "runs": 10,
+   "player_side_wins": 4,
+   "mean_union_lost": 26.8,
+   "mean_confederate_lost": 39.5,
+   "mean_turns": 54.8,
+   "decisions": 184,
+   "model_decisions": 184,
+   "mean_cost_usd_per_run": 0.391,
+   "total_cost_usd": 3.9102,
+   "mean_prompt_tokens_per_run": 145792,
+   "mean_completion_tokens_per_run": 9944,
+   "pooled_latency_ms_median": 5240.6
+  },
+  "astra_all": {
+   "runs": 4,
+   "player_side_wins": 2,
+   "mean_union_lost": 28.25,
+   "mean_confederate_lost": 33.0,
+   "mean_turns": 57.5,
+   "decisions": 77,
+   "model_decisions": 77,
+   "mean_cost_usd_per_run": 1.9448,
+   "total_cost_usd": 7.779,
+   "mean_prompt_tokens_per_run": 110519,
+   "mean_completion_tokens_per_run": 12560,
+   "pooled_latency_ms_median": 14808.7
+  }
+ }
+}
