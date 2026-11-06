@@ -8,7 +8,7 @@ Simulated values quote `python3 scripts/concord_fire_release.py` and `python3 sc
 
 - **`a377ff8`.** The first version made the command's order open every hold-fire company in earshot by default. Its verdict found that this extra release has no source.
 - **`fb36c84`.** The default became `release_scope` `hit`: the order opens only the company that met the release condition. The earshot reading became the labelled sensitivity variant `sensitivity-earshot-release`.
-- **`ba4d8b7`.** A code review (BLOCK on `0e45485`) found that the release read true positions and status. It also skipped a normal order's refusals and overrode a newer `hold_fire`. The release now acts only on what headquarters knows (§2). The default Concord runs are unchanged by this; the earshot variant changes (§3).
+- **`ba4d8b7`.** A code review (BLOCK on `0e45485`) found that the release read true positions and status. It also skipped a normal order's refusals and overrode a newer `hold_fire`. The release now chooses its recipients only from what headquarters knows (§2); the trigger is the commander's direct perception of the loss. The default Concord runs are unchanged by this; the earshot variant changes (§3).
 
 ## 1. Diagnosis
 
@@ -25,12 +25,12 @@ Line numbers are at `f250220`, before this change, and were re-checked against t
 
 The change is an engine mechanic in the fire step, gated by scenario data. It changes no parameter, policy behaviour, prompt or rules edition.
 
-**What `release_by` `command` means.** It is scenario-delegated, conditional commander intent. The scenario authorizes each side's command to order "open fire once fired upon", and the release acts only on what headquarters knows. It is not an automatic historical attribution. At Concord the delegated intent stands for Buttrick's order (S47). The mechanism and its timing are the model's.
+**What `release_by` `command` means.** It is scenario-delegated, conditional commander intent. The scenario authorizes each side's command to order "open fire once fired upon", and the trigger is the commander's direct perception of the loss (authored: within voice reach, no report needed). Only the choice of which units the order reaches uses headquarters' knowledge and a normal order's refusals. It is not an automatic historical attribution. At Concord the delegated intent stands for Buttrick's order (S47). The mechanism and its timing are the model's.
 
 **Event chain the model runs.**
 
 1. A hold-fire unit takes casualties: the unchanged release condition, in the previous interval or this one.
-2. The command perceives it: its own detachment directly, any other unit through headquarters' knowledge.
+2. The command perceives the loss directly (authored: within voice reach, no report needed).
 3. The command speaks an `open_fire` order.
 4. The order is delivered in the same interval.
 5. `fire_posture_set` makes the unit `open_fire`.
