@@ -99,6 +99,27 @@ SCRIPTED_TEXT = 'General, we shall proceed according to our standing orders.'
 SCRIPTED_TEXTS = {COLONIAL_VOICE_PROFILE: 'Colonel, the companies will proceed according to their standing orders.'}
 
 
+# poc-13B review: how staff address the player, by voice. Standing-order,
+# recommendation and staff-assessment text is stored as "General, ..."; a voice
+# listed here shows it with its own title. Other voices add no display field.
+VOICE_ADDRESS = {COLONIAL_VOICE_PROFILE: 'Colonel'}
+
+
+def _address(text, title):
+    return title + text[len('General'):] if text.startswith('General, ') else text
+
+
+def present_analysis(analysis, entry=None):
+    """The staff assessment for display: in a voice with its own address
+    (``VOICE_ADDRESS``) each recommendation gains ``display_reason``.
+    Test: `test_1775_standing_and_recommendation_text_does_not_say_general`."""
+    title = VOICE_ADDRESS.get(entry.voice_profile if entry else VOICE_PROFILE)
+    if title:
+        for row in analysis.get('units', []):
+            row['recommendation']['display_reason'] = _address(row['recommendation']['reason'], title)
+    return analysis
+
+
 def scripted_text(voice_profile):
     """The scripted decision's text in ``voice_profile`` (poc-13B: 1775 has its own)."""
     return SCRIPTED_TEXTS.get(voice_profile, SCRIPTED_TEXT)
@@ -168,4 +189,12 @@ def present_view(observation, entry=None):
             dispatch.update(message_key=key, message_args=args,
                             display_text=texts[key].format(**shown))
             break
+    title = VOICE_ADDRESS.get(voice)
+    if title:  # poc-13B review: no "General" in the 1775 voice.
+        for dispatch in result.get('dispatches', []):
+            dispatch['display_text'] = _address(dispatch['display_text'], title)
+        for r in result.get('recommendations', []):
+            r['display_text'] = _address(r['text'], title)
+    if 'analysis' in result:
+        present_analysis(result['analysis'], entry)
     return result

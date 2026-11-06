@@ -92,9 +92,13 @@ def succession(s,emit,message):
     re-addressed to it. With no such unit, ``command_lost``: the side keeps
     no working command and its units continue under standing orders.
     Test: `test_side_command_passes_to_the_named_successor_after_the_delay`,
-    `test_side_with_no_successor_falls_back_to_standing_orders`."""
+    `test_side_with_no_successor_falls_back_to_standing_orders`,
+    `test_both_commands_falling_in_one_interval_replay_identically`,
+    `test_reports_on_their_way_to_the_fallen_command_go_to_the_successor`."""
     if 'command_rules' not in s:return
-    for side in s['commanders']:
+    # poc-13B review: scenario side order, never dict-key order, which a Store
+    # load sorts; otherwise two vacancies in one interval replay out of order.
+    for side in (x['id'] for x in s['sides']):
         vacancy=s['command_vacancy'].get(side)
         if comms.operational(s,side):
             s['command_vacancy'].pop(side,None);continue

@@ -76,7 +76,7 @@ const TroopAnalysis = {
       $('standing-intent').textContent = templates.find(template => template.id === $('standing-profile').value).intent;
       $('standing-current').textContent = 'Last reported: ' + (label(unit.standing_profile) || 'Legacy contact behavior') +
         (unit.standing_version !== null ? ' · version ' + unit.standing_version : '');
-      $('standing-recommendation').textContent = 'Suggested: ' + label(unit.recommendation.profile_id) + '. ' + unit.recommendation.reason;
+      $('standing-recommendation').textContent = 'Suggested: ' + label(unit.recommendation.profile_id) + '. ' + (unit.recommendation.display_reason ?? unit.recommendation.reason);
 
       const disabled = busy || replay || godMode || !['poc-8', 'poc-9', 'poc-10', 'poc-11', 'poc-12', 'poc-13'].includes(state.rules) || state.status !== 'active' ||
         !assessment.command_operational || ['routed', 'lost'].includes(unit.status);

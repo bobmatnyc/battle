@@ -161,6 +161,76 @@ class SuccessionTests(unittest.TestCase):
             build_state(era_entry(), "poc-12")
 
 
+class SuccessionReviewTests(unittest.TestCase):
+    """Fixes from the part B review (code-critic)."""
+
+    def test_both_commands_falling_in_one_interval_replay_identically(self):
+        s = era()
+        unit(s, "B1")["morale"] = 0
+        unit(s, "G1")["morale"] = 0
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp) / "succession.sqlite")
+            gid = store.create(s)
+            for _ in range(3):  # In memory, as the headless runner keeps it.
+                if s["status"] != "active":break
+                n = runtime.apply(s, {"type": "advance", "decision": None})
+                store.save(gid, n, s["revision"])
+                s = n
+            self.assertEqual([e["side"] for e in events(s, "command_vacant")], ["union", "confederate"])
+            self.assertEqual(runtime.verify_replay(store, gid)["status"], "identical")
+
+    def test_standing_instruction_to_a_leaderless_unit_is_refused(self):
+        from battle import standing
+
+        s = era()
+        sent = standing.issue(s, "union", {"unit_id": "B2", "profile_id": "cautious"})
+        unit(s, "B2")["leaderless"] = True
+        s = advance(s, 3)
+        self.assertEqual(next(o for o in s["standing_orders"] if o["id"] == sent["id"])["status"], "refused")
+        self.assertEqual(unit(s, "B2")["standing_profile"], "balanced")
+
+    def test_registration_refuses_units_without_an_officer(self):
+        with self.assertRaisesRegex(ValueError, "officers must be a positive integer"):
+            validate(era_entry(command=dataclasses.replace(COMMAND, officers=0)))
+        with self.assertRaisesRegex(ValueError, "officers must be a positive integer"):
+            validate(era_entry(units=(UnitEntry("B1", "union", "Blue command", (5, 12), {"officers": 0}),
+                                      UnitEntry("G1", "confederate", "Grey guard", (20, 2)))))
+
+    def test_reports_on_their_way_to_the_fallen_command_go_to_the_successor(self):
+        s = era()
+        unit(s, "B1")["morale"] = 0
+        s = advance(s)  # B1 routs: the vacancy opens.
+        pending = next(r for r in s["reports"] if r["data"] and r["data"].get("id") == "B3")
+        rid, before = pending["transport"]["id"], pending["transport"]["forwardings"]
+        self.assertEqual(pending["transport"]["recipient_id"], "B1")
+        s = advance(s)  # B2 takes command.
+        moved = next(r for r in s["reports"] if r["transport"]["id"] == rid)["transport"]
+        self.assertEqual((moved["recipient_id"], moved["forwardings"], moved["address"]),
+                         ("B2", before + 1, unit(s, "B2")["pos"]))
+        for _ in range(12):
+            if any(e["report_id"] == rid for e in events(s, "report_received")):break
+            s = advance(s)
+        self.assertTrue(any(e["report_id"] == rid for e in events(s, "report_received")))
+
+    def test_1775_standing_and_recommendation_text_does_not_say_general(self):
+        from battle import analysis, standing
+
+        s = era()
+        standing.issue(s, "union", {"unit_id": "B3", "profile_id": "cautious"})
+        view = engine.view(s, "union")
+        view["recommendations"] = [{"id": "A1", "text": "General, the men are fatigued."}]
+        shown = present_view(view, era_entry())
+        self.assertTrue(shown["dispatches"][-1]["display_text"].startswith("Colonel, preserve"))
+        self.assertEqual(shown["recommendations"][0]["display_text"], "Colonel, the men are fatigued.")
+        rows = present_view(dict(view, analysis=analysis.assess(view)), era_entry())["analysis"]["units"]
+        self.assertTrue(all(r["recommendation"]["display_reason"].startswith("Colonel,") for r in rows))
+        # Other voices are untouched: no display text is added or changed.
+        plain = present_view(dict(view, analysis=analysis.assess(view)))
+        self.assertEqual(plain["dispatches"][-1]["display_text"], plain["dispatches"][-1]["text"])
+        self.assertNotIn("display_text", plain["recommendations"][0])
+        self.assertNotIn("display_reason", plain["analysis"]["units"][0]["recommendation"])
+
+
 class VoiceReachTests(unittest.TestCase):
     """A spoken order reaches only units within earshot; others get a runner."""
 

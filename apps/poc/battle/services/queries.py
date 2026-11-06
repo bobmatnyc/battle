@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from ..contracts import AuditUnavailable, BattleRepository, Document, Simulation, UnknownScenario
-from ..presentation import scenario_brief
+from ..presentation import present_analysis, scenario_brief
 from .replay import ReplayService
 
 
@@ -53,7 +53,7 @@ class BattleQueries:
         )
         if entry is not None:
             result["scenario_brief"] = scenario_brief(entry, commander_view["side"])
-        result["analysis"] = self.assess(commander_view)
+        result["analysis"] = present_analysis(self.assess(commander_view), entry)  # poc-13B review: 1775 address
         return result
 
     def replay(self, game_id, revision, *, god=False):

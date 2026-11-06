@@ -75,17 +75,22 @@ def command_problems(entry):
     """Why: a succession list the rules cannot follow must fail at registration.
     What: problems with ``entry.command``: every side of the list is a
     scenario side, every successor a unit of that side other than its
-    command unit and listed once; counts are non-negative integers, and so is
-    every unit override ``officers``.
-    Test: `test_registration_refuses_bad_command_data`."""
+    command unit and listed once; ``officers`` (the default and every unit
+    override) is a positive integer, the other counts non-negative integers.
+    Test: `test_registration_refuses_bad_command_data`,
+    `test_registration_refuses_units_without_an_officer`."""
     command, problems = entry.command, []
+    # poc-13B review: a unit starts with at least one officer; only losses or
+    # a split make it leaderless, so no unit starts orderable without one.
     for u in entry.units:
-        if "officers" in u.overrides and not _count(u.overrides["officers"]):
-            problems.append(f"unit {u.id!r} officers must be a non-negative integer")
+        if "officers" in u.overrides and not _count(u.overrides["officers"], 1):
+            problems.append(f"unit {u.id!r} officers must be a positive integer")
     if command is None:
         return problems
-    if not all(_count(v) for v in (command.officers, command.succession_delay, command.leaderless_morale)):
-        problems.append("command officers, succession_delay and leaderless_morale must be non-negative integers")
+    if not _count(command.officers, 1):
+        problems.append("command officers must be a positive integer")
+    if not all(_count(v) for v in (command.succession_delay, command.leaderless_morale)):
+        problems.append("command succession_delay and leaderless_morale must be non-negative integers")
     sides = {u.id: u.side for u in entry.units}
     for side, successors in command.succession.items():
         if side not in entry.sides:

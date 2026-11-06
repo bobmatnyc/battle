@@ -70,7 +70,8 @@ def deliver(s):
         if status=='expired':
             o['status']='expired'
         elif o['version']<=u['standing_version']:o['status']='superseded'
-        elif u['status'] in ('routed','lost','merged'):o['status']='refused'
+        # poc-13B review: a leaderless unit refuses standing instructions too.
+        elif u['status'] in ('routed','lost','merged') or u.get('leaderless'):o['status']='refused'
         else:
             o['status']='delivered'
             u.update(standing_profile=o['profile_id'],standing_version=o['version'])
