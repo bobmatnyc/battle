@@ -131,3 +131,5 @@ Historical calibration is much less complete than the game-system survey. One in
 [42 — Hougoumont north gate](42-hougoumont-scenario.md) adds the Hougoumont catalog entry on `poc-10`: an authored map of the walled farm and its north gate, reconstructed missions, authored gate labour, the `hold-compound` victory kind, a minimal 1815 voice and command profile, and the basis of every field.
 
 [43 — Concord North Bridge scenario build spec](43-concord-scenario-spec.md) proposes the Concord catalog entry field by field with its provenance, classifies each missing mechanic as data, rule or UI, designs the rule changes, groups them into one rules edition, and sets out scripted controls and open questions. It adds no code.
+
+[44 — Pushing through a held gateway (`poc-11`)](44-poc11-gateway-push.md) adds authored push effort that displaces a defender from an open gateway, freezes the `poc-10` engine, and records the Hougoumont outcomes.
