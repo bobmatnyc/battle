@@ -54,7 +54,22 @@ The schema required one value each for `voice_profile` and `communications`, and
 
 ## Scripted-vs-scripted run
 
-`build_headless` with `--scenario hougoumont-north-gate` and both sides scripted ends at turn 60 with `allied`, "The Allied garrison held the farm until the scenario deadline." Replay is `identical` (62 revisions). The final strengths are A1 15, A2 38 (routed), A3 0 (lost), F1 7 (routed), F2 68 and F3 31. No French unit entered the compound. The gate stayed open, because the scripted control issues no *Close the gate* order. Legros's party routed at turn 4 under fire from the walls. The follow-on companies stayed between the lane and the wood edge, reacting locally to fire. This tests the plumbing. It is not a historical comparison.
+This section records the run before the gate-aware control below; it is reproduced today with `--player-policy scripted-fallback-v1`. `build_headless` with `--scenario hougoumont-north-gate` and both sides scripted ends at turn 60 with `allied`, "The Allied garrison held the farm until the scenario deadline." Replay is `identical` (62 revisions). The final strengths are A1 15, A2 38 (routed), A3 0 (lost), F1 7 (routed), F2 68 and F3 31. No French unit entered the compound. The gate stayed open, because the scripted control issues no *Close the gate* order. Legros's party routed at turn 4 under fire from the walls. The follow-on companies stayed between the lane and the wood edge, reacting locally to fire. This tests the plumbing. It is not a historical comparison.
+
+## Gate-aware scripted defender
+
+The fallback control moved the gate party off the gateway and never closed the gate, so the scripted baseline skipped the decision the scenario turns on. The defender now has its own control, `scripted-gate-defender-v1` (`command_policy.gate_defender_actions`):
+
+- The gate party is the live unit nearest the gateway hex, then by id (A1 at the start). It is kept on the gateway: a move back if it is elsewhere, a hold if it is there.
+- At the first decision it gets the `close_on_breach` standing order, once, through normal standing-order delivery.
+- When a delivered contact stands inside the compound and the known gate is not barred, it is ordered to `close_gate` through normal order delivery. The standing order may already have started the work locally.
+- Other units fill the compound ring as the fallback defender does, skipping the gateway. At most three orders a decision.
+
+**Selection.** The headless runner picks the control for the scripted player side from the entry: the defender of an entry with `gates` gets `scripted-gate-defender-v1`; every other side and scenario keeps `scripted-fallback-v1`. `--player-policy` overrides it; the gate control is refused for a side that does not defend a gated scenario. A run under the gate control records `player_policy` in its run metadata and prints the metadata in its summary; `opponent` still names the French control. Other runs keep their metadata and output: `make headless-poc` output, game id blanked, is byte-identical (`cmp`) to `b26aa63`. The gate control drives only the direct-orders path of the player side. When Allied is the computer side (a French player), the commander's scripted decisions still use the fallback, because a decision carries orders but no standing order.
+
+**Outcome.** With the gate-aware defender, the scripted run ends at turn 28: `allied`, "The attacking formations have broken." Replay is `identical` (32 revisions). Final strengths: A1 15, A2 28 (routed), A3 57, F1 6, F2 65, F3 19, all French routed. A1 received `close_on_breach` at turn 1 and held the gateway. No French unit entered the compound, so no breach was observed, no close order was sent and the gate stayed open; the capture counter never left 0. Legros's party routed at turn 4, as before. Keeping A1 in the gateway blocks it, because units cannot stack. This tests the control; it is not a historical comparison.
+
+**Engine-driven tests** (`HoldCompoundEngineTests`, through `RulesSimulation` and a stored game, each checking replay): French troops enter, the gate party shuts the gate under its delivered standing order after a `gate_blocked` interval, and F1 is `cut_off` inside with the capture counter at 0 while the gate party stands; a capture count of 1 to 5 reset to 0 when the Allied commander marches back in; a draw when both sides have no effective formation; a French win when the Allied side has none. The arrangements (an unarmed garrison, a relief one hex from the gate) are test set-ups, not scenario changes.
 
 ## Not modelled
 
