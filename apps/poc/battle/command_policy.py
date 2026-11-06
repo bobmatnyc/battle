@@ -106,6 +106,119 @@ def gate_defender_actions(observation):
     return standing, orders[:3]
 
 
+# Scripted control for the attacker of a gated scenario (docs/research/44).
+GATE_ATTACKER_POLICY = "scripted-gate-attacker-v1"
+ASSAULT_STANDING = "firm"
+ASSAULT_SIZE = 2
+
+
+def gate_attacker_actions(observation):
+    """Why: the attacker of a walled compound must carry its gateway; the
+    fallback control never brought a unit to the gate, so no push happened.
+    What: returns ``(standing, orders)`` from the side's own observation
+    (reported positions and delivered contacts only). The opening is the
+    known one whose outside hex is nearest a live unit (then by id). The
+    assault group is the two live units already sent in, then nearest that
+    hex (then by id); each gets the ``firm`` standing instruction once. The
+    lead is ordered to the gateway (to a free compound hex if a friend holds
+    it), so the engine marches it to the outside hex and the push rule
+    engages once the order is delivered. The second waits by the walls until
+    the lead is inside, because two units bound for one hex both wait. A
+    unit reported inside holds; one in the gateway steps to a free compound
+    hex to clear it for the next. Other units hold, or take the free hex by
+    the walls nearest them, as fire positions. Orders in transit are not
+    resent. At most three orders. Without a known gate it returns
+    ``([], fallback_orders(observation, "attacker"))``.
+    Test: `test_gate_attacker_reaches_the_outside_hex_and_pushes_through_delivery`,
+    `test_gate_attacker_reads_only_the_hq_view`.
+    """
+    if observation.get("command", {}).get("operational") is False:
+        return [], []
+    live = sorted((u for u in observation["units"] if u["status"] not in ("lost", "routed")),
+                  key=lambda u: u["id"])
+    gated = [f for f in observation.get("map_features", ()) if f.get("openings")]
+    if not gated or not live:
+        return [], fallback_orders(observation, "attacker")
+    feature, gate = min(
+        ((f, o) for f in gated for o in f["openings"]),
+        key=lambda fo: (min(grid.distance(u["pos"], fo[1]["outside"]) for u in live),
+                        fo[0]["id"], fo[1]["id"]))
+    outside, gateway = list(gate["outside"]), list(gate["inside"])
+    compound = [list(p) for p in feature["compound"]]
+    held = {grid.key(u["pos"]) for u in observation["units"]} | {
+        grid.key(c["pos"]) for c in observation.get("contacts", ())}
+    # The latest order per unit still travelling; it is not sent twice.
+    pending = {o["unit_id"]: (o["stance"], o["destination"]) for o in observation.get("orders", ())
+               if o.get("status") in ("awaiting_ack", "en_route")}
+
+    def committed(u):
+        # Already ordered into the compound, as reported or still in transit.
+        sent = pending.get(u["id"])
+        return u.get("target") in compound or (sent is not None and sent[1] in compound)
+
+    # Units already sent in lead, so the assault does not change hands as reports arrive.
+    ranked = sorted(live, key=lambda u: (not committed(u), grid.distance(u["pos"], outside), u["id"]))
+    assault, support = ranked[:ASSAULT_SIZE], sorted(ranked[ASSAULT_SIZE:], key=lambda u: u["id"])
+    templates = {t["id"] for t in observation.get("standing_templates", ())}
+    issued = {o["unit_id"] for o in observation.get("standing_orders", ())
+              if o["profile_id"] == ASSAULT_STANDING}
+    standing = [{"unit_id": u["id"], "profile_id": ASSAULT_STANDING}
+                for u in sorted(assault, key=lambda u: u["id"])
+                if ASSAULT_STANDING in templates and u.get("standing_profile") != ASSAULT_STANDING
+                and u["id"] not in issued]
+    free_inside = sorted((p for p in compound if p != gateway and grid.key(p) not in held),
+                         key=lambda p: (grid.distance(gateway, p), p))
+    # Free hexes by the walls; the outside hex is the assault's.
+    ring = sorted({grid.key(n): n for p in compound for n in grid.neighbors(p)
+                   if n not in compound and n != outside and grid.key(n) not in held}.values(),
+                  key=lambda p: (grid.distance(outside, p), p))
+    orders = []
+
+    def send(u, target):
+        if u["pos"] == target:
+            order = {"unit_id": u["id"], "stance": "hold", "destination": None}
+            wanted = u["stance"] != "hold"
+        else:
+            order = {"unit_id": u["id"], "stance": "move", "destination": target}
+            wanted = u.get("target") != target
+        if wanted and pending.get(u["id"]) != (order["stance"], order["destination"]):
+            orders.append(order)
+
+    def post(u):
+        # Hold a hex by the walls, or take the free one nearest the unit, so
+        # units do not cross the approach to the outside hex.
+        near_wall = any(grid.distance(u["pos"], p) == 1 for p in compound)
+        if near_wall and u["pos"] != outside:
+            send(u, u["pos"])
+        elif ring:
+            p = min(ring, key=lambda p: (grid.distance(u["pos"], p), grid.distance(outside, p), p))
+            ring.remove(p)
+            send(u, p)
+
+    lead_inside = assault[0]["pos"] in compound
+    others_outside = any(u["pos"] not in compound for u in assault)
+    for i, u in enumerate(assault):
+        if u["pos"] == gateway and others_outside and free_inside:
+            send(u, free_inside.pop(0))  # Clear the gateway for the next unit.
+        elif u["pos"] in compound:
+            send(u, u["pos"])  # Hold the compound once inside.
+        elif committed(u):
+            continue  # Already ordered in; the push needs the order kept.
+        elif i and not lead_inside:
+            # One unit makes for the outside hex at a time: two units bound for
+            # the same hex both wait. The next stands by the walls meanwhile.
+            post(u)
+        else:
+            friend_in_gateway = any(f["pos"] == gateway for f in live)
+            send(u, free_inside[0] if friend_in_gateway and free_inside else gateway)
+    for u in support:
+        if u["pos"] in compound:
+            send(u, u["pos"])
+        else:
+            post(u)
+    return standing, orders[:3]
+
+
 # Little Round Top is the default scenario for callers that inject no catalog.
 DEFAULT_SCENARIO = LITTLE_ROUND_TOP
 
@@ -116,23 +229,37 @@ PROMPT_VERSION = DEFAULT_SCENARIO.prompt_version
 
 # Scripted control used for the side that no model plays; recorded in run metadata.
 OPPONENT_POLICY = "scripted-fallback-v1"
-SCRIPTED_POLICIES = (OPPONENT_POLICY, GATE_DEFENDER_POLICY)
+SCRIPTED_POLICIES = (OPPONENT_POLICY, GATE_DEFENDER_POLICY, GATE_ATTACKER_POLICY)
+# Gate-aware controls by role; their decisions record ``policy`` and ``standing``.
+GATE_POLICIES = {"defender": GATE_DEFENDER_POLICY, "attacker": GATE_ATTACKER_POLICY}
 
 
 def scripted_policy(entry, side):
     """The entry's scripted control for ``side``, whether the player or the
-    computer runs it: the gate-aware defender when the entry has gates and
-    ``side`` defends, else ``scripted-fallback-v1``."""
-    if entry.gates is not None and entry.sides[side].role == "defender":
-        return GATE_DEFENDER_POLICY
+    computer runs it: the gate-aware control of ``side``'s role when the
+    entry has gates, else ``scripted-fallback-v1``.
+    Test: `test_gate_attacker_selection_and_refusal`."""
+    if entry.gates is not None:
+        return GATE_POLICIES.get(entry.sides[side].role, OPPONENT_POLICY)
     return OPPONENT_POLICY
+
+
+def gate_policy_refusal(requested, default):
+    """The refusal text when gate control ``requested`` does not fit the side
+    whose entry default is ``default``, else None."""
+    sides = {GATE_DEFENDER_POLICY: "defending", GATE_ATTACKER_POLICY: "attacking"}
+    if requested in sides and default != requested:
+        return f"{requested} needs the {sides[requested]} side of a gated scenario"
+    return None
 
 
 def scripted_actions(policy, observation, role):
     """``(standing, orders)`` of scripted control ``policy`` for a side in
-    ``role``; only the gate-aware defender issues standing instructions."""
+    ``role``; only the gate-aware controls issue standing instructions."""
     if policy == GATE_DEFENDER_POLICY:
         return gate_defender_actions(observation)
+    if policy == GATE_ATTACKER_POLICY:
+        return gate_attacker_actions(observation)
     return [], fallback_orders(observation, role)
 
 # Voice profile id -> prose instruction. Entries name one of these.

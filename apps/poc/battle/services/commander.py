@@ -5,7 +5,7 @@ import time
 from copy import deepcopy
 from ..contracts import DecisionProvider, ProviderFailure, ScenarioCatalog, Simulation
 from ..command_policy import (
-    DEFAULT_SCENARIO, GATE_DEFENDER_POLICY, scripted_actions, system_prompt,
+    DEFAULT_SCENARIO, GATE_POLICIES, scripted_actions, system_prompt,
 )
 
 # Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
@@ -151,7 +151,8 @@ class CommanderService:
         ``reply_format`` is the provider's (json, extracted, tool_call), or
         ``none`` when the provider failed. In any other mode the scripted
         control ``policy`` decides (None: ``scripted-fallback-v1``); a
-        ``scripted-gate-defender-v1`` decision also carries the ``standing``
+        ``scripted-gate-defender-v1`` or ``scripted-gate-attacker-v1`` decision
+        also carries the ``standing``
         instructions it issues and its ``policy``. A model's fallback stays
         the plain fallback control.
         Test: `test_model_french_run_gives_the_computer_allies_the_gate_defender`,
@@ -240,8 +241,8 @@ class CommanderService:
             "model": None,
             "voice_profile": self.display_scenario(state).voice_profile,
         }
-        if policy == GATE_DEFENDER_POLICY:
-            # Only this control adds fields, so other records keep their shape;
+        if policy in GATE_POLICIES.values():
+            # Only the gate controls add fields, so other records keep their shape;
             # replay issues the stored instructions without re-running the policy.
             record.update(policy=policy, standing=standing)
         return record

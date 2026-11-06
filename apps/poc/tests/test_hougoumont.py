@@ -236,11 +236,13 @@ class GateDefenderPolicyTests(unittest.TestCase):
             result = build_headless(db, scenario_id=ENTRY.id, scenarios=catalog()).run()
             self.assertEqual(result["replay"]["status"], "identical")
             self.assertEqual(result["run"]["player_policy"], "scripted-gate-defender-v1")
-            self.assertEqual(result["run"]["opponent"], "scripted-fallback-v1")
+            self.assertEqual(result["run"]["opponent"], "scripted-gate-attacker-v1")
             final = build_replay(db).repository.load(result["game_id"])
             self.assertEqual(final["run"], result["run"])
-            self.assertEqual([(o["unit_id"], o["profile_id"], o["status"]) for o in final["standing_orders"]],
-                             [("A1", "close_on_breach", "delivered")])
+            # The French gate attacker issues its own standing orders; A1 is the first gate party.
+            allied = [(o["unit_id"], o["profile_id"], o["status"]) for o in final["standing_orders"]
+                      if o["unit_id"].startswith("A")]
+            self.assertEqual(allied[0], ("A1", "close_on_breach", "delivered"))
             self.assertNotIn("A1", [o["unit_id"] for o in final["orders"] if o["side"] == "allied"])
             with self.assertRaisesRegex(ValueError, "defending side of a gated scenario"):
                 build_headless(Path(tmp) / "lrt.sqlite", player_policy="scripted-gate-defender-v1")
@@ -291,6 +293,117 @@ class GateDefenderPolicyTests(unittest.TestCase):
                       [(o["unit_id"], o["stance"], o["status"]) for o in run.state["orders"]
                        if o["side"] == "allied"])
         self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+
+
+ATTACKER = "scripted-gate-attacker-v1"
+OUTSIDE, GATEWAY = [11, 8], [11, 9]
+
+
+def attack(run, commander, turns):
+    """Advance ``run`` ``turns`` intervals with the French computer side
+    deciding under the gate attacker every third turn, as the runner does."""
+    for _ in range(turns):
+        decision = None
+        if run.state["turn"] % 3 == 0:
+            decision = commander.decide(run.state, "french", mode="scripted", policy=ATTACKER)
+        run.step({"type": "advance", "decision": decision})
+
+
+class GateAttackerPolicyTests(unittest.TestCase):
+    def test_gate_attacker_reaches_the_outside_hex_and_pushes_through_delivery(self):
+        # No garrison in sight: F1, ordered into the farm, marches through the outside hex.
+        far = {"A1": {"pos": [20, 18]}, "A2": {"pos": [21, 18]}, "A3": {"pos": [22, 18]}}
+        run = EngineRun(arranged(F1={"pos": [11, 5]}, **far))
+        commander = CommanderService(run.sim, DisabledProvider(), scenarios=catalog())
+        attack(run, commander, 1)
+        self.assertEqual(run.state["decisions"][0]["orders"][0],
+                         {"unit_id": "F1", "stance": "move", "destination": GATEWAY})
+        while run.unit("F1")["pos"] != OUTSIDE and run.state["turn"] < 12:
+            attack(run, commander, 1)
+        self.assertEqual(run.unit("F1")["pos"], OUTSIDE)
+        self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+        # A1 holds the gateway. F1, already on the outside hex, pushes only once the
+        # policy's order to enter has been delivered by normal transport.
+        run = EngineRun(arranged(A1={"ammo": 0, "strength": 80, "initial": 80}, A2={"ammo": 0}, A3={"pos": [20, 2]},
+                                 F1={"pos": OUTSIDE, "strength": 60, "initial": 60}))
+        commander = CommanderService(run.sim, DisabledProvider(), scenarios=catalog())
+        while run.state["turn"] < 15 and not any(e["kind"] == "gateway_carried" for e in run.state["events"]):
+            attack(run, commander, 1)
+        delivered = next(e["turn"] for e in run.state["events"]
+                         if e["kind"] == "order_delivered" and e.get("unit_id") == "F1")
+        pushes = [e for e in run.state["events"] if e["kind"] == "gateway_push"]
+        self.assertTrue(pushes)
+        self.assertEqual({tuple(e["pushers"]) for e in pushes}, {("F1",)})
+        self.assertGreater(delivered, 0)
+        self.assertGreaterEqual(min(e["turn"] for e in pushes), delivered)
+        carried = next(e for e in run.state["events"] if e["kind"] == "gateway_carried")
+        self.assertEqual((carried["unit_id"], carried["holder_id"]), ("F1", "A1"))
+        self.assertIn(list(run.unit("F1")["pos"]), COMPOUND)
+        self.assertEqual({d["policy"] for d in run.state["decisions"]}, {ATTACKER})
+        self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+
+    def test_gate_attacker_reads_only_the_hq_view(self):
+        from battle.command_policy import gate_attacker_actions
+
+        s = build_state(ENTRY)
+        view = engine.view(s, "french")
+        standing, orders = gate_attacker_actions(view)
+        self.assertEqual(standing, [{"unit_id": "F1", "profile_id": "firm"},
+                                    {"unit_id": "F3", "profile_id": "firm"}])
+        # F1 makes for the gateway; F3 waits by the walls; F2 takes a fire position.
+        self.assertEqual(orders, [{"unit_id": "F1", "stance": "move", "destination": GATEWAY},
+                                  {"unit_id": "F3", "stance": "move", "destination": [10, 12]},
+                                  {"unit_id": "F2", "stance": "move", "destination": [9, 10]}])
+        # A1 truly leaves the gateway for F2's fire position; nobody has reported it.
+        engine.find_unit(s, "A1")["pos"] = [9, 10]
+        self.assertEqual(gate_attacker_actions(engine.view(s, "french")), (standing, orders))
+        # A delivered contact on that hex does move F2 to another free hex by the walls.
+        view["contacts"] = [{"id": "A1", "pos": [9, 10], "side": "allied"}]
+        self.assertNotIn([9, 10], [o["destination"] for o in gate_attacker_actions(view)[1]])
+        # Once inside the walls the assault holds.
+        view["contacts"] = []
+        view["units"][0].update(pos=[11, 10], stance="move")
+        self.assertIn({"unit_id": "F1", "stance": "hold", "destination": None}, gate_attacker_actions(view)[1])
+
+    def test_gate_attacker_selection_and_refusal(self):
+        import subprocess
+        import sys
+        from battle.command_policy import scripted_policy
+
+        self.assertEqual((scripted_policy(ENTRY, "french"), scripted_policy(ENTRY, "allied")),
+                         (ATTACKER, "scripted-gate-defender-v1"))
+        self.assertEqual({scripted_policy(LITTLE_ROUND_TOP, side) for side in LITTLE_ROUND_TOP.sides},
+                         {"scripted-fallback-v1"})
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "h.sqlite"
+            computer = build_headless(db, scenario_id=ENTRY.id, scenarios=catalog())
+            self.assertEqual(computer.metadata(build_state(ENTRY))["opponent"], ATTACKER)
+            player = build_headless(db, scenario_id=ENTRY.id, scenarios=catalog(), player_side="french")
+            meta = player.metadata(build_state(ENTRY))
+            self.assertEqual((meta["player_policy"], meta["opponent"]), (ATTACKER, "scripted-gate-defender-v1"))
+            refused = (
+                dict(player_policy=ATTACKER),  # Little Round Top has no gate.
+                dict(opponent=ATTACKER),
+                dict(scenario_id=ENTRY.id, scenarios=catalog(), player_policy=ATTACKER),  # Allied player.
+                dict(scenario_id=ENTRY.id, scenarios=catalog(), player_side="french", opponent=ATTACKER),
+            )
+            for kwargs in refused:
+                with self.subTest(**{k: v for k, v in kwargs.items() if k != "scenarios"}):
+                    with self.assertRaisesRegex(ValueError, "attacking side of a gated scenario"):
+                        build_headless(db, **kwargs)
+            cli = subprocess.run(
+                [sys.executable, "-m", "battle", "--headless", "--db", str(db),
+                 "--player-policy", ATTACKER], capture_output=True, text=True,
+                cwd=Path(__file__).resolve().parent.parent)
+        self.assertEqual(cli.returncode, 2)
+        self.assertIn(f"{ATTACKER} needs the attacking side of a gated scenario", cli.stderr)
+        # Only the gate controls add fields: a fallback decision keeps its shape.
+        run = EngineRun(build_state(ENTRY))
+        commander = CommanderService(run.sim, DisabledProvider(), scenarios=catalog())
+        plain = commander.decide(run.state, "french", mode="scripted")
+        gated = commander.decide(run.state, "french", mode="scripted", policy=ATTACKER)
+        self.assertEqual(set(gated) - set(plain), {"policy", "standing"})
+        self.assertNotIn("policy", plain)
 
 
 class HoldCompoundEngineTests(unittest.TestCase):

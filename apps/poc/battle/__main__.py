@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from .bootstrap import PLAYER_SCENARIOS, build_application, build_headless, build_replay
-from .command_policy import GATE_DEFENDER_POLICY, SCRIPTED_POLICIES
+from .command_policy import GATE_ATTACKER_POLICY, GATE_DEFENDER_POLICY, SCRIPTED_POLICIES
 from .config import EFFORTS
 from .contracts import UnknownScenario
 
@@ -60,7 +60,8 @@ def main():
         "--player-policy",
         choices=list(SCRIPTED_POLICIES),
         help="Scripted control for a scripted player side (default: the scenario's choice, "
-        f"{GATE_DEFENDER_POLICY} for the defender of a gated scenario)",
+        f"{GATE_DEFENDER_POLICY} for the defender and {GATE_ATTACKER_POLICY} for the "
+        "attacker of a gated scenario)",
     )
     headless.add_argument("--model", help="OpenRouter model id (default: Settings)")
     headless.add_argument(

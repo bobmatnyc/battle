@@ -38,11 +38,30 @@ The entry carries `gateway_push: GatewayPushEntry(push_labour, push_cap)`, store
 
 ## Hougoumont outcomes (`poc-11`)
 
-**Scripted run** (both sides scripted, `scripted-gate-defender-v1` for the Allies, authored start): unchanged from `poc-10`. `allied` wins at turn 28, "The attacking formations have broken." No French unit reaches the gate's outside hex, so there is no push and no breach; the gate stays open, no unit is cut off, the capture counter stays at 0. Replay is `identical`.
+**Scripted run** (both sides scripted, `scripted-gate-defender-v1` for the Allies and `scripted-fallback-v1` for the French, authored start; superseded by the gate-aware attacker below): unchanged from `poc-10`. `allied` wins at turn 28, "The attacking formations have broken." No French unit reaches the gate's outside hex, so there is no push and no breach; the gate stays open, no unit is cut off, the capture counter stays at 0. Replay is `identical`.
 
 **Engine-driven north-gate arrangement** (`test_french_carry_the_held_north_gate`): Legros's party on the outside hex and the follow-on companies near the gate, both ordered into the farm under *Hold ground firmly*; the gate party and A2 without cartridges; A3 away on the ridge; A1 under `close_on_breach`. Legros's party pushes 20 a turn and carries the gateway at turn 3, displacing the gate party to the château hex, which routs in the same interval and so never closes the gate. The French win at turn 15 with the capture counter at 6; the gate stays open and nobody is cut off. Replay is `identical`. In `poc-10` the same start never breaches by turn 15. These are test set-ups, not scenario changes.
 
 **Observed limit.** With the authored garrison and its fire, the push seldom completes: in trial runs the French party withdrew under its standing order ("a much stronger enemy") or the holder left the gateway for cover before the third interval. The gate-closing sequence after a push (French inside, gate shut behind them) is therefore possible but not reached in these runs.
+
+## Gate-aware scripted attacker
+
+Under `scripted-fallback-v1` the French never reached the gate, so live runs with a model as the Allies met no assault. The attacker now has its own control, `scripted-gate-attacker-v1` (`command_policy.gate_attacker_actions`). It reads only the French headquarters view: reported positions, delivered contacts and orders in transit. Ties break by distance, then by id or hex.
+
+- **Opening.** The known opening whose outside hex is nearest a live unit.
+- **Assault group.** Two units: those already ordered into the compound first, then the nearest to the outside hex. Each gets the *Hold ground firmly* standing instruction once.
+- **Lead.** Ordered to the gateway hex. The engine routes it to the outside hex, and once the order is delivered the push rule engages there. The second unit waits by the walls until the lead is inside, because two units moving into one hex both wait every interval.
+- **Inside.** A unit reported inside holds. One in the gateway steps to a free compound hex, so the next can enter.
+- **Support.** Other units hold a hex by the walls, or take the free one nearest them, as fire positions.
+- At most three orders a decision. An order still in transit is not sent again.
+
+**Selection.** `scripted_policy` gives the attacker of a gated entry `scripted-gate-attacker-v1`, as the computer side and as a scripted player side (`--player-side french`, which now runs under it instead of the fallback). `--opponent` and `--player-policy` accept it and refuse it for any other side or scenario ("needs the attacking side of a gated scenario"). Run metadata records it as `opponent` or `player_policy`. Its decisions carry `policy` and `standing` like the defender's. Replay applies the stored instructions and does not re-run the policy, so old saves replay unchanged. Other decisions keep their shape. `make headless-poc` output, game id and artifact path blanked, is byte-identical (`cmp`) to `e557d5d`.
+
+**Outcome** (both sides scripted, both gate-aware, authored start): `french` wins at turn 58, "Allied formations can no longer hold the farm." Replay is `identical` (64 revisions). The gateway is never pushed, the gate stays open, no unit is cut off and the capture counter stays at 0. Final strengths: A1 0 (lost), A2 37 (routed), A3 0 (lost), F1 0 (lost), F2 69, F3 28. The French win by fire from outside the walls, not by entry. The scripted French-player run gives the same result (79 revisions, `identical`).
+
+**Why no push.** The French are ordered in but halt short of the gate. `tactics.decide` stops a unit (*defend*, *take cover* or *withdraw*) whenever an enemy is within 5 hexes. The gateway hex can be seen from every hex north of the gate, so a unit cannot march onto the outside hex while the gateway is held. A push can start only from a unit that is already on the outside hex, or that gets there before the holder arrives. This is local-tactics behaviour, not a gate or push rule; this change does not alter it.
+
+**Engine-driven tests** (`GateAttackerPolicyTests` in `test_hougoumont.py`): with the garrison out of sight, F1 marches from 11,5 to the outside hex and into the farm. With A1 holding the gateway and F1 on the outside hex, F1 pushes only from the turn its order is delivered, and it carries the gateway at turn 5. A defender that has truly moved but sent no report does not change the orders. Selection and refusal are covered through `build_headless` and the CLI. These are test set-ups, not scenario changes.
 
 ## Tests
 

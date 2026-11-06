@@ -89,7 +89,8 @@ python3 -m battle --db /tmp/player-run.sqlite --replay GAME_ID_FROM_OUTPUT
 |---|---|---|
 | `--player-side` | `union` | Side the player controller commands |
 | `--player-provider` | `scripted` | `scripted` or `openrouter`. `openrouter` refuses to start without `OPENROUTER_API_KEY` |
-| `--opponent` | `scripted-fallback-v1` | Scripted control for the other side; the only control available |
+| `--opponent` | the scenario's choice | Scripted control for the other side: `scripted-fallback-v1`, or in a gated scenario `scripted-gate-defender-v1` for the defender and `scripted-gate-attacker-v1` for the attacker. A gate control is refused for any other side |
+| `--player-policy` | the scenario's choice | Scripted control for a scripted player side, by the same rule as `--opponent` |
 | `--model` | `OPENROUTER_MODEL`, else `openai/gpt-4.1-mini` | Requested OpenRouter model id |
 | `--effort` | none | `low`, `medium` or `high`, sent as `{"reasoning": {"effort": ...}}` in the request body. Shape confirmed live on 2026-11-06 |
 | `--max-tokens` | `OPENROUTER_MAX_TOKENS`, else 4000 with an effort, else 650 | Completion token limit. Reasoning tokens count against it; Astra used 3,211 at `high` |

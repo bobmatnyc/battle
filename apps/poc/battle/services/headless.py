@@ -1,8 +1,8 @@
 """Full local simulation use case, sharing the same ports as interactive play."""
 
 from ..command_policy import (
-    GATE_DEFENDER_POLICY, OPPONENT_POLICY, SCRIPTED_POLICIES, scripted_actions,
-    scripted_policy,
+    GATE_POLICIES, OPPONENT_POLICY, SCRIPTED_POLICIES, gate_policy_refusal,
+    scripted_actions, scripted_policy,
 )
 from ..contracts import BattleRepository, Commander, ScenarioCatalog, Simulation
 from .replay import ReplayService
@@ -18,19 +18,23 @@ class HeadlessRunner:
     scenario entry; ``player_side`` None is the entry's player side. A
     scripted run of that side keeps the direct-orders path, so Little Round
     Top's default run is unchanged.
-    ``player_policy`` picks the scripted control of that direct-orders path
+    ``player_policy`` picks the scripted control of a scripted player side,
+    on that direct-orders path or through decision records for another side
     (None: the entry's choice, ``scripted-gate-defender-v1`` for the defender
-    of a gated entry, else ``scripted-fallback-v1``). A run under the gate
-    policy records it as ``player_policy`` in run metadata and its summary;
-    other runs keep their metadata and output unchanged.
+    and ``scripted-gate-attacker-v1`` for the attacker of a gated entry, else
+    ``scripted-fallback-v1``); a gate control is refused for a side of another
+    role or scenario. A run under a gate policy records it as
+    ``player_policy`` in run metadata and its summary; other runs keep their
+    metadata and output unchanged.
     ``opponent`` picks the computer side's control by the same rule (None:
-    the entry's choice); its decisions carry a gate defender's standing
+    the entry's choice); its decisions carry a gate control's standing
     instructions, and run metadata records it as ``opponent``.
     ``scenario_id`` selects the catalog entry (None: the catalog default);
     an unknown id raises ``UnknownScenario`` before anything is stored.
     Test: `test_model_player_run_records_side_decisions_and_replays`,
     `test_default_headless_run_keeps_baseline_path`,
-    `test_duel_fixture_runs_headless_and_replays`.
+    `test_duel_fixture_runs_headless_and_replays`,
+    `test_gate_attacker_selection_and_refusal`.
     """
 
     def __init__(
@@ -81,15 +85,16 @@ class HeadlessRunner:
             return default
         if requested not in SCRIPTED_POLICIES:
             raise ValueError(f"Unknown opponent control {requested!r}")
-        if requested == GATE_DEFENDER_POLICY and default != GATE_DEFENDER_POLICY:
-            raise ValueError(f"{GATE_DEFENDER_POLICY} needs the defending side of a gated scenario")
+        refusal = gate_policy_refusal(requested, default)
+        if refusal:
+            raise ValueError(refusal)
         return requested
 
     def _policy(self, requested):
-        if not self.baseline:
+        if self.player_mode != "scripted":
             if requested not in (None, OPPONENT_POLICY):
                 raise ValueError(
-                    f"Player policy {requested!r} needs a scripted run of the scenario's player side"
+                    f"Player policy {requested!r} needs a scripted player side"
                 )
             return None
         default = scripted_policy(self.scenario, self.player_side)
@@ -97,13 +102,14 @@ class HeadlessRunner:
             return default
         if requested not in SCRIPTED_POLICIES:
             raise ValueError(f"Unknown player policy {requested!r}")
-        if requested == GATE_DEFENDER_POLICY and default != GATE_DEFENDER_POLICY:
-            raise ValueError(f"{GATE_DEFENDER_POLICY} needs the defending side of a gated scenario")
+        refusal = gate_policy_refusal(requested, default)
+        if refusal:
+            raise ValueError(refusal)
         return requested
 
     @property
     def gate_policy(self):
-        return self.player_policy == GATE_DEFENDER_POLICY
+        return self.player_policy in GATE_POLICIES.values()
 
     def metadata(self, state):
         model_run = self.player_mode == "openrouter"
@@ -161,7 +167,7 @@ class HeadlessRunner:
     def _player_actions(self, state):
         if not self.baseline:
             decision = self.commander.decide(
-                state, side=self.player_side, mode=self.player_mode
+                state, side=self.player_side, mode=self.player_mode, policy=self.player_policy
             )
             return [{"type": "decision", "decision": decision}]
         view = self.simulation.view(state, self.player_side)
