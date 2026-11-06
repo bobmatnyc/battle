@@ -90,4 +90,4 @@ None for any existing game. The headless runs on this branch: Little Round Top, 
 - Officers are a count, not people. The rule cannot say who fell, and a single early volley cannot kill an officer before losses reach the step.
 - Voice reach ignores noise, smoke and suppression (43 R4's `din_penalty` is not implemented).
 - A holding unit's release reach (43 R2 `release_reach`) is not tied to the voice reach.
-- The weapon table changes fire only. Tactical choices still use the 5-hex fire range of the standing profiles when they judge threats.
+- With a weapon table, `tactics_v10` halts and reacts to contacts within the unit's own `range_hexes` (`threat_range`), not 5 hexes; before this, two smoothbore formations 3 to 5 hexes apart halted for the whole run on fire neither could deliver (mechanics check `SmoothboreApproachMechanicsCheck`, not historical calibration). Being fired upon still triggers a reaction at any range. The retreat, reconnaissance and rest safety checks in `orders.py` keep 5 hexes.

@@ -30,9 +30,20 @@ def assault(s,u):
     return any(grid.key(c['pos']) in inside for c in s['contacts'].get(u['side'],{}).values()
                if s['turn']-c['observed_turn']<=recon.CONTACT_MAX_AGE)
 
+def threat_range(s,u):
+    """Why: two smoothbore formations 3 to 5 hexes apart halted for good on fire
+    neither could deliver. What: the distance at which a contact makes ``u``
+    halt and react: its weapon's ``range_hexes`` when the snapshot has a weapon
+    table listing its class, else 5 hexes (every earlier battle).
+    Test: `test_formations_ordered_to_close_reach_smoothbore_range`."""
+    weapon=s.get('weapon_rules',{}).get(u.get('weapon_class'))
+    return weapon['range_hexes'] if weapon else 5
+
 def decide(s,u,contacts):
     doctrine=standing.profile(u)
-    nearby=[c for c in contacts if grid.distance(u['pos'],c['pos'])<=5]
+    # poc-13B: react to contacts within the unit's own weapon range when the
+    # snapshot declares weapon_rules; without them the 5-hex check is unchanged.
+    nearby=[c for c in contacts if grid.distance(u['pos'],c['pos'])<=threat_range(s,u)]
     attacked=s['turn']-u.get('last_attacked_turn',-99)<=1
     reason='No enemy within effective range; maintain the assigned mission.'
     action='continue' if u.get('target') is not None else 'hold'

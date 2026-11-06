@@ -391,6 +391,54 @@ class CarriedReviewTests(unittest.TestCase):
                     dry_run(validate(entry))
 
 
+def smoothbore_approach(distance, grey_stance="move"):
+    """Two smoothbore command detachments ``distance`` hexes apart in one
+    column, under weapon and command rules. Blue orders itself north past
+    Grey's hex; Grey orders itself south past Blue's, or to hold."""
+    units = (UnitEntry("B1", "union", "Blue company", (5, 5 + distance), {"weapon_class": "smoothbore muskets"}),
+             UnitEntry("G1", "confederate", "Grey company", (5, 5), {"weapon_class": "smoothbore muskets"}))
+    command = CommandEntry(succession={"union": (), "confederate": ()})
+    s = era(units=units, command=command, weapons=WEAPONS_1775)
+    engine.issue(s, "union", {"unit_id": "B1", "stance": "move", "destination": [5, 1]})
+    grey = [5, 18] if grey_stance == "move" else None
+    engine.issue(s, "confederate", {"unit_id": "G1", "stance": grey_stance, "destination": grey})
+    return s
+
+
+class SmoothboreApproachMechanicsCheck(unittest.TestCase):
+    """Mechanics check, NOT historical calibration: two smoothbore formations
+    ordered to close must not halt for good on fire that cannot reach them.
+    No winner is asserted; the values are assumptions (docs/research/47)."""
+
+    LIMIT = 12  # intervals
+
+    def run_until_in_range(self, s):
+        gaps = []
+        for _ in range(self.LIMIT):
+            if s["status"] != "active":break
+            s = advance(s)
+            gaps.append(grid.distance(unit(s, "B1")["pos"], unit(s, "G1")["pos"]))
+            if gaps[-1] <= SMOOTHBORE_1775.range_hexes:break
+        return s, gaps
+
+    def test_formations_ordered_to_close_reach_smoothbore_range(self):
+        for distance in (3, 4, 5):
+            with self.subTest(distance=distance):
+                s, gaps = self.run_until_in_range(smoothbore_approach(distance))
+                self.assertLessEqual(min(gaps), SMOOTHBORE_1775.range_hexes, gaps)
+                for uid in ("B1", "G1"):
+                    halted = [e for e in events(s, "local_decision") if e["unit_id"] == uid]
+                    self.assertFalse(all(e["action"] == "defend" for e in halted), (uid, gaps))
+
+    def test_a_holding_formation_still_holds_while_the_other_closes(self):
+        for distance in (3, 4, 5):
+            with self.subTest(distance=distance):
+                s, gaps = self.run_until_in_range(smoothbore_approach(distance, grey_stance="hold"))
+                self.assertLessEqual(min(gaps), SMOOTHBORE_1775.range_hexes, gaps)
+                self.assertEqual([e for e in events(s, "unit_moved") if e["unit_id"] == "G1"], [])
+                self.assertEqual(unit(s, "G1")["stance"], "hold")
+
+
 class Poc13EditionTests(unittest.TestCase):
     def test_poc13_runs_and_saves_keep_their_part_a_digests(self):
         from unittest import mock
