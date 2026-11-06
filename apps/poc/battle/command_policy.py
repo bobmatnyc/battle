@@ -29,7 +29,9 @@ def fallback_orders(observation):
     return orders[:3]
 
 
-PROMPT_VERSION = "lrt-side-v1"
+# v2: strict json_schema reply contract, per-unit order acceptance in the
+# observation and the instruction to order only orderable units.
+PROMPT_VERSION = "lrt-side-v2"
 
 # Scripted control used for the side that no model plays; recorded in run metadata.
 OPPONENT_POLICY = "scripted-fallback-v1"
@@ -37,6 +39,7 @@ OPPONENT_POLICY = "scripted-fallback-v1"
 _COMMON = """You are a commander in a small historical strategy GAME, Little Round Top, 1863.
 You know only the supplied delivered reports, never hidden world state. Every hex is 50m, each turn 30 seconds.
 You may order only supplied friendly units. Orders travel by runner. Unit commanders act autonomously on local contact: defend, seek cover, or withdraw when condition or credible enemy estimates warrant it. A movement destination remains the mission during a temporary local reaction. Enemy strength ranges and composition are estimates at observation time, not exact or current counts. Scouts improve estimates; slower intelligence still obeys report delivery. Do not issue repeated orders merely to suppress self-preservation.
+Each unit in observation.units has accepts_orders and order_refusal, taken from headquarters' delivered reports, and order_contract.orderable_units lists the units that can take orders now. Order ONLY units in that list. A formation reported routed (breaking and withdrawing), lost or merged refuses orders, and no unit accepts orders while your command detachment is disrupted. If the list is empty, return an empty orders list.
 Legal orders use {"unit_id":"U1", "stance":"<template id>", "destination":[column,row] or null}. Use ONLY the supplied order_contract and order_templates. Hex templates need a destination; hold/rest/resupply/dig_in use null. Resupply uses recorded ammunition points and finite stocks. Rest does not heal casualties. Recon does not grant extra skills. Respect existing rest, retreat and resupply missions until conditions require a change.
 Columns 0..23, rows 0..20. At most one order per unit, at most 3 orders. No new equipment or abilities.
 Return JSON {"text":"brief commander dispatch", "orders":[...]}. No Markdown.
@@ -124,4 +127,29 @@ def observation_for(s, side):
         "max_orders": 3,
         "one_order_per_unit": True,
     }
+    if s.get("rules") == "poc-8":
+        mark_order_acceptance(s, side, observation)
     return observation
+
+
+def mark_order_acceptance(s, side, observation):
+    """Why: a model ordered units the engine refuses (a reported routed U1), so
+    each such decision fell back; it must see which units take orders.
+    What: sets ``accepts_orders`` and ``order_refusal`` on every observed unit
+    and ``order_contract.orderable_units``, using the poc-8 checks in
+    ``engine.validate_order``: ``command_disrupted`` when the side's command
+    detachment is not operational, else ``engine.report_refusal`` on the
+    delivered report. Earlier editions are left unmarked. No rule effect.
+    Test: `test_observation_marks_reported_routed_unit_unable_to_accept_orders`,
+    `test_observation_marks_every_unit_refused_when_command_disrupted`.
+    """
+    operational = observation["command"]["operational"]
+    for unit in observation["units"]:
+        refusal = (
+            engine.report_refusal(s, side, unit["id"]) if operational else "command_disrupted"
+        )
+        unit["accepts_orders"] = refusal is None
+        unit["order_refusal"] = refusal
+    observation["order_contract"]["orderable_units"] = [
+        u["id"] for u in observation["units"] if u["accepts_orders"]
+    ]

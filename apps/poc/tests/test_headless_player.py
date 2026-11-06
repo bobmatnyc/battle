@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from battle import runtime, scenario
+from battle import command_policy, engine, runtime, scenario
 from battle.adapters.openrouter import OpenRouterProvider
 from battle.adapters.rules import RulesSimulation
 from battle.bootstrap import build_headless, build_replay
@@ -128,6 +128,8 @@ class HeadlessPlayerTests(unittest.TestCase):
                     "player_provider": "openrouter",
                     "model": "fake/player-model",
                     "effort": "high",
+                    # FakeProvider reports no reply contract.
+                    "response_format": None,
                     "opponent_side": "confederate",
                     "opponent": OPPONENT_POLICY,
                 },
@@ -385,6 +387,74 @@ class CompositionTests(unittest.TestCase):
         self.assertIsNone(metadata["model"])
         with self.assertRaises(ValueError):
             Settings(effort="extreme")
+
+    def test_run_metadata_records_prompt_version_and_response_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = build_headless(
+                Path(tmp) / "battle.sqlite",
+                player_provider="openrouter",
+                settings=Settings(api_key="synthetic", model="m"),
+            )
+            scripted = build_headless(Path(tmp) / "scripted.sqlite")
+        metadata = runner.metadata(scenario.create())
+        self.assertEqual(metadata["prompt_version"], "lrt-side-v2")
+        self.assertEqual(metadata["response_format"], "json_schema:commander_orders")
+        self.assertIsNone(scripted.metadata(scenario.create())["response_format"])
+
+
+def probe_refused(state, side, unit_id):
+    """True when the engine refuses a plain hold order to ``unit_id``."""
+    try:
+        engine.validate_order(
+            state, side, {"unit_id": unit_id, "stance": "hold", "destination": None}
+        )
+    except engine.InvalidOrder:
+        return True
+    return False
+
+
+class OrderAcceptanceObservationTests(unittest.TestCase):
+    def observe(self, state, side="union"):
+        provider = FakeProvider()
+        CommanderService(RulesSimulation(), provider).decide(state, side=side)
+        instruction, payload = provider.calls[0]
+        return instruction, payload["observation"]
+
+    def test_observation_marks_reported_routed_unit_unable_to_accept_orders(self):
+        state = scenario.create()
+        # HQ has received a routed report for U1; ground truth is unchanged.
+        state["friendly_reports"]["union"]["U1"]["status"] = "routed"
+        # U3 broke in ground truth, but HQ has not been told: still orderable.
+        engine.find_unit(state, "U3")["status"] = "routed"
+        instruction, observation = self.observe(state)
+        units = {u["id"]: u for u in observation["units"]}
+        self.assertEqual(
+            (units["U1"]["accepts_orders"], units["U1"]["order_refusal"]),
+            (False, "reported_routed"),
+        )
+        self.assertEqual(
+            (units["U3"]["accepts_orders"], units["U3"]["order_refusal"]), (True, None)
+        )
+        self.assertEqual(observation["order_contract"]["orderable_units"], ["U2", "U3"])
+        for unit_id, unit in units.items():
+            self.assertEqual(unit["accepts_orders"], not probe_refused(state, "union", unit_id))
+        self.assertIn("orderable_units", instruction)
+        # Earlier editions keep their observation unchanged.
+        legacy = command_policy.observation_for(scenario.create(rules="poc-7"), "union")
+        self.assertNotIn("orderable_units", legacy["order_contract"])
+        self.assertNotIn("accepts_orders", legacy["units"][0])
+
+    def test_observation_marks_every_unit_refused_when_command_disrupted(self):
+        state = scenario.create()
+        engine.find_unit(state, "U2")["status"] = "routed"  # HQ's own detachment.
+        _, observation = self.observe(state)
+        self.assertFalse(observation["command"]["operational"])
+        self.assertEqual(observation["order_contract"]["orderable_units"], [])
+        for unit in observation["units"]:
+            self.assertEqual(
+                (unit["accepts_orders"], unit["order_refusal"]), (False, "command_disrupted")
+            )
+            self.assertTrue(probe_refused(state, "union", unit["id"]))
 
 
 if __name__ == "__main__":

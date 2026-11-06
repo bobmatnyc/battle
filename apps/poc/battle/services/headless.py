@@ -61,6 +61,7 @@ class HeadlessRunner:
             "player_provider": self.player_mode,
             "model": self.commander.model if model_run else None,
             "effort": self.commander.effort if model_run else None,
+            "response_format": self.commander.response_format if model_run else None,
             "opponent_side": self.opponent_side,
             "opponent": self.opponent,
         }
