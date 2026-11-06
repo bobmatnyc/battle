@@ -144,13 +144,20 @@ PROVENANCE = {
 }
 # docs/research/50: the assumptions of the command fire release (``release_by``
 # ``command``), each with its source. v2 entries carry them; ``before`` drops them.
+# The release is scenario-delegated, conditional commander intent acting on
+# headquarters' knowledge, not an automatic historical attribution.
 RELEASE_PROVENANCE = {
-    "fire.release_by": "sourced: Buttrick's order, 'Fire, for god's sake fire!', released the fire after the "
-                       "British volley in which Davis and Hosmer fell (S47)",
+    "fire.release_by": "reconstruction: the scenario delegates to the provincial command the conditional intent "
+                       "'open fire once fired upon', standing for Buttrick's order, 'Fire, for god's sake fire!', "
+                       "given after the British volley in which Davis and Hosmer fell (S47); the command acts only "
+                       "on what headquarters knows, and the mechanism is the model's, not the record's",
     "fire.release_by.commander": "reconstruction: the command rides with P1, the Acton company (S47, S48), as "
                                  "provincial.command_unit",
-    "fire.release_by.timing": "reconstruction: the order takes effect in the interval of the volley that "
-                              "triggers it",
+    "fire.release_by.timing": "authored: the order is spoken and delivered in the interval of the losses that "
+                              "trigger it, below the 3-interval decision cadence; no source gives the delay",
+    "fire.release_by.knowledge": "authored: recipients are chosen by headquarters' known position and reports, "
+                                 "with a normal order's refusals (command.spoken, engine.validate_order); a newer "
+                                 "hold_fire, pending or delivered after the losses, wins",
     "fire.release_by.reach": "authored: the order carries the 1775 voice reach of 2 hexes, the docs/research/47 "
                              "assumption; no new number",
     "fire.release_by.trigger": "authored: the release condition is unchanged: casualties in a hold-fire unit "
@@ -209,7 +216,7 @@ def concord_entry(variant=None, british=BRITISH_THREE, bridge_cost=BRIDGE_MOVE_C
         voice_profile=COLONIAL_VOICE_PROFILE,
         tools_per_unit=0,
         # Barrett's order: provincials hold fire; the British fired without one (S47).
-        # Buttrick's order releases it (docs/research/50).
+        # The command may release it on losses it knows of (docs/research/50).
         fire=FIRE,
         command=CommandEntry(succession={"provincial": ("P2", "P3", "P4"), "british": succession}),
         weapons=WEAPONS_1775,

@@ -137,33 +137,69 @@ def relay(s,packet,target,emit):
     return True
 
 
-def release(s,triggered,emit,enqueue,message):
-    """Why: at Concord Buttrick's order, not each company, released the fire
-    (S47; docs/research/50). What: under ``fire_rules.release_by`` ``command``,
-    for each side with a unit in ``triggered`` (hold-fire units meeting the
-    unchanged release condition) whose operational command unit is that unit
-    or within voice reach of it, the command gives a spoken ``open_fire``
-    order, sent and delivered this interval: under ``release_scope`` ``hit``
-    to each such triggered unit only, under ``earshot`` to every hold-fire
-    unit of the side in voice reach that accepts orders. Returns the ids it
-    opened; none under ``unit``. Units out of reach keep their own release.
+def release(s,triggered,emit,enqueue,message,check,previous=False):
+    """Why: a scenario may delegate to a side's command the conditional intent
+    "open fire once fired upon" (at Concord, standing for Buttrick's order,
+    S47; docs/research/50). It is an order headquarters gives on what it
+    knows, not an automatic attribution. What: under ``fire_rules.release_by``
+    ``command``, for every side (delegation is scenario-wide), ``triggered``
+    are the hold-fire units meeting the unchanged release condition, in the
+    previous interval (``previous``) or this one. The chain is: losses, the
+    command perceives them, speaks, the order is delivered, the posture is
+    set, the unit fires. The operational command gives a spoken ``open_fire``
+    order, sent and delivered this interval (an authored timing below the
+    decision cadence), to each triggered unit (``release_scope`` ``hit``)
+    or to every hold-fire unit (``earshot``) that it may order: see
+    ``_may_release``. Returns the ids it opened; none under ``unit``. Every
+    unit it does not open keeps its own release (Barrett's rule).
     Test: `test_hit_scope_releases_only_the_unit_that_meets_the_release_condition`,
     `test_earshot_scope_releases_the_unit_and_every_hold_fire_unit_in_voice_reach`,
-    `test_unit_out_of_voice_reach_keeps_its_own_release`."""
+    `test_unit_out_of_voice_reach_keeps_its_own_release`,
+    `test_newer_voice_hold_fire_delivered_after_the_losses_is_not_overridden`,
+    `test_pending_runner_hold_fire_is_not_overridden_or_superseded`,
+    `test_recipient_is_chosen_by_the_position_headquarters_knows`,
+    `test_release_meets_the_refusals_of_a_normal_order`."""
     if s['fire_rules'].get('release_by','unit')!='command':return set()
-    opened=set();hit={u['id'] for u in triggered}
+    opened=set()
     earshot=s['fire_rules'].get('release_scope','hit')=='earshot'
+    # The losses the command acts on: last interval's fired-upon event, or this interval's, still to come.
+    kind='unit_under_fire' if s['fire_rules']['warning_shots_release'] else 'casualties'
+    since={u['id']:(max(e['seq'] for e in s['events'] if e['turn']==s['turn']-1 and e['kind']==kind
+                        and e.get('unit_id')==u['id']) if previous else len(s['events'])+1) for u in triggered}
     for side in (x['id'] for x in s['sides']):
         if not comms.operational(s,side):continue
-        commander=comms.command_unit(s,side);reach=voice_reach(s,side)
-        heard=lambda u:u['side']==side and grid.distance(commander['pos'],u['pos'])<=reach
-        if not any(heard(u) for u in triggered):continue
-        for u in sorted(s['units'],key=lambda x:x['id']):
-            if (heard(u) and (earshot or u['id'] in hit) and u.get('fire_posture')=='hold_fire' and u['strength']>0
-                    and u['status'] not in ('routed','lost','merged') and not u.get('leaderless')):
-                _spoken_open_fire(s,side,commander,u,reach,emit,enqueue,message)
-                opened.add(u['id'])
+        commander=comms.command_unit(s,side)
+        heard=[u for u in triggered if u['side']==side and _may_release(s,side,commander,u,since[u['id']],check)]
+        if not heard:continue
+        first=min(since[u['id']] for u in heard)
+        targets=heard if not earshot else [u for u in sorted(s['units'],key=lambda x:x['id'])
+                                           if u['side']==side and _may_release(s,side,commander,u,first,check)]
+        for u in sorted(targets,key=lambda x:x['id']):
+            _spoken_open_fire(s,side,commander,u,voice_reach(s,side),emit,enqueue,message)
+            opened.add(u['id'])
     return opened
+
+
+def _may_release(s,side,commander,u,since,check):
+    """Whether the command may give ``u`` the release now: a hold-fire unit
+    truly able to take it (as delivery checks) that headquarters may order
+    (``check``, ``engine.validate_order``, except for the command unit,
+    whose own state headquarters knows), within voice reach of the
+    commander both as headquarters knows its position (``spoken``) and in
+    fact, and with no ``hold_fire`` to it pending or delivered after the
+    losses at event ``since``: the newer hold_fire wins."""
+    if u.get('fire_posture')!='hold_fire' or u['strength']<=0 or u['status'] in ('routed','lost','merged') or u.get('leaderless'):
+        return False
+    reach=voice_reach(s,side)
+    if u['id']!=commander['id']:
+        try:check(s,side,{'unit_id':u['id'],'destination':None,'stance':'open_fire'})
+        except Exception:return False  # engine.InvalidOrder; command cannot import engine.
+        known=s['friendly_reports'][side][u['id']]['pos']
+        if not spoken(s,side,commander,u,known) or grid.distance(commander['pos'],u['pos'])>reach:return False
+    delivered={e['order_id']:e['seq'] for e in s['events'] if e['kind']=='order_delivered'}
+    return not any(o['unit_id']==u['id'] and o['stance']=='hold_fire'
+                   and (o['status']=='en_route' or (o['status']=='delivered' and delivered.get(o['id'],0)>since))
+                   for o in s['orders'])
 
 
 def _spoken_open_fire(s,side,commander,u,reach,emit,enqueue,message):

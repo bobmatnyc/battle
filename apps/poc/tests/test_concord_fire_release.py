@@ -100,6 +100,69 @@ class CommandReleaseTests(unittest.TestCase):
             validate(entry)
 
 
+def union_orders(s):
+    return [(o["unit_id"], o["stance"], o["source"], o["status"]) for o in s["orders"] if o["side"] == "union"]
+
+
+def b2_volleys(s):
+    return [(e["turn"], e.get("returning_fire", False)) for e in events(s, "volley") if e["unit_id"] == "B2"]
+
+
+class ReleaseRefusalTests(unittest.TestCase):
+    """The release is an order headquarters gives: it reads headquarters'
+    knowledge, meets a normal order's refusals and yields to a newer hold_fire.
+    The probes are code-critic's (review of 0e45485)."""
+
+    def test_newer_voice_hold_fire_delivered_after_the_losses_is_not_overridden(self):
+        s = fire_era((5, 7), release_by="command")
+        unit(s, "G1")["ammo"] = 0
+        engine.emit(s, "casualties", unit_id="B2", count=1, remaining=99)  # Losses in interval 0.
+        engine.issue(s, "union", {"unit_id": "B2", "destination": None, "stance": "hold_fire"})
+        s = advance(s)
+        self.assertEqual(union_orders(s), [("B2", "hold_fire", "human", "delivered")])
+        self.assertEqual(b2_volleys(s), [(1, True)])  # Barrett's own release.
+
+    def test_pending_runner_hold_fire_is_not_overridden_or_superseded(self):
+        s = fire_era((5, 7), release_by="command")
+        s["friendly_reports"]["union"]["B2"]["pos"] = [5, 2]  # Out of earshot as headquarters knows it.
+        engine.issue(s, "union", {"unit_id": "B2", "destination": None, "stance": "hold_fire"})
+        s["friendly_reports"]["union"]["B2"]["pos"] = [5, 10]  # Then learns it is in earshot.
+        s = advance(s, 13)
+        self.assertNotIn("command_release", [o["source"] for o in s["orders"]])
+        self.assertEqual(union_orders(s)[0][3], "delivered")
+        self.assertTrue(b2_volleys(s)[0][1])
+
+    def test_recipient_is_chosen_by_the_position_headquarters_knows(self):
+        s = fire_era((5, 7), release_by="command")
+        s["friendly_reports"]["union"]["B2"]["pos"] = [5, 2]  # Truly 2 hexes away, known 10.
+        s = advance(s)
+        self.assertEqual(union_orders(s), [])
+        self.assertTrue(b2_volleys(s)[0][1])
+
+    def test_release_meets_the_refusals_of_a_normal_order(self):
+        for case in ("not_reported", "reported_routed"):
+            with self.subTest(case):
+                s = fire_era((5, 7), release_by="command")
+                if case == "not_reported":
+                    s["friendly_reports"]["union"].pop("B2")
+                else:
+                    s["friendly_reports"]["union"]["B2"]["status"] = "routed"
+                with self.assertRaises(engine.InvalidOrder):
+                    engine.validate_order(s, "union", {"unit_id": "B2", "destination": None, "stance": "open_fire"})
+                s = advance(s)
+                self.assertEqual(union_orders(s), [])
+                self.assertTrue(b2_volleys(s)[0][1])
+
+    def test_leaderless_command_or_recipient_gives_no_release(self):
+        for uid in ("B1", "B2"):
+            with self.subTest(leaderless=uid):
+                s = fire_era((5, 7), release_by="command", release_scope="earshot")
+                unit(s, uid)["leaderless"] = True
+                s = advance(s)
+                self.assertEqual([o for o in union_orders(s) if o[0] == "B2"], [])
+                self.assertEqual(b2_volleys(s), [(1, True)])
+
+
 def headless(entry_id, scenarios=None):
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "concord.sqlite"
@@ -140,7 +203,8 @@ class ConcordReleaseTests(unittest.TestCase):
         _, final = headless(variant.entry.id, ScenarioRegistry([variant.entry]))
         self.assertEqual(final["fire_rules"]["release_scope"], "earshot")
         released = [o["unit_id"] for o in final["orders"] if o["source"] == "command_release"]
-        self.assertEqual(released, ["P1", "P2", "P3"])
+        # P3 is in earshot in fact, but headquarters' delivered report still places it out of reach.
+        self.assertEqual(released, ["P1", "P2"])
 
     def test_v1_game_resolves_through_for_state_and_replays(self):
         catalog = build_headless_scenarios()

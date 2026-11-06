@@ -29,7 +29,10 @@ MILITIA_ORDERS = (
      "provenance": "reconstruction: no source read gives the column's order or frontage"},
     {"id": "fire", "trigger": "headquarters knows a provincial company has taken losses",
      "stance": "open_fire", "source": "S47: Buttrick, 'Fire, for god's sake fire!', after the British volley",
-     "provenance": "sourced: the order (S47); the trigger, a delivered loss report, is reconstruction"},
+     # docs/research/50: in v2 entries the command release models the recorded order.
+     "provenance": "authored: in v2 entries a follow-up to the companies still holding fire; the recorded order "
+                   "is the command release (fire.release_by, docs/research/50). In v1 entries this order stood "
+                   "for it, its trigger a delivered loss report (reconstruction, doc 48)"},
     {"id": "cross", "trigger": "fire released and no fresh British contact within 2 hexes of the far end",
      "stance": "move", "source": "doc 43 §5 S1: 'cross when the guard is broken'; S47: the militia held the bridge",
      "provenance": "reconstruction: no crossing order was read"},
@@ -68,7 +71,9 @@ def _order(uid, stance, destination=None):
 
 def militia_actions(observation):
     """Why: the provincial side must advance under Barrett's instruction and
-    fire on Buttrick's order (S47), as doc 43 §5 S1 reconstructs.
+    open fire once fired upon (S47), as doc 43 §5 S1 reconstructs. In v2
+    entries Buttrick's order is the command release (docs/research/50) and
+    the ``fire`` order here is authored follow-up.
     What: ``([], orders)``, at most three orders, in this priority: the
     ``advance`` and ``follow`` moves to ``APPROACH`` once per company; the
     ``fire`` order to every company reported holding fire once headquarters

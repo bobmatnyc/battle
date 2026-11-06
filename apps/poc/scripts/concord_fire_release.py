@@ -64,7 +64,8 @@ def releases(final):
 
 
 def checks(final):
-    """Doc 48 §6 event checks the engine can show, plus who released the fire."""
+    """Doc 48 §6 event checks the engine can show, plus the event label of the
+    first provincial fire (a label, not evidence of historical causation)."""
     events, side = final["events"], {u["id"]: u["side"] for u in final["units"]}
     volleys = [e for e in events if e["kind"] == "volley"]
     first_prov = next((v for v in volleys if side[v["unit_id"]] == "provincial"), None)
@@ -76,7 +77,8 @@ def checks(final):
         "british fire first": bool(volleys) and side[volleys[0]["unit_id"]] == "british",
         "provincials fire only after provincial losses": bool(first_prov and first_brit and hit)
         and first_brit["seq"] < first_prov["seq"] and hit["turn"] <= first_prov["turn"],
-        "an order releases the first provincial fire": bool(posture),
+        # Shows only which event label the first fire carries, not historical causation (doc 50).
+        "event label only: the first provincial fire follows a delivered order": bool(posture),
         "british withdraw": any(e["kind"] == "local_decision" and side[e["unit_id"]] == "british"
                                 and e["action"] == "withdraw" for e in events)
         or any(o["side"] == "british" and o["stance"] == "retreat" for o in final["orders"]),
