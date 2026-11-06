@@ -123,6 +123,8 @@ class HeadlessPlayerTests(unittest.TestCase):
                 {
                     "rules": "poc-8",
                     "scenario": "little-round-top-v8",
+                    "scenario_id": "little-round-top",
+                    "variant": None,
                     "prompt_version": PROMPT_VERSION,
                     "player_side": "union",
                     "player_provider": "openrouter",

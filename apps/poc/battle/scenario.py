@@ -1,9 +1,16 @@
-"""Historical setting with authored, uncalibrated POC terrain and detachments."""
-import math
-from .grid import COLS, ROWS, center, key
+"""Little Round Top: authored, uncalibrated POC terrain, detachments and missions.
 
-SIDES = ('union','confederate')
-RULES_VERSION = 'poc-8'
+The scenario is one ``ScenarioEntry`` (``LITTLE_ROUND_TOP``); ``create`` keeps
+the original function API for every rules edition.
+"""
+import math
+from .grid import COLS, ROWS, METRES_PER_HEX, center, key
+from .scenario_entry import (
+    RULES_VERSION, SIDES, MapEntry, ScenarioEntry, SideEntry, SupplyEntry,
+    UnitEntry, VictoryEntry, build_state, unit,
+)
+
+__all__ = ['SIDES', 'RULES_VERSION', 'LITTLE_ROUND_TOP', 'terrain', 'unit', 'create']
 
 def terrain():
     cells = {}
@@ -20,62 +27,65 @@ def terrain():
                            'cover':{'open':10,'woods':32,'rocky':46}[kind]}
     return cells
 
-def unit(uid,side,name,pos):
-    return {'id':uid,'side':side,'name':name,'pos':pos,'initial':40,'strength':40,
-            'ammo':1600,'morale':85,'suppression':0,'fatigue':0,'status':'ready',
-            'target':None,'stance':'hold','move_credit':0,'loss_credit':0,
-            'order_version':0,'skill':70,'unit_type':'infantry','weapon_class':'rifled muskets',
-            'recon_role':'line','recon_skill':35,'local_action':'hold','local_reason':'Awaiting contact; hold position.',
-            'tactical_target':None,'last_attacked_turn':-99,'withdraw_until':0}
+# Authored map features; not surveyed historical placements.
+FEATURES = {
+    'roads': ({'id':'north-lane','kind':'road','name':'North farm lane','points':[[3,2],[7,4],[11,6],[14,8],[18,9],[22,10]]},
+              {'id':'south-track','kind':'road','name':'Southern track','points':[[1,19],[4,18],[7,17],[9,16]]}),
+    'buildings': ({'id':'farmstead','kind':'building','name':'Farmstead','pos':[7,3],'cover':45,'height':8},
+                  {'id':'barn','kind':'building','name':'Barn','pos':[17,8],'cover':40,'height':6}),
+    'works': ({'id':'prepared-works','kind':'fortification','name':'Prepared breastwork','pos':[11,13],
+               'cover':60,'progress':100,'effort':400,'required':400,'updated_turn':0},),
+}
+
+# Authored reconnaissance assignments; not claims about the historical regiments.
+SCOUT = {'recon_role':'scout','recon_skill':80}
+
+LITTLE_ROUND_TOP = ScenarioEntry(
+    id='little-round-top',
+    title='Little Round Top',
+    variant=None,
+    rules=RULES_VERSION,
+    prompt_version='lrt-side-v2',
+    prompt_setting='Little Round Top, 1863',
+    labels={'poc-1':'little-round-top-v2','poc-2':'little-round-top-v2',
+            'poc-3':'little-round-top-v3','poc-4':'little-round-top-v4',
+            'poc-5':'little-round-top-v5','poc-6':'little-round-top-v6',
+            'poc-7':'little-round-top-v7','poc-8':'little-round-top-v8'},
+    location='Little Round Top · Gettysburg, Pennsylvania',
+    date='1863-07-02',
+    start_time='16:30:00',
+    time_basis='Scenario local time; authored start time',
+    seconds_per_turn=30,
+    weather={'season':'summer','conditions':'dry, clear (fixed POC condition)'},
+    sides={
+        'union': SideEntry(
+            name='Union', role='defender', command_unit='U2', headquarters=(14,8),
+            mission='You command the Union defenders. Your mission: hold the marked summit objective until turn 60. The summit can be lost before then if the enemy holds it while none of your formations remains effective nearby.',
+            charge="hold the marked summit until five o'clock",
+            supply=SupplyEntry('Union ammunition point',(14,8),2400,'rifled muskets')),
+        'confederate': SideEntry(
+            name='Confederate', role='attacker', command_unit='C2', headquarters=(4,20),
+            mission='You command the Confederate attackers. Your mission: occupy the marked summit objective, within one hex of it, for 3 consecutive turns with no effective Union formation nearby, before turn 60.',
+            charge='take the marked summit before five o\'clock',
+            supply=SupplyEntry('Confederate ammunition point',(4,20),2400,'rifled muskets')),
+    },
+    units=(UnitEntry('U1','union','20th Maine · A',(11,14)),
+           UnitEntry('U2','union','20th Maine · B',(13,15)),
+           UnitEntry('U3','union','20th Maine · C',(10,13),SCOUT),
+           UnitEntry('C1','confederate','15th Alabama · A',(5,20)),
+           UnitEntry('C2','confederate','15th Alabama · B',(9,20)),
+           UnitEntry('C3','confederate','47th Alabama · A',(3,17),SCOUT)),
+    victory=VictoryEntry(kind='hold-objective', objective=(11,15), defender='union',
+                         attacker='confederate', deadline_turns=60),
+    map=MapEntry(terrain=terrain, features=FEATURES, cols=COLS, rows=ROWS,
+                 metres_per_hex=METRES_PER_HEX, width=1080, height=840,
+                 source='Library of Congress, Gettysburg topographic map (1876). Authored POC terrain; approximate registration.',
+                 source_url='https://www.loc.gov/item/99447491/'),
+    order_catalog=('hold','move','rest','retreat','resupply','recon','dig_in'),
+    communications='civil-war-courier-v1',
+    voice_profile='civil-war-en-v1',
+)
 
 def create(rules=RULES_VERSION):
-    units = [unit('U1','union','20th Maine · A',[11,14]),
-             unit('U2','union','20th Maine · B',[13,15]),
-             unit('U3','union','20th Maine · C',[10,13]),
-             unit('C1','confederate','15th Alabama · A',[5,20]),
-             unit('C2','confederate','15th Alabama · B',[9,20]),
-             unit('C3','confederate','47th Alabama · A',[3,17])]
-    # Authored reconnaissance assignments; not claims about the historical regiments.
-    for u in (units[2],units[5]):u.update(recon_role='scout',recon_skill=80)
-    s={'rules':rules,'scenario':'little-round-top-v2','turn':0,'revision':0,
-       'status':'active','winner':None,'reason':None,'objective':[11,15],
-       'recon_memory':{},'intel_assets':[],'capture':0,'max_turns':60,'seconds_per_turn':30,'units':units,
-       'cells':terrain(),'orders':[],'reports':[], 'contacts':{x:{} for x in SIDES},
-       'friendly_reports':{side:{u['id']:dict(u,observed_turn=0,received_turn=0)
-                            for u in units if u['side']==side} for side in SIDES},
-       'dispatches':{x:[] for x in SIDES},'events':[], 'decisions':[],
-       'weather':{'season':'summer','conditions':'dry, clear (fixed POC condition)'},
-       'hq':{'union':[14,8],'confederate':[4,20]}}
-    if rules in ('poc-3','poc-4','poc-5','poc-6','poc-7','poc-8'):
-        s['scenario']='little-round-top-v3'
-        s['rally_points']={side:list(pos) for side,pos in s['hq'].items()}
-        # Staff are attached to existing aggregate detachments, not extra soldiers.
-        s['commanders']={side:{'controller_id':side+'-commander','unit_id':uid,
-                               'communications':'civil-war-courier-v1'}
-                         for side,uid in (('union','U2'),('confederate','C2'))}
-        s['hq']={side:next(list(u['pos']) for u in units if u['id']==c['unit_id'])
-                 for side,c in s['commanders'].items()}
-        s['acknowledgements']={side:{} for side in SIDES}
-    if rules in ('poc-4','poc-5','poc-6','poc-7','poc-8'):
-        s.update(scenario='little-round-top-v4',formation_ops=[],formation_notices={},retired_units=[])
-    if rules in ('poc-5','poc-6','poc-7','poc-8'):
-        s['scenario']='little-round-top-v5'
-        s['supply_sites']=[{'id':side+'-ammunition','side':side,'name':name,
-                            'pos':pos,'ammo':2400,'weapon_class':'rifled muskets'}
-                           for side,name,pos in [('union','Union ammunition point',[14,8]),
-                                                 ('confederate','Confederate ammunition point',[4,20])]]
-    if rules in ('poc-6','poc-7','poc-8'):
-        from . import features
-        s['scenario']='little-round-top-v6'
-        for u in units:u['tools']=20
-        features.setup(s)
-        for side in SIDES:
-            for u in units:
-                if u['side']==side:s['friendly_reports'][side][u['id']]['tools']=u['tools']
-    if rules=='poc-7':s.update(scenario='little-round-top-v7',recommendations=[])
-    if rules=='poc-8':
-        s.update(scenario='little-round-top-v8',recommendations=[],standing_orders=[])
-        for u in units:
-            u.update(standing_profile='balanced',standing_version=0)
-            s['friendly_reports'][u['side']][u['id']].update(standing_profile='balanced',standing_version=0)
-    return s
+    """Little Round Top's initial snapshot in ``rules`` (compatibility API)."""
+    return build_state(LITTLE_ROUND_TOP, rules)

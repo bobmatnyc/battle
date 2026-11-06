@@ -3,8 +3,8 @@
 import re
 import time
 from copy import deepcopy
-from ..contracts import DecisionProvider, ProviderFailure, Simulation
-from ..command_policy import PROMPT_VERSION, fallback_orders, system_prompt
+from ..contracts import DecisionProvider, ProviderFailure, ScenarioCatalog, Simulation
+from ..command_policy import DEFAULT_SCENARIO, fallback_orders, system_prompt
 from ..presentation import VOICE_PROFILE
 
 # Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
@@ -81,10 +81,13 @@ class CommanderService:
         simulation: Simulation,
         provider: DecisionProvider,
         *,
+        scenarios: ScenarioCatalog | None = None,
         timer=time.perf_counter,
     ):
         self.simulation = simulation
         self.provider = provider
+        # Source of each battle's missions and prompt version; bootstrap injects it.
+        self.scenarios = scenarios
         # Latency is measured here, at the service edge; replay never calls it.
         self.timer = timer
 
@@ -105,6 +108,21 @@ class CommanderService:
         # Optional on providers; test doubles may omit it.
         return getattr(self.provider, "response_format", None)
 
+    def scenario(self, state):
+        """Why: prompts must use the battle's own scenario missions.
+        What: the injected catalog's entry for ``state``. Without a catalog,
+        Little Round Top serves only its own snapshots; any other scenario
+        raises ValueError rather than receiving another battle's mission.
+        Test: `test_commander_without_catalog_refuses_other_scenarios`.
+        """
+        if self.scenarios is not None:
+            return self.scenarios.for_state(state)
+        if not DEFAULT_SCENARIO.owns(state):
+            raise ValueError(
+                f"No scenario catalog injected for {state.get('scenario')!r}."
+            )
+        return DEFAULT_SCENARIO
+
     def decide(self, state, side="confederate", mode="openrouter"):
         """Why: a model may command one side; every outcome must be auditable.
         What: returns a decision record for ``side``. In ``openrouter`` mode it
@@ -124,15 +142,16 @@ class CommanderService:
         observation.pop("dispatches", None)
         if mode != "openrouter":
             return self._scripted(state, side, observation)
+        scenario = self.scenario(state)
         telemetry = {
             "requested_model": self.provider.model,
             "effort": self.effort,
-            "prompt_version": PROMPT_VERSION,
+            "prompt_version": scenario.prompt_version,
         }
         started = self.timer()
         try:
             result, metadata = self.provider.request(
-                system_prompt(side),
+                system_prompt(side, scenario),
                 {
                     "task": "Choose your next tactical orders.",
                     "observation": deepcopy(observation),
@@ -224,11 +243,12 @@ class CommanderService:
 
     def chat(self, state, text, mode="openrouter"):
         observation = self.simulation.observation(state, "union")
+        scenario = self.scenario(state)
         error = None
         if mode == "openrouter":
             try:
                 result, metadata = self.provider.request(
-                    system_prompt("union")
+                    system_prompt("union", scenario)
                     + " You are the Union player's staff adviser. Answer their question. Propose orders only when requested. Orders require player approval.",
                     {"request": text, "observation": deepcopy(observation)},
                 )
@@ -246,7 +266,7 @@ class CommanderService:
         answer = (
             f"General, our command comprises {len(observation['units'])} detachments, "
             f"with {len(observation['contacts'])} enemy sightings reported to headquarters. "
-            "Our charge is to hold the marked summit until five o'clock. Send your instructions by runner; "
+            f"Our charge is to {scenario.sides['union'].charge}. Send your instructions by runner; "
             "the latest reports may already be out of date."
         )
         return {

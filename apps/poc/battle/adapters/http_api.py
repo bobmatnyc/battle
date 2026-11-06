@@ -27,7 +27,7 @@ class HttpApi:
         if path == "/api/state":
             return self.service.state(god)
         if path == "/api/map":
-            return self.service.scenarios.map()
+            return self.service.map()
         if path == "/api/history":
             return self.service.queries.history(game_id)
         if path == "/api/replay":

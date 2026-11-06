@@ -70,7 +70,7 @@ python3 -m battle --headless --db /tmp/battle-check.sqlite
 python3 -m battle --db /tmp/battle-check.sqlite --replay GAME_ID_FROM_HEADLESS_OUTPUT
 ```
 
-The 221-test component suite covers geometry, blocked movement, communications, fog of war, combat conservation/simultaneity, hostile or failed model responses, persistence conflicts, and transaction rollback. By default the headless path runs scripted commanders for both sides and checks exact transition replay. Live inference is a separate smoke check, not part of the deterministic suite.
+The 232-test component suite covers geometry, blocked movement, communications, fog of war, combat conservation/simultaneity, hostile or failed model responses, persistence conflicts, and transaction rollback. By default the headless path runs scripted commanders for both sides and checks exact transition replay. Live inference is a separate smoke check, not part of the deterministic suite.
 
 ## Headless player runs
 
@@ -94,10 +94,11 @@ python3 -m battle --db /tmp/player-run.sqlite --replay GAME_ID_FROM_OUTPUT
 | `--effort` | none | `low`, `medium` or `high`, sent as `{"reasoning": {"effort": ...}}` in the request body. Shape confirmed live on 2026-11-06 |
 | `--max-tokens` | `OPENROUTER_MAX_TOKENS`, else 4000 with an effort, else 650 | Completion token limit. Reasoning tokens count against it; Astra used 3,211 at `high` |
 | `--timeout` | `OPENROUTER_TIMEOUT`, else 90 with an effort, else 18 | Provider timeout in seconds. The slowest live Astra call took 19.2 s |
+| `--scenario` | `little-round-top` | Scenario id from the catalog. Also sets the scenario for new interactive games. An unknown id is refused with the list of known ids |
 
 The provider flags need `--player-provider openrouter`; `OPENROUTER_EFFORT` sets the effort from the environment or `.env.local`. With no flags, the run is the scripted baseline: the Union uses the direct scripted orders path, and its output and replay are unchanged.
 
-The player receives its own side's mission (`command_policy.system_prompt`, prompt version `lrt-side-v2`) and the side's authorized, fog-limited observation. Version `lrt-side-v2` covers the strict `json_schema` reply contract and order acceptance; runs before it recorded `lrt-side-v1`. In `poc-8` games each observed unit carries `accepts_orders` and `order_refusal`, and `order_contract.orderable_units` lists the units that accept orders now. The refusal is `command_disrupted` when the side's command detachment is routed or lost, `not_reported` without a delivered report, or `reported_routed`, `reported_lost` or `reported_merged` from headquarters' latest delivered report; the prompt tells the model to order only listed units. These are the same checks `engine.validate_order` applies, read from delivered reports, so a unit that has broken but not yet reported stays orderable, exactly as the engine would accept the order. The fields are observation-only with no rule effect, so the rules edition stays `poc-8`; games in earlier editions get no such fields. It never receives the opponent's objective, plan or ground truth. Each player decision is committed as a `decision` action before the next interval, and its orders are issued for the side named in `decision.side`. Decisions saved before this field existed carry no side and replay as Confederate decisions, so old saves replay unchanged. This is command plumbing with no rule effect, so the rules edition stays `poc-8`.
+The player receives its own side's mission (`command_policy.system_prompt`, text and prompt version from the scenario entry; `lrt-side-v2` for Little Round Top) and the side's authorized, fog-limited observation. Version `lrt-side-v2` covers the strict `json_schema` reply contract and order acceptance; runs before it recorded `lrt-side-v1`. In `poc-8` games each observed unit carries `accepts_orders` and `order_refusal`, and `order_contract.orderable_units` lists the units that accept orders now. The refusal is `command_disrupted` when the side's command detachment is routed or lost, `not_reported` without a delivered report, or `reported_routed`, `reported_lost` or `reported_merged` from headquarters' latest delivered report; the prompt tells the model to order only listed units. These are the same checks `engine.validate_order` applies, read from delivered reports, so a unit that has broken but not yet reported stays orderable, exactly as the engine would accept the order. The fields are observation-only with no rule effect, so the rules edition stays `poc-8`; games in earlier editions get no such fields. It never receives the opponent's objective, plan or ground truth. Each player decision is committed as a `decision` action before the next interval, and its orders are issued for the side named in `decision.side`. Decisions saved before this field existed carry no side and replay as Confederate decisions, so old saves replay unchanged. This is command plumbing with no rule effect, so the rules edition stays `poc-8`.
 
 Every decision record, stored in the `decisions` table with the state snapshot, carries:
 
@@ -114,11 +115,13 @@ Every decision record, stored in the `decisions` table with the state snapshot, 
 | `rejected_proposal` | The proposed orders when validation rejected them |
 | `fallback`, `fallback_stage`, `fallback_reason` | True when scripted orders replaced the model; stage `provider_error`, `invalid_response` or `validation_failed`. For a provider failure, the adapter's safe reason (`HTTP 429`, `TimeoutError`, `JSONDecodeError`, `AmbiguousJSON`, `NoContent`, `ReplyTooLarge`, `ReplyTruncated`); a reason that is neither `HTTP` plus three digits nor in the allowlist `services/commander.py` `KNOWN_REASONS` is replaced by the exception type. Otherwise the exception type. Never response content or credentials |
 
-A fallback is recorded with `source: "scripted"` and `fallback: true`, never as a model decision. Prompts and credentials are not stored. The initial snapshot's `run` object records the rules edition, scenario, prompt version, player side, provider, model, effort, response format (`json_schema:commander_orders` for OpenRouter, null for scripted runs) and opponent control. Replay re-applies the recorded decisions and never calls a provider.
+A fallback is recorded with `source: "scripted"` and `fallback: true`, never as a model decision. Prompts and credentials are not stored. The initial snapshot's `run` object records the rules edition, scenario label, scenario id and variant, prompt version, player side, provider, model, effort, response format (`json_schema:commander_orders` for OpenRouter, null for scripted runs) and opponent control. Replay re-applies the recorded decisions and never calls a provider.
 
 ## Architecture
 
 The demo now uses explicit service boundaries and constructor dependency injection. `battle/bootstrap.py` wires simulation, repository, commander/provider, clock and scenario interfaces. Command/query/replay services are independent of HTTP and SQLite; the browser has an injected API client and assessment component. Services run in one process, with unchanged battle rules and saves. [Architecture, contracts and migration guide](../../docs/research/27-service-architecture-and-dependency-injection.md).
+
+Scenarios are data. Each is one `ScenarioEntry` (sides and missions, units and command attachment, map, setting, victory, rules edition, prompt version, order catalog, variant); `bootstrap.py` builds the catalog from `PLAYER_SCENARIOS`, and only Little Round Top is player-facing. `POST /api/new` accepts an optional `"scenario"` id. [Entry format and `poc-8` limits](../../docs/research/38-scenario-catalog.md).
 
 New code should use these interfaces and the composition root. Preserve atomic event/state commits, authorized observations and inference-free replay when replacing adapters.
 
@@ -131,7 +134,7 @@ New code should use these interfaces and the composition root. Preserve atomic e
 | `battle/adapters/` | Rules/scenario, OpenRouter and HTTP resource adapters |
 | `battle/config.py` | Startup configuration with secret-safe representation |
 | `static/api-client.js`, `static/troop-analysis.js` | Injected browser transport and assessment component |
-| `battle/scenario.py` | Authored terrain, forces, initial conditions |
+| `battle/scenario_entry.py`, `battle/scenario.py` | Scenario-entry format and builder; the Little Round Top entry (authored terrain, forces, missions) |
 | `battle/standing.py`, `battle/tactics_v8.py` | Persistent doctrine, independent courier delivery and bounded contact reactions |
 | `battle/analysis.py` | Read-only troop assessment from headquarters knowledge |
 | `battle/recommendations.py` | Local commander advice, delivered flags, acceptance/dismissal and expiry |

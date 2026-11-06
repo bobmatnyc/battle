@@ -27,6 +27,7 @@ class BattleService:
         clock_factory: ClockFactory,
         *,
         mode="scripted",
+        scenario_id=None,
     ):
         self.repository = repository
         self.simulation = simulation
@@ -34,8 +35,12 @@ class BattleService:
         self.scenarios = scenarios
         self.queries = queries
         self.mode = mode
+        # Scenario for new games unless a request names one; unknown ids fail here.
+        self.scenario_id = scenarios.resolve(scenario_id).id
         self.lock = threading.Lock()
-        self.game_id = repository.latest() or repository.create(scenarios.create())
+        self.game_id = repository.latest() or repository.create(
+            scenarios.create(self.scenario_id)
+        )
         self.clock = clock_factory(self.clock_step, audit=self._audit_clock)
 
     def _audit_clock(self, command, speed):
@@ -102,6 +107,11 @@ class BattleService:
         )
         return result
 
+    def map(self):
+        """The command-desk map of the current game's scenario."""
+        state = self.repository.load(self.game_id)
+        return self.scenarios.map(self.scenarios.for_state(state).id)
+
     def _ensure_paused(self):
         clock = self.clock.status()
         if clock["running"] or clock["inflight"]:
@@ -118,7 +128,11 @@ class BattleService:
             if game_id != self.game_id or revision != state["revision"]:
                 raise Conflict("Battle changed. Refresh before issuing another order.")
             if command == "new":
-                self.game_id = self.repository.create(self.scenarios.create())
+                # Resolve before creating, so an unknown id changes nothing.
+                scenario = self.scenarios.create(
+                    payload.get("scenario") or self.scenario_id
+                )
+                self.game_id = self.repository.create(scenario)
                 self.clock.control("reset")
             elif command == "mode":
                 if payload.get("mode") not in ("scripted", "openrouter"):

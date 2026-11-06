@@ -3,13 +3,15 @@ from copy import deepcopy
 from . import grid
 
 
-def setup(s):
-    roads=[{'id':'north-lane','kind':'road','name':'North farm lane','points':[[3,2],[7,4],[11,6],[14,8],[18,9],[22,10]]},
-           {'id':'south-track','kind':'road','name':'Southern track','points':[[1,19],[4,18],[7,17],[9,16]]}]
-    buildings=[{'id':'farmstead','kind':'building','name':'Farmstead','pos':[7,3],'cover':45,'height':8},
-               {'id':'barn','kind':'building','name':'Barn','pos':[17,8],'cover':40,'height':6}]
-    works=[{'id':'prepared-works','kind':'fortification','name':'Prepared breastwork','pos':[11,13],
-            'cover':60,'progress':100,'effort':400,'required':400,'updated_turn':0}]
+def setup(s,layout):
+    """Applies a scenario's authored roads, buildings and works to ``s``.
+
+    ``layout`` holds ``roads``, ``buildings`` and ``works`` lists (scenario
+    entry data); each is copied, so the entry stays unchanged.
+    """
+    roads=deepcopy(list(layout['roads']))
+    buildings=deepcopy(list(layout['buildings']))
+    works=deepcopy(list(layout['works']))
     s['map_features']=roads+buildings+works
     for f in s['map_features']:f.update(provenance='authored-poc',briefed=True)
     for road in roads:

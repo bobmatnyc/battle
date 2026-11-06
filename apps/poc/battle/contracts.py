@@ -17,6 +17,10 @@ class AuditUnavailable(ValueError):
     """Full ground-truth audit is not yet available to the caller."""
 
 
+class UnknownScenario(ValueError):
+    """The requested scenario id, or a saved game's label, is not in the catalog."""
+
+
 class ProviderFailure(RuntimeError):
     """Why: a decoded but unusable response was still paid for; its telemetry
     must reach the decision record.
@@ -56,8 +60,18 @@ class Simulation(Protocol):
 
 
 class ScenarioCatalog(Protocol):
-    def create(self) -> Document: ...
-    def map(self) -> Document: ...
+    """Scenario entries by id; ``None`` selects the catalog's default scenario.
+
+    ``resolve`` and ``for_state`` return the entry (``scenario_entry.ScenarioEntry``)
+    for an id or a saved snapshot; both raise ``UnknownScenario`` when absent.
+    """
+
+    default_id: str
+    def ids(self) -> tuple[str, ...]: ...
+    def resolve(self, scenario_id: str | None = None) -> Any: ...
+    def for_state(self, state: Document) -> Any: ...
+    def create(self, scenario_id: str | None = None) -> Document: ...
+    def map(self, scenario_id: str | None = None) -> Document: ...
 
 
 class DecisionProvider(Protocol):

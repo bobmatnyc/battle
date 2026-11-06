@@ -1,6 +1,9 @@
-"""Versioned Python rules exposed through the application simulation port."""
+"""Versioned Python rules and scenario entries exposed through application ports."""
 
-from .. import command_policy, engine, runtime, scenario, grid
+from .. import command_policy, engine, runtime
+from ..contracts import UnknownScenario
+from ..scenario import LITTLE_ROUND_TOP
+from ..scenario_entry import build_state, map_document, validate
 
 
 class RulesSimulation:
@@ -11,23 +14,62 @@ class RulesSimulation:
     validate_orders = staticmethod(command_policy.validated)
 
 
-class LittleRoundTopCatalog:
-    create = staticmethod(scenario.create)
+class ScenarioRegistry:
+    """Why: several scenarios must share one catalog, chosen by id for new
+    games and by snapshot label for saved ones.
+    What: validates every entry against the current rules on construction,
+    refuses duplicate ids or labels, and resolves ``scenario_id`` (None means
+    ``default``) or a state's ``scenario`` label to its entry. Unknown ids
+    raise ``UnknownScenario`` naming the known ids.
+    Test: `test_catalog_resolves_ids_and_refuses_unknown_scenarios`,
+    `test_catalog_resolves_saved_games_by_label`.
+    """
 
-    def map(self):
-        return {
-            "setting": {
-                "location": "Little Round Top · Gettysburg, Pennsylvania",
-                "start_local": "1863-07-02T16:30:00",
-                "time_basis": "Scenario local time; authored start time",
-            },
-            "cells": list(scenario.terrain().values()),
-            "cols": grid.COLS,
-            "rows": grid.ROWS,
-            "radius": grid.RADIUS,
-            "metres_per_hex": grid.METRES_PER_HEX,
-            "width": 1080,
-            "height": 840,
-            "source": "Library of Congress, Gettysburg topographic map (1876). Authored POC terrain; approximate registration.",
-            "source_url": "https://www.loc.gov/item/99447491/",
-        }
+    def __init__(self, entries, default=None):
+        entries = tuple(validate(entry) for entry in entries)
+        if not entries:
+            raise ValueError("A scenario catalog needs at least one entry.")
+        self._entries = {}
+        self._labels = {}
+        for entry in entries:
+            if entry.id in self._entries:
+                raise ValueError(f"Duplicate scenario id {entry.id!r}.")
+            self._entries[entry.id] = entry
+            for label in entry.labels.values():
+                if self._labels.setdefault(label, entry.id) != entry.id:
+                    raise ValueError(f"Scenario label {label!r} belongs to two entries.")
+        self.default_id = default or entries[0].id
+        self.resolve(self.default_id)
+
+    def ids(self):
+        return tuple(self._entries)
+
+    def resolve(self, scenario_id=None):
+        scenario_id = self.default_id if scenario_id is None else scenario_id
+        entry = self._entries.get(scenario_id) if isinstance(scenario_id, str) else None
+        if entry is None:
+            raise UnknownScenario(
+                f"Unknown scenario {scenario_id!r}. Known scenarios: {', '.join(self._entries)}."
+            )
+        return entry
+
+    def for_state(self, state):
+        scenario_id = self._labels.get(state.get("scenario"))
+        if scenario_id is None:
+            raise UnknownScenario(
+                f"Saved scenario {state.get('scenario')!r} is not in this catalog."
+            )
+        return self._entries[scenario_id]
+
+    def create(self, scenario_id=None):
+        return build_state(self.resolve(scenario_id))
+
+    def map(self, scenario_id=None):
+        return map_document(self.resolve(scenario_id))
+
+
+class LittleRoundTopCatalog(ScenarioRegistry):
+    """Compatibility catalog holding Little Round Top only."""
+
+    def __init__(self):
+        super().__init__([LITTLE_ROUND_TOP])

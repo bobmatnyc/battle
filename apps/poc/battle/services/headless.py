@@ -1,6 +1,6 @@
 """Full local simulation use case, sharing the same ports as interactive play."""
 
-from ..command_policy import OPPONENT_POLICY, PROMPT_VERSION, fallback_orders
+from ..command_policy import OPPONENT_POLICY, fallback_orders
 from ..contracts import BattleRepository, Commander, ScenarioCatalog, Simulation
 from ..scenario import SIDES
 from .replay import ReplayService
@@ -14,8 +14,11 @@ class HeadlessRunner:
     What: ``player_side`` is driven by ``commander`` in ``player_mode``; the
     other side is the explicit scripted ``opponent``. The scripted Union
     default keeps today's direct-orders path, so its run is unchanged.
+    ``scenario_id`` selects the catalog entry (None: the catalog default);
+    an unknown id raises ``UnknownScenario`` before anything is stored.
     Test: `test_model_player_run_records_side_decisions_and_replays`,
-    `test_default_headless_run_keeps_baseline_path`.
+    `test_default_headless_run_keeps_baseline_path`,
+    `test_duel_fixture_runs_headless_and_replays`.
     """
 
     def __init__(
@@ -29,7 +32,9 @@ class HeadlessRunner:
         player_side="union",
         player_mode="scripted",
         opponent=OPPONENT_POLICY,
+        scenario_id=None,
     ):
+        self.scenario = scenarios.resolve(scenario_id)
         if player_side not in SIDES:
             raise ValueError(f"Unknown player side {player_side!r}")
         if player_mode not in PLAYER_MODES:
@@ -56,7 +61,9 @@ class HeadlessRunner:
         return {
             "rules": state.get("rules"),
             "scenario": state.get("scenario"),
-            "prompt_version": PROMPT_VERSION,
+            "scenario_id": self.scenario.id,
+            "variant": self.scenario.variant,
+            "prompt_version": self.scenario.prompt_version,
             "player_side": self.player_side,
             "player_provider": self.player_mode,
             "model": self.commander.model if model_run else None,
@@ -67,7 +74,7 @@ class HeadlessRunner:
         }
 
     def run(self):
-        state = self.scenarios.create()
+        state = self.scenarios.create(self.scenario.id)
         state["run"] = self.metadata(state)
         game_id = self.repository.create(state)
 

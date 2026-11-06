@@ -4,22 +4,40 @@ from dataclasses import replace
 
 from . import analysis
 from .adapters.openrouter import OpenRouterProvider
-from .adapters.rules import LittleRoundTopCatalog, RulesSimulation
+from .adapters.rules import RulesSimulation, ScenarioRegistry
 from .clock import SimulationClock
 from .config import Settings
 from .presentation import present_view
+from .scenario import LITTLE_ROUND_TOP
 from .services.battle import BattleService
 from .services.commander import CommanderService
 from .services.queries import BattleQueries
 from .services.replay import ReplayService
 from .storage import Store
 
+# Player-facing scenarios; the first is the default. Test fixtures stay out.
+PLAYER_SCENARIOS = (LITTLE_ROUND_TOP,)
 
-def build_application(db, *, offline=False, settings=None):
+
+def build_scenarios():
+    """The player-facing scenario catalog, validated against the current rules."""
+    return ScenarioRegistry(PLAYER_SCENARIOS)
+
+
+def build_application(db, *, offline=False, settings=None, scenario_id=None):
+    """Why: the interactive server composes every concrete dependency here.
+    What: new games use ``scenario_id`` (None: the catalog default); an unknown
+    id raises ``UnknownScenario`` before any database is opened.
+    Test: `test_new_game_creation_selects_and_refuses_scenarios`.
+    """
+    scenarios = build_scenarios()
+    scenarios.resolve(scenario_id)
     settings = settings if settings is not None else Settings.load()
     repository = Store(db)
     simulation = RulesSimulation()
-    commander = CommanderService(simulation, OpenRouterProvider(settings))
+    commander = CommanderService(
+        simulation, OpenRouterProvider(settings), scenarios=scenarios
+    )
     replay = ReplayService(repository, simulation)
     queries = BattleQueries(
         repository, simulation, replay, assess=analysis.assess, present=present_view
@@ -28,10 +46,11 @@ def build_application(db, *, offline=False, settings=None):
         repository,
         simulation,
         commander,
-        LittleRoundTopCatalog(),
+        scenarios,
         queries,
         SimulationClock,
         mode="scripted" if offline or not commander.available else "openrouter",
+        scenario_id=scenario_id,
     )
 
 
@@ -52,19 +71,27 @@ def build_headless(
     effort=None,
     max_tokens=None,
     timeout=None,
+    scenario_id=None,
+    scenarios=None,
 ):
     """Why: the headless run composes its player provider here, never in services.
     What: ``scripted`` uses ``DisabledProvider``; ``openrouter`` builds the
     OpenRouter adapter from ``Settings`` with CLI overrides applied, unless a
     ``provider`` is injected (tests use a fake). Overrides left as None keep the
     ``Settings`` value. The defaults reproduce the scripted baseline run.
+    ``scenario_id`` picks the scenario from ``scenarios`` (default: the
+    player-facing catalog); an unknown id raises ``UnknownScenario`` before
+    any credential is read or database opened.
     Test: `test_build_headless_composes_openrouter_overrides`,
-    `test_build_headless_refuses_openrouter_without_credential`.
+    `test_build_headless_refuses_openrouter_without_credential`,
+    `test_build_headless_refuses_unknown_scenario`.
     """
     from .adapters.openrouter import DisabledProvider
     from .command_policy import OPPONENT_POLICY
     from .services.headless import HeadlessRunner
 
+    scenarios = scenarios if scenarios is not None else build_scenarios()
+    scenarios.resolve(scenario_id)
     if player_provider == "openrouter" and provider is None:
         settings = settings if settings is not None else Settings.load()
         overrides = {
@@ -85,14 +112,15 @@ def build_headless(
         provider = DisabledProvider()
     repository = Store(db)
     simulation = RulesSimulation()
-    commander = CommanderService(simulation, provider)
+    commander = CommanderService(simulation, provider, scenarios=scenarios)
     return HeadlessRunner(
         repository,
         simulation,
         commander,
-        LittleRoundTopCatalog(),
+        scenarios,
         ReplayService(repository, simulation),
         player_side=player_side,
         player_mode=player_provider,
         opponent=opponent or OPPONENT_POLICY,
+        scenario_id=scenario_id,
     )

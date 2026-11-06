@@ -1,8 +1,9 @@
 import argparse
 from pathlib import Path
-from .bootstrap import build_application, build_headless, build_replay
+from .bootstrap import PLAYER_SCENARIOS, build_application, build_headless, build_replay
 from .command_policy import OPPONENT_POLICY
 from .config import EFFORTS
+from .contracts import UnknownScenario
 
 
 def main():
@@ -26,6 +27,12 @@ def main():
         "--replay",
         metavar="GAME_ID",
         help="Verify all recorded transitions without inference",
+    )
+    parser.add_argument(
+        "--scenario",
+        metavar="ID",
+        help=f"Scenario for new games and headless runs (default: {PLAYER_SCENARIOS[0].id}; "
+        f"known: {', '.join(e.id for e in PLAYER_SCENARIOS)})",
     )
     headless = parser.add_argument_group(
         "headless player run", "Used with --headless; defaults reproduce the scripted run"
@@ -72,6 +79,7 @@ def main():
                 effort=args.effort,
                 max_tokens=args.max_tokens,
                 timeout=args.timeout,
+                scenario_id=args.scenario,
             )
         except ValueError as exc:
             parser.error(str(exc))
@@ -79,7 +87,13 @@ def main():
     else:
         from .server import serve_application
 
-        serve_application(build_application(args.db, offline=args.offline), args.port)
+        try:
+            service = build_application(
+                args.db, offline=args.offline, scenario_id=args.scenario
+            )
+        except UnknownScenario as exc:
+            parser.error(str(exc))
+        serve_application(service, args.port)
 
 
 if __name__ == "__main__":
