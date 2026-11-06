@@ -3,8 +3,9 @@
 Why: at Concord an officer's fall, and who heard an order, shaped the
 exchange (docs/research/43, R3 and R4). What: pure functions of the snapshot
 that ``engine`` calls. Each reads only snapshot data that part B adds
-(``command_rules``, a profile ``voice_reach``), so a battle without it plays
-exactly as before. Design and limits: docs/research/47.
+(``command_rules``, a profile ``voice_reach``, a ``fire_rules.release_by``
+of ``command``), so a battle without it plays exactly as before. Design and
+limits: docs/research/47; command fire release: docs/research/50.
 """
 from copy import deepcopy
 from . import comms,grid
@@ -134,3 +135,51 @@ def relay(s,packet,target,emit):
     packet.update(method='courier',pos=list(origin),address=list(target['pos']),credit=0)
     emit(s,'voice_out_of_reach',packet=deepcopy(packet))
     return True
+
+
+def release(s,triggered,emit,enqueue,message):
+    """Why: at Concord Buttrick's order, not each company, released the fire
+    (S47; docs/research/50). What: under ``fire_rules.release_by`` ``command``,
+    for each side with a unit in ``triggered`` (hold-fire units meeting the
+    unchanged release condition) whose operational command unit is that unit
+    or within voice reach of it, the command gives a spoken ``open_fire``
+    order, sent and delivered this interval, to every hold-fire unit of the
+    side in voice reach that accepts orders. Returns the ids it opened; none
+    under ``unit``. Units out of reach keep their own release.
+    Test: `test_command_releases_the_unit_and_every_hold_fire_unit_in_voice_reach`,
+    `test_unit_out_of_voice_reach_keeps_its_own_release`."""
+    if s['fire_rules'].get('release_by','unit')!='command':return set()
+    opened=set()
+    for side in (x['id'] for x in s['sides']):
+        if not comms.operational(s,side):continue
+        commander=comms.command_unit(s,side);reach=voice_reach(s,side)
+        heard=lambda u:u['side']==side and grid.distance(commander['pos'],u['pos'])<=reach
+        if not any(heard(u) for u in triggered):continue
+        for u in sorted(s['units'],key=lambda x:x['id']):
+            if (heard(u) and u.get('fire_posture')=='hold_fire' and u['strength']>0
+                    and u['status'] not in ('routed','lost','merged') and not u.get('leaderless')):
+                _spoken_open_fire(s,side,commander,u,reach,emit,enqueue,message)
+                opened.add(u['id'])
+    return opened
+
+
+def _spoken_open_fire(s,side,commander,u,reach,emit,enqueue,message):
+    """One ``open_fire`` order from ``commander`` to ``u``, given and taken
+    this interval; recorded and acknowledged as ``engine.issue`` orders are."""
+    version=max([o['version'] for o in s['orders'] if o['unit_id']==u['id']]+[u['order_version']])+1
+    oid=f'O{len(s["orders"])+1}'
+    packet=comms.envelope(s,commander['pos'],u['id'],u['pos'],'voice')
+    packet.update(id=oid,pos=list(u['pos']),status='arrived',ready_turn=s['turn'],
+                  last_progress_turn=s['turn'],expected_turn=s['turn'])
+    if u['id']!=commander['id']:packet.update(speaker_id=commander['id'],voice_reach=reach)
+    s['orders'].append({'id':oid,'side':side,'unit_id':u['id'],'destination':None,'stance':'open_fire',
+                        'source':'command_release','version':version,'sent_turn':s['turn'],
+                        'arrival_turn':s['turn'],'status':'delivered','transport':packet})
+    emit(s,'order_sent',order_id=oid,side=side,unit_id=u['id'],destination=None,version=version,
+         arrival_turn=s['turn'],transport=deepcopy(packet))
+    u.update(fire_posture='open_fire',fire_posture_version=version)
+    emit(s,'fire_posture_set',unit_id=u['id'],order_id=oid,fire_posture='open_fire')
+    emit(s,'order_delivered',order_id=oid,unit_id=u['id'],version=version)
+    message(s,side,f'{u["id"]}: open_fire order given by voice under fire.',kind='order')
+    enqueue(s,side,f'{u["id"]}: order {oid} delivered.',data={'order_id':oid,'status':'delivered'},
+            kind='ack',sender=u['id'])

@@ -347,6 +347,10 @@ def advance(s):
             order_rules.complete(s,u,'Assigned position reached.')
     damage={u['id']:0 for u in s['units']}; suppression={u['id']:0 for u in s['units']}
     holding=[]
+    by_command=s['fire_rules'].get('release_by','unit')=='command'
+    if by_command:  # docs/research/50: the command releases a unit fired upon last interval, and its earshot.
+        command.release(s,[u for u in s['units'] if u['strength']>0 and u['ammo']>0 and u['status']!='routed'
+                           and u.get('fire_posture')=='hold_fire' and fired_upon(s,u,s['turn']-1)],emit,enqueue,message)
     for u in sorted(s['units'],key=lambda x:x['id']):
         if u['strength']<=0 or u['ammo']<=0 or u['status']=='routed': continue
         # poc-13: a unit holding fire fires only if fired upon in the previous interval ...
@@ -357,6 +361,9 @@ def advance(s):
     warning=s['fire_rules']['warning_shots_release']
     released=[u for u in holding if suppression[u['id']]>0
               and (warning or (u['loss_credit']+damage[u['id']])//100>0)]
+    if by_command:  # docs/research/50: one spoken order opens the unit and its earshot, before any volley.
+        opened=command.release(s,released,emit,enqueue,message)|{u['id'] for u in released}
+        released=[u for u in holding if u['id'] in opened]
     for u in released:volley(s,u,damage,suppression)
     for u in s['units']:
         if u['status']=='merged':continue

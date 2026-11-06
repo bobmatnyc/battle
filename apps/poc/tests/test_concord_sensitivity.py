@@ -27,13 +27,18 @@ from battle.scenario_concord import CONCORD_NORTH_BRIDGE as ENTRY, FEATURES, VAR
 from battle.scenario_entry import PROVENANCE, build_state, dry_run, validate
 
 POC = Path(__file__).resolve().parent.parent
-# Taken at d6f1748, before any sensitivity variant existed: sha256 of the
+# Before docs/research/50 (the v1 entry, each company releasing itself),
+# taken at d6f1748, before any sensitivity variant existed: sha256 of the
 # sort-keyed JSON of the headless run summary without ``game_id`` and the
 # saved final state of the baseline ``concord-north-bridge`` run.
-BASELINE_RUN_SHA256 = "8755f91fab16f90beae38aa4e77aa4bba07b4ffdcc779f09aa693822bd148b79"
-# The same commit: sha256 of ``scripts/concord_timeline.py`` stdout with the
-# ``game_id`` value replaced by an ellipsis.
-BASELINE_TIMELINE_SHA256 = "b4c03cfb5a9c4ebd9d4be9d0578d226b0d40d36361eaa23c89725044e3d3bda1"
+BEFORE_RUN_SHA256 = "8755f91fab16f90beae38aa4e77aa4bba07b4ffdcc779f09aa693822bd148b79"
+# The same commit: sha256 of ``scripts/concord_timeline.py`` stdout (now
+# ``--before``) with the ``game_id`` value replaced by an ellipsis.
+BEFORE_TIMELINE_SHA256 = "b4c03cfb5a9c4ebd9d4be9d0578d226b0d40d36361eaa23c89725044e3d3bda1"
+# After docs/research/50 (the v2 entry, command fire release), the same two
+# digests of the baseline run.
+AFTER_RUN_SHA256 = "b03a3d1b7ec3f19ddd1e361fe27fb28353e61c6aa291b0de13bdb21d471960fa"
+AFTER_TIMELINE_SHA256 = "5a8c36dcf626b2a492655b813536dd5b0e92fc98a0a683d3466412ce75b73a72"
 GAME_ID = re.compile(r"'game_id': '[0-9a-f]+'")
 
 
@@ -45,28 +50,39 @@ def run(entry, tmp, name):
     return result, build_replay(db).repository.load(result["game_id"]), db
 
 
-def masked_timeline(seed):
+def masked_timeline(seed, *args):
     """``concord_timeline.py`` stdout under ``PYTHONHASHSEED=seed``, game_id masked."""
     env = {**os.environ, "PYTHONHASHSEED": str(seed)}
-    out = subprocess.run([sys.executable, str(POC / "scripts" / "concord_timeline.py")], cwd=POC, env=env,
+    out = subprocess.run([sys.executable, str(POC / "scripts" / "concord_timeline.py"), *args], cwd=POC, env=env,
                          check=True, capture_output=True, text=True).stdout
     return GAME_ID.sub("'game_id': '…'", out)
 
 
+def run_digest(entry):
+    with tempfile.TemporaryDirectory() as tmp:
+        result, final, _ = run(entry, tmp, "baseline.sqlite")
+    summary = {k: v for k, v in result.items() if k != "game_id"}
+    return hashlib.sha256(json.dumps({"result": summary, "final": final}, sort_keys=True).encode()).hexdigest()
+
+
 class BaselinePinTests(unittest.TestCase):
+    def test_before_entry_keeps_its_pinned_digest(self):
+        from battle.scenario_concord import CONCORD_NORTH_BRIDGE_BEFORE as BEFORE
+        self.assertEqual(build_state(BEFORE)["scenario"], "concord-north-bridge-v1")
+        self.assertNotIn("release_by", build_state(BEFORE)["fire_rules"])
+        self.assertEqual(run_digest(BEFORE), BEFORE_RUN_SHA256)
+
     def test_baseline_run_keeps_its_pinned_digest(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            result, final, _ = run(ENTRY, tmp, "baseline.sqlite")
-        summary = {k: v for k, v in result.items() if k != "game_id"}
-        digest = hashlib.sha256(json.dumps({"result": summary, "final": final}, sort_keys=True).encode())
-        self.assertEqual(digest.hexdigest(), BASELINE_RUN_SHA256)
+        self.assertEqual(run_digest(ENTRY), AFTER_RUN_SHA256)
 
     def test_baseline_timeline_is_the_same_under_two_hash_seeds(self):
         # One process has one hash seed, so a replay inside it cannot show
         # an order that depends on set or dict hashing; two processes can.
-        first, second = masked_timeline(1), masked_timeline(2)
-        self.assertEqual(first, second)
-        self.assertEqual(hashlib.sha256(first.encode()).hexdigest(), BASELINE_TIMELINE_SHA256)
+        for args, pin in (((), AFTER_TIMELINE_SHA256), (("--before",), BEFORE_TIMELINE_SHA256)):
+            with self.subTest(args=args):
+                first, second = masked_timeline(1, *args), masked_timeline(2, *args)
+                self.assertEqual(first, second)
+                self.assertEqual(hashlib.sha256(first.encode()).hexdigest(), pin)
 
 
 class SensitivityEntryTests(unittest.TestCase):

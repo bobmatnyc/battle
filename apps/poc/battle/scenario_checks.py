@@ -10,13 +10,17 @@ from . import grid
 # A water cell (``water: true``) is impassable unless it is a crossing.
 CROSSINGS = ("bridge", "ford")
 FIRE_POSTURES = ("hold_fire", "open_fire")
+RELEASE_BY = ("unit", "command")  # docs/research/50
 
 
 def fire_problems(entry, fire):
-    """poc-13 fire discipline: known postures and a boolean warning-shot flag."""
+    """poc-13 fire discipline: known postures, a boolean warning-shot flag and
+    a known ``release_by``. Test: `test_registration_refuses_an_unknown_release_by`."""
     problems = []
     if fire.default_posture not in FIRE_POSTURES or type(fire.warning_shots_release) is not bool:
         problems.append(f"fire default posture must be one of {FIRE_POSTURES} and warning_shots_release a boolean")
+    if fire.release_by not in RELEASE_BY:
+        problems.append(f"fire release_by must be one of {RELEASE_BY}")
     for u in entry.units:
         if "fire_posture" in u.overrides and u.overrides["fire_posture"] not in FIRE_POSTURES:
             problems.append(f"unit {u.id!r} fire posture must be one of {FIRE_POSTURES}")

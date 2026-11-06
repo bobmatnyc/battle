@@ -23,7 +23,7 @@ from dataclasses import dataclass, replace
 
 from . import concord_policy, grid
 from .scenario_concord import (
-    APPROACH, BRIDGE, BRIDGE_MOVE_COST, BRITISH_THREE, PROVENANCE, PROVINCIALS, RIVER_COL, TOWN, Variant,
+    APPROACH, BRIDGE, BRIDGE_MOVE_COST, BRITISH_THREE, PROVINCIALS, RIVER_COL, TOWN, Variant,
     _open_fire, concord_entry,
 )
 from .scenario_entry import UnitEntry
@@ -122,7 +122,7 @@ def geometry_entry(name, g, note=None):
                     for u in BRITISH_THREE)
     base = concord_entry(name, british=_open_fire(british))
     provincials = tuple(UnitEntry(u.id, u.side, u.name, g.provincials[u.id], u.overrides) for u in PROVINCIALS)
-    provenance = dict(PROVENANCE)
+    provenance = dict(base.provenance)
     if note:
         provenance["sensitivity"] = f"authored: sensitivity: {note}"
         provenance["scripted"] = ("reconstruction: the scripted historical-order policies of "

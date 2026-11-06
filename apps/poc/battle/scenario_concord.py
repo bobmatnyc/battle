@@ -11,7 +11,7 @@ entry's ``provenance``; the comparison with the record is docs/research/48.
 Test: `test_entry_registers_in_the_headless_catalog_after_a_dry_run`,
 `test_open_questions_are_labelled_and_each_alternative_is_a_variant`.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .grid import COLS, METRES_PER_HEX, ROWS, key
 from .scenario_command import COLONIAL_COMMUNICATIONS, WEAPONS_1775, CommandEntry
@@ -142,10 +142,29 @@ PROVENANCE = {
     "voice_profile": "authored: 1775 prose voice; no historical order is quoted as text",
     "scripted": "reconstruction: scripted historical-order policies (battle/concord_policy.py, doc 43 §5 S1)",
 }
+# docs/research/50: the assumptions of the command fire release (``release_by``
+# ``command``), each with its source. v2 entries carry them; ``before`` drops them.
+RELEASE_PROVENANCE = {
+    "fire.release_by": "sourced: Buttrick's order, 'Fire, for god's sake fire!', released the fire after the "
+                       "British volley in which Davis and Hosmer fell (S47)",
+    "fire.release_by.commander": "reconstruction: the command rides with P1, the Acton company (S47, S48), as "
+                                 "provincial.command_unit",
+    "fire.release_by.timing": "reconstruction: the order takes effect in the interval of the volley that "
+                              "triggers it",
+    "fire.release_by.reach": "authored: the order carries the 1775 voice reach of 2 hexes, the docs/research/47 "
+                             "assumption; no new number",
+    "fire.release_by.trigger": "authored: the release condition is unchanged: casualties in a hold-fire unit "
+                               "(warning shots release no one, as 'fire')",
+    "fire.release_by.out_of_reach": "sourced: a company out of earshot keeps Barrett's own rule, 'Do not fire "
+                                    "unless first fired upon' (S47)",
+}
+FIRE_BEFORE = FireEntry(default_posture="hold_fire")  # v1: each company releases itself (doc 48).
+FIRE = FireEntry(default_posture="hold_fire", release_by="command")  # v2: docs/research/50.
 
 
 def concord_entry(variant=None, british=BRITISH_THREE, bridge_cost=BRIDGE_MOVE_COST):
-    """One Concord entry; ``variant`` None is the catalog reading."""
+    """One Concord entry (v2, command fire release); ``variant`` None is the
+    catalog reading. ``before`` gives its v1 form."""
     suffix = "" if variant is None else f"-{variant}"
     succession = tuple(u.id for u in british if u.id != "B2")
     return ScenarioEntry(
@@ -155,7 +174,7 @@ def concord_entry(variant=None, british=BRITISH_THREE, bridge_cost=BRIDGE_MOVE_C
         rules=RULES_VERSION,
         prompt_version="concord-side-v1",
         prompt_setting="Concord's North Bridge, 1775",
-        labels={"poc-13": f"concord-north-bridge{suffix}-v1"},
+        labels={"poc-13": f"concord-north-bridge{suffix}-v2"},
         location="North Bridge · Concord, Massachusetts",
         date="1775-04-19",
         start_time="09:25:00",
@@ -187,12 +206,23 @@ def concord_entry(variant=None, british=BRITISH_THREE, bridge_cost=BRIDGE_MOVE_C
         voice_profile=COLONIAL_VOICE_PROFILE,
         tools_per_unit=0,
         # Barrett's order: provincials hold fire; the British fired without one (S47).
-        fire=FireEntry(default_posture="hold_fire"),
+        # Buttrick's order releases it (docs/research/50).
+        fire=FIRE,
         command=CommandEntry(succession={"provincial": ("P2", "P3", "P4"), "british": succession}),
         weapons=WEAPONS_1775,
         scripted={"provincial": "scripted-concord-militia-v1", "british": "scripted-concord-regulars-v1"},
-        provenance=PROVENANCE,
+        provenance={**PROVENANCE, **RELEASE_PROVENANCE},
     )
+
+
+def before(entry):
+    """Why: the change must keep its before run (build-handoff step 3).
+    What: ``entry`` as it was before docs/research/50: ``FIRE_BEFORE`` (each
+    company releases itself), its ``-v1`` label and no release provenance.
+    Test: `test_before_entry_keeps_its_pinned_digest`."""
+    label = entry.labels[RULES_VERSION].removesuffix("-v2") + "-v1"
+    return replace(entry, labels={RULES_VERSION: label}, fire=FIRE_BEFORE,
+                   provenance={k: v for k, v in entry.provenance.items() if k not in RELEASE_PROVENANCE})
 
 
 def _open_fire(units):
@@ -201,6 +231,9 @@ def _open_fire(units):
 
 
 CONCORD_NORTH_BRIDGE = concord_entry(british=_open_fire(BRITISH_THREE))
+# Before docs/research/50: the v1 entry, each company releasing itself. Kept
+# buildable and pinned to its old digests; in no catalog.
+CONCORD_NORTH_BRIDGE_BEFORE = before(CONCORD_NORTH_BRIDGE)
 
 
 @dataclass(frozen=True)

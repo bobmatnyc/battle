@@ -21,7 +21,7 @@ from battle.concord_policy import (
 )
 from battle.scenario_command import COLONIAL_COMMUNICATIONS, WEAPONS_1775
 from battle.scenario_concord import (
-    APPROACH, BRIDGE, CONCORD_NORTH_BRIDGE as ENTRY, EAST_END, TOWN, VARIANTS, WEST_END,
+    APPROACH, BRIDGE, CONCORD_NORTH_BRIDGE as ENTRY, EAST_END, TOWN, VARIANTS, WEST_END, before,
 )
 from battle.scenario_entry import PROVENANCE, build_state, dry_run, validate
 from battle.presentation import COLONIAL_VOICE_PROFILE
@@ -50,7 +50,9 @@ class ConcordEntryTests(unittest.TestCase):
         self.assertNotIn(ENTRY, PLAYER_SCENARIOS)
         dry_run(validate(ENTRY))
         s = build_state(ENTRY)
-        self.assertEqual((s["rules"], s["scenario"]), ("poc-13", "concord-north-bridge-v1"))
+        # docs/research/50: v2 has the command fire release; v1 stays buildable as ``before``.
+        self.assertEqual((s["rules"], s["scenario"]), ("poc-13", "concord-north-bridge-v2"))
+        self.assertEqual(build_state(before(ENTRY))["scenario"], "concord-north-bridge-v1")
         self.assertEqual(s["sides"], [{"id": "provincial", "name": "Provincials", "role": "attacker"},
                                       {"id": "british", "name": "British", "role": "defender"}])
         self.assertEqual((ENTRY.date, ENTRY.start_time), ("1775-04-19", "09:25:00"))

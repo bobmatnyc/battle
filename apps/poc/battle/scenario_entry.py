@@ -178,10 +178,12 @@ class FireEntry:
     shot (enemy fire that causes the unit no casualties in that interval)
     counts as being fired upon is ``warning_shots_release``; no source
     settles it, so it is an authored sensitivity flag, off by default.
+    ``release_by``, ``unit`` or ``command``: who releases it (docs/research/50).
     """
 
     default_posture: str = "open_fire"
     warning_shots_release: bool = False
+    release_by: str = "unit"
     basis: str = "authored sensitivity parameter; not a historical estimate"
 
 
@@ -563,6 +565,9 @@ def build_state(entry, rules=None):
     if _at_least(rules, 'poc-13'):
         from dataclasses import asdict
         s['fire_rules'] = asdict(entry.fire or FireEntry())
+        # docs/research/50: only a non-default release is written, so every
+        # earlier poc-13 snapshot and digest stays as it was.
+        if s['fire_rules']['release_by'] == 'unit': del s['fire_rules']['release_by']
         for u in units:
             u.setdefault('fire_posture', s['fire_rules']['default_posture'])
             s['friendly_reports'][u['side']][u['id']]['fire_posture'] = u['fire_posture']
