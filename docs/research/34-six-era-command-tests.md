@@ -108,7 +108,7 @@ Châtel-Chéhéry, France  /  October 8, 1918. Company G, 328th U.S. Infantry. T
 
 Shared component exercised: `test_recon_tactics.ReconTests.test_distance_cover_and_suppression_reduce_quality`.
 
-Sources: [U.S. Army History • Field study of Hill 223](https://history.army.mil/Portals/143/Images/Publications/ArmyHistoryMag/pdf/20002009/AH50newOCR.pdf) · [U.S. Army History • The other sixteen](https://www.lineofdeparture.army.mil/Journals/Army-History/Archive/Spring-2026/Unraveling-the-Myth-of-Sergeant/)
+Sources: U.S. Army History • Field study of Hill 223 ([link dead (HTTP 403, 2026-11-06); unverified](https://history.army.mil/Portals/143/Images/Publications/ArmyHistoryMag/pdf/20002009/AH50newOCR.pdf)) · [Gregory, *Unraveling the Myth of Sgt. Alvin York: The Other Sixteen* (Texas A&M University Press, 2023) • Project MUSE listing](https://muse.jhu.edu/book/125322), accessed 2026-11-06 (S41 in [09](09-sources.md))
 
 ## Romans in Gaul — The recall at Gergovia
 
