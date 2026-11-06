@@ -259,11 +259,17 @@ def push(s):
     is displaced to the nearest free compound hex (by distance, then hex), or
     overrun to strength 0 when none is free, and the lead pusher steps into
     the gateway. Both report by normal transport. A no-op without
-    ``push_rules``, which only poc-11 snapshots carry.
+    ``push_rules``, which only poc-11 and later snapshots carry.
+    poc-12 (docs/research/45): the holder steps back only to a free compound
+    hex beside the gateway (``step_back``). With none free the push stalls at
+    the threshold, nobody moves or loses strength, and ``gateway_push_stalled``
+    records why; it carries in the first interval such a hex is free.
     Test: `test_push_effort_accumulates_against_a_held_gateway`,
     `test_holder_is_displaced_inside_at_the_threshold`,
     `test_holder_is_overrun_when_no_inside_hex_is_free`,
-    `test_push_resets_when_the_pushers_are_drawn_off`."""
+    `test_push_resets_when_the_holder_leaves_the_gateway`,
+    `test_crowded_courtyard_stalls_the_push_and_conserves_strength`,
+    `test_one_free_hex_beside_the_gateway_takes_the_holder`."""
     rules = s.get('push_rules')
     if not rules:return
     from . import engine
@@ -288,18 +294,52 @@ def push(s):
                         pushers=[p['id'] for p in pushers], labor=effort - before, effort=effort,
                         required=rules['push_labour'],
                         under_fire=any(s['turn'] - p.get('last_attacked_turn', -99) <= 1 for p in pushers))
-            if effort >= rules['push_labour']:
+            if effort < rules['push_labour']:continue
+            if s['rules'] == 'poc-11':  # Frozen poc-11 rule: anywhere free in the compound, else overrun.
                 s['push_effort'][k] = 0
-                _carry(s, f, o, holder, pushers[0])
+                _carry(s, f, o, holder, pushers[0], _nearest_free(s, f, o))
+                continue
+            room = step_back(s, f, o)
+            if room is None:
+                # poc-12: grid capacity alone never destroys a formation.
+                engine.emit(s, 'gateway_push_stalled', feature_id=f['id'], opening_id=o['id'], holder_id=holder['id'],
+                            pushers=[p['id'] for p in pushers], effort=effort, reason='no_free_hex_beside_gateway')
+                continue
+            s['push_effort'][k] = 0
+            _carry(s, f, o, holder, pushers[0], room)
 
 
-def _carry(s, f, o, holder, lead):
-    from . import engine, orders
-    taken = {grid.key(u['pos']) for u in s['units'] if u['strength'] > 0}
+def _taken(s):
+    return {grid.key(u['pos']) for u in s['units'] if u['strength'] > 0}
+
+
+def _nearest_free(s, f, o):
+    """poc-11: the free compound hex nearest the gateway, at any distance, or None."""
+    taken = _taken(s)
     free = sorted((p for p in f['compound'] if grid.key(p) not in taken),
                   key=lambda p: (grid.distance(o['inside'], p), p))
-    if free:
-        holder['pos'] = list(free[0])
+    return free[0] if free else None
+
+
+def step_back(s, f, o):
+    """Why: a displaced holder gives ground one step, as any move does; it
+    cannot pass through or stack with the units behind it (docs/research/45).
+    What: the free compound hex beside the gateway ``o['inside']``, not across
+    a wall, lowest hex first; None when every such hex is taken.
+    Test: `test_displacement_is_one_step_to_the_nearest_legal_hex`."""
+    taken = _taken(s)
+    gateway = s['cells'][grid.key(o['inside'])]
+    room = sorted(p for p in grid.neighbors(o['inside'])
+                  if p in f['compound'] and grid.key(p) not in taken and p not in gateway.get('walls', ()))
+    return room[0] if room else None
+
+
+def _carry(s, f, o, holder, lead, room):
+    """The lead pusher takes the gateway; the holder moves to ``room``, or is
+    overrun when ``room`` is None (poc-11 only)."""
+    from . import engine, orders
+    if room:
+        holder['pos'] = list(room)
         outcome, losses = 'displaced', 0
     else:
         losses = holder['strength']
