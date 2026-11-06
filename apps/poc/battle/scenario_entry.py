@@ -28,7 +28,9 @@ SECONDS_PER_TURN = 30  # engine.issue states delays as turns * 30 seconds.
 ORDER_CATALOG = ("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in")
 # poc-10: an entry whose map declares a gate offers Close the gate as well.
 GATE_ORDER_CATALOG = ORDER_CATALOG + ("close_gate",)
-COMMUNICATIONS = "civil-war-courier-v1"  # comms.PROFILE, the only profile.
+PROVENANCE = ("sourced:", "reconstruction:", "authored:")
+# comms.PROFILES ids; the Napoleonic profile shares the 1863 transport rates.
+COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1")
 
 
 def unit(uid, side, name, pos):
@@ -162,6 +164,9 @@ class ScenarioEntry:
     tools_per_unit: int = 20
     player_side: str | None = None
     gates: GateEntry | None = None
+    # Field name -> "sourced: ...", "reconstruction: ..." or "authored: ...".
+    # Documentation only: never stored in a snapshot or shown in a prompt.
+    provenance: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def player(self):
@@ -183,13 +188,13 @@ def validate(entry):
     side ids, names and roles, the player side, the victory kind and its own
     checks (``victory.KINDS``), grid geometry, turn length, order catalog,
     communications, voice, unit roster and command attachment, headquarters
-    and supply hexes on the grid, and unit overrides that would replace a
-    unit's id, side or hex.
+    and supply hexes on the grid, unit overrides that would replace a
+    unit's id, side or hex, and provenance notes without a kind label.
     Test: `test_catalog_refuses_entry_the_rules_cannot_run`,
     `test_registry_refuses_off_grid_headquarters_and_supply`,
     `test_registry_refuses_overrides_of_unit_identity`.
     """
-    from .presentation import VOICE_PROFILE
+    from .presentation import VOICE_PROFILES
 
     problems = []
     if entry.rules != RULES_VERSION:
@@ -215,13 +220,16 @@ def validate(entry):
         for v in (entry.gates.close_labour, entry.gates.bar_labour, entry.gates.force_labour, entry.gates.work_cap)
     ):
         problems.append("gate labour values must be positive integers")
-    if entry.communications != COMMUNICATIONS:
-        problems.append(f"communications must be {COMMUNICATIONS!r}")
-    if entry.voice_profile != VOICE_PROFILE:
-        problems.append(f"voice profile must be {VOICE_PROFILE!r}")
+    if entry.communications not in COMMUNICATIONS:
+        problems.append(f"communications must be one of {COMMUNICATIONS}")
+    if entry.voice_profile not in VOICE_PROFILES:
+        problems.append(f"voice profile must be one of {tuple(VOICE_PROFILES)}")
     if not entry.prompt_version or not all(s.mission for s in entry.sides.values()):
         problems.append("prompt version and every side's mission are required")
     problems.extend(_roster_problems(entry))
+    unlabelled = [k for k, v in entry.provenance.items() if not str(v).startswith(PROVENANCE)]
+    if unlabelled:
+        problems.append(f"provenance of {', '.join(unlabelled)} must start with one of {PROVENANCE}")
     if problems:
         raise ValueError(f"Scenario {entry.id!r} cannot run: " + "; ".join(problems))
     return entry

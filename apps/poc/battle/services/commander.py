@@ -5,7 +5,6 @@ import time
 from copy import deepcopy
 from ..contracts import DecisionProvider, ProviderFailure, ScenarioCatalog, Simulation
 from ..command_policy import DEFAULT_SCENARIO, fallback_orders, system_prompt
-from ..presentation import VOICE_PROFILE
 
 # Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
 # the exception names the provider adapter reports. Anything else is replaced
@@ -207,7 +206,7 @@ class CommanderService:
             "text": str(result.get("text", "Orders prepared."))[:1500],
             "observation": observation,
             "turn": state["turn"],
-            "voice_profile": VOICE_PROFILE,
+            "voice_profile": self.display_scenario(state).voice_profile,
             "validation": {"valid": True, "error": None},
             "rejected_proposal": None,
             "fallback": False,
@@ -231,7 +230,7 @@ class CommanderService:
             "fallback": False,
             "fallback_reason": None,
             "model": None,
-            "voice_profile": VOICE_PROFILE,
+            "voice_profile": self.display_scenario(state).voice_profile,
         }
 
     def _fallback(self, state, side, observation, telemetry, stage, reason):
@@ -283,7 +282,7 @@ class CommanderService:
                         state, side, result.get("orders", [])
                     ),
                     "source": "openrouter",
-                    "voice_profile": VOICE_PROFILE,
+                    "voice_profile": self.display_scenario(state).voice_profile,
                 }
             except Exception as exc:
                 error = failure_kind(exc)
@@ -300,5 +299,5 @@ class CommanderService:
             "orders": [],
             "source": "scripted",
             "fallback_reason": error,
-            "voice_profile": VOICE_PROFILE,
+            "voice_profile": self.display_scenario(state).voice_profile,
         }

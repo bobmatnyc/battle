@@ -131,7 +131,7 @@ class CatalogTests(unittest.TestCase):
             "one defender, one attacker": dict(sides=two_attackers),
             "command unit": dict(sides=command),
             "unique": dict(units=DUEL.units + (DUEL.units[0],)),
-            "voice": dict(voice_profile="napoleonic-en-v1"),
+            "voice": dict(voice_profile="unknown-voice-v1"),
         }
         for problem, change in cases.items():
             with self.subTest(problem=problem):
@@ -365,7 +365,7 @@ class SelectionTests(unittest.TestCase):
                 timeout=60,
             )
             self.assertEqual(cli.returncode, 2)
-            self.assertIn("Unknown scenario 'nope'. Known scenarios: little-round-top.", cli.stderr)
+            self.assertIn("Unknown scenario 'nope'. Known scenarios: little-round-top, hougoumont-north-gate.", cli.stderr)
             self.assertFalse(db.exists())
 
     def test_entry_build_does_not_mutate_entry_data(self):

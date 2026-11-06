@@ -9,6 +9,9 @@ from . import grid
 
 PROFILE={'id':'civil-war-courier-v1','label':'1863 · voice / foot courier',
          'methods':['voice','courier'],'cost_per_turn':200,'expiry_turns':20}
+# Hougoumont (docs/research/42): the 1863 transport rates under an 1815 label.
+# Period rates (gallopers, aides-de-camp) are deferred; transport reads PROFILE.
+PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'})}
 
 def command_unit(s,side):
     uid=s['commanders'][side]['unit_id']
@@ -27,7 +30,7 @@ def location(s,side):
     u=command_unit(s,side)
     return {**deepcopy(s['commanders'][side]),'pos':list(u['pos']) if u else None,
             'status':u['status'] if u else 'lost','operational':operational(s,side),
-            'profile':deepcopy(PROFILE)}
+            'profile':deepcopy(PROFILES[s['commanders'][side]['communications']])}
 
 def envelope(s,origin,recipient,address,method='courier',handling=0,cells=None):
     """A packet from origin to address. Its ``expected_turn`` is planned over

@@ -18,6 +18,22 @@ Never invent a messenger, sighting or event merely for atmosphere. These voice
 instructions apply only to prose, never to JSON keys, IDs or legal order values.
 The current demo's output locale is English; localization is a product requirement.'''
 
+# Hougoumont (docs/research/42): the same rules as the 1863 voice, set in 1815.
+NAPOLEONIC_VOICE_PROFILE = 'napoleonic-en-v1'
+NAPOLEONIC_VOICE_INSTRUCTION = '''Write the human-readable text as a concise military dispatch
+appropriate to the Napoleonic Wars in 1815. Address the player as Colonel;
+use restrained, readable period phrasing such as headquarters, detachment,
+companies, position, cartridges, runner, and orders. Avoid modern radio idioms such as
+roger, copy that, over and out, and modern slang. Do not use caricatured dialect,
+invent historical quotations, or obscure the meaning with theatrical archaism.
+Keep every reported fact, uncertainty, map reference and delivery limitation intact.
+Never invent a messenger, sighting or event merely for atmosphere. These voice
+instructions apply only to prose, never to JSON keys, IDs or legal order values.
+The current demo's output locale is English; localization is a product requirement.'''
+
+# Voice profile id -> prose instruction. A scenario entry names one of these.
+VOICE_PROFILES = {VOICE_PROFILE: VOICE_INSTRUCTION, NAPOLEONIC_VOICE_PROFILE: NAPOLEONIC_VOICE_INSTRUCTION}
+
 EN_DISPATCH = {
     'order.move.sent': 'To {unit}: Instructions to change position are on their way by runner. Delivery expected in {seconds} seconds.',
     'order.hold.sent': 'To {unit}: Instructions to hold position are on their way by runner. Delivery expected in {seconds} seconds.',

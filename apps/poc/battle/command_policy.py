@@ -1,7 +1,7 @@
 """Pure commander observations, validated order contracts and scripted policy."""
 
 from . import engine, grid, orders as order_rules
-from .presentation import VOICE_INSTRUCTION, VOICE_PROFILE
+from .presentation import VOICE_PROFILES
 from .scenario import LITTLE_ROUND_TOP
 from .scenario_entry import LEGACY_ROLES
 
@@ -51,7 +51,7 @@ PROMPT_VERSION = DEFAULT_SCENARIO.prompt_version
 OPPONENT_POLICY = "scripted-fallback-v1"
 
 # Voice profile id -> prose instruction. Entries name one of these.
-VOICES = {VOICE_PROFILE: VOICE_INSTRUCTION}
+VOICES = VOICE_PROFILES
 
 
 def _common(scenario):

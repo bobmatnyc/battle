@@ -9,6 +9,7 @@ from .clock import SimulationClock
 from .config import Settings
 from .presentation import present_view
 from .scenario import LITTLE_ROUND_TOP
+from .scenario_hougoumont import HOUGOUMONT_NORTH_GATE
 from .services.battle import BattleService
 from .services.commander import CommanderService
 from .services.queries import BattleQueries
@@ -16,7 +17,7 @@ from .services.replay import ReplayService
 from .storage import Store
 
 # Player-facing scenarios; the first is the default. Test fixtures stay out.
-PLAYER_SCENARIOS = (LITTLE_ROUND_TOP,)
+PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE)
 
 
 def build_scenarios():
