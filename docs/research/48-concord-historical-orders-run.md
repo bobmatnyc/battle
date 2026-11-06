@@ -24,7 +24,7 @@ Each of the three open questions in [43 §6](43-concord-scenario-spec.md#6-open-
 
 | Question | Entry reading (provenance key) | Variant | Source locator |
 |---|---|---|---|
-| 1. Which bank | British on the town (east) bank, militia on the ridge west of it (`map.banks`). S47, S48 and S49 do not say. S47's ridge above the bridge and the first shots into the river put the forces on opposite banks. | `british-west-bank`: the guard at the west end of the bridge, the river behind it | S47, S48, S49 silent; web snippets not read (43 §6, unverified) |
+| 1. Which bank | British on the town (east) bank, militia on the ridge west of it (`map.banks`). S47, S48 and S49 do not say. S47's ridge above the bridge and the first shots into the river put the forces on opposite banks. | `british-west-bank`: an authored counterfactual, the guard at the west end of the bridge with the river behind it. The sources are silent on the banks, so no source supports it either | S47, S48, S49 silent; web snippets not read (43 §6, unverified) |
 | 2. Planks | Planks intact, bridge hex move cost 100 (`map.bridge`) | `planks-lifted`: bridge hex move cost 300. A fully lifted bridge would put the objective on impassable water, which `validate` refuses | S47: an officer suggested lifting them; not confirmed |
 | 3. Companies | Three companies, about 96 (`units.british`) | `two-companies`: two of 45, about 90 | S47 three, about 96; S49 two, about 90 |
 
@@ -32,7 +32,7 @@ Other authored or reconstructed choices: the start minute (09:25), the split of 
 
 ## 4. The scripted historical orders
 
-`battle/concord_policy.py` holds the orders as data (`MILITIA_ORDERS`, `REGULARS_ORDERS`), each with a trigger, a `source` locator and a `provenance` label. No policy reads ground truth or chooses a winner.
+`battle/concord_policy.py` holds the orders as data (`MILITIA_ORDERS`, `REGULARS_ORDERS`), each with a trigger, a `source` locator and a `provenance` label. No policy chooses a winner. The policies read only the side's `engine.view`, with one exception that matters: headquarters rides with P1, the provincial command unit, and `engine.view` gives the command unit's own detachment its true current state. Headquarters therefore knows P1's losses at once, without a report.
 
 | Policy | Order | Trigger | Source |
 |---|---|---|---|
@@ -46,18 +46,85 @@ Other authored or reconstructed choices: the start minute (09:25), the split of 
 
 ## 5. The run
 
+The full output of `python3 scripts/concord_timeline.py` (from `apps/poc`, commit `454b1a2`). Only the `game_id`, which differs on every run, is replaced by `…`. Every event the comparison cites is in this block.
+
 ```
-{'game_id': '…', 'winner': 'provincial', 'turns': 8, 'events': 568, 'strength': {'P1': 39, 'P2': 120, 'P3': 120, 'P4': 120, 'B1': 29, 'B2': 32, 'B3': 32}, 'replay': {'revisions': 12, 'turns': 8, 'status': 'identical'}, 'run': {… 'opponent': 'scripted-concord-regulars-v1', 'player_policy': 'scripted-concord-militia-v1'}}
+{'game_id': '…', 'winner': 'provincial', 'turns': 8, 'events': 568, 'strength': {'P1': 39, 'P2': 120, 'P3': 120, 'P4': 120, 'B1': 29, 'B2': 32, 'B3': 32}, 'replay': {'revisions': 12, 'turns': 8, 'status': 'identical'}, 'run': {'rules': 'poc-13', 'scenario': 'concord-north-bridge-v1', 'scenario_id': 'concord-north-bridge', 'variant': None, 'prompt_version': 'concord-side-v1', 'player_side': 'provincial', 'player_provider': 'scripted', 'model': None, 'effort': None, 'response_format': None, 'opponent_side': 'british', 'opponent': 'scripted-concord-regulars-v1', 'player_policy': 'scripted-concord-militia-v1'}}
+turn  0  order_sent        {'arrival_turn': 1, 'destination': [11, 10], 'order_id': 'O1', 'side': 'provincial', 'unit_id': 'P1', 'version': 1}
+turn  0  order_sent        {'arrival_turn': 1, 'destination': [11, 9], 'order_id': 'O2', 'side': 'provincial', 'unit_id': 'P2', 'version': 1}
+turn  0  order_sent        {'arrival_turn': 1, 'destination': [11, 11], 'order_id': 'O3', 'side': 'provincial', 'unit_id': 'P3', 'version': 1}
+turn  0  order_sent        {'arrival_turn': 1, 'destination': None, 'order_id': 'O4', 'side': 'british', 'unit_id': 'B1', 'version': 1}
+turn  0  order_sent        {'arrival_turn': 1, 'destination': None, 'order_id': 'O5', 'side': 'british', 'unit_id': 'B2', 'version': 1}
+turn  0  order_sent        {'arrival_turn': 1, 'destination': None, 'order_id': 'O6', 'side': 'british', 'unit_id': 'B3', 'version': 1}
+turn  1  order_delivered   {'order_id': 'O1', 'unit_id': 'P1', 'version': 1}
+turn  1  order_delivered   {'order_id': 'O2', 'unit_id': 'P2', 'version': 1}
+turn  1  order_delivered   {'order_id': 'O3', 'unit_id': 'P3', 'version': 1}
+turn  1  order_delivered   {'order_id': 'O4', 'unit_id': 'B1', 'version': 1}
+turn  1  order_delivered   {'order_id': 'O5', 'unit_id': 'B2', 'version': 1}
+turn  1  order_delivered   {'order_id': 'O6', 'unit_id': 'B3', 'version': 1}
+turn  1  local_decision    B1 observe: Enemy sighted beyond effective range; observe, report and maintain mission.
+turn  1  local_decision    B2 observe: Enemy sighted beyond effective range; observe, report and maintain mission.
+turn  1  local_decision    B3 observe: Enemy sighted beyond effective range; observe, report and maintain mission.
+turn  1  local_decision    P1 continue: Enemy sighted beyond effective range; observe, report and maintain mission.
+turn  1  local_decision    P2 continue: Enemy sighted beyond effective range; observe, report and maintain mission.
+turn  1  local_decision    P3 continue: No enemy within effective range; maintain the assigned mission.
+turn  1  local_decision    P4 hold: No enemy within effective range; maintain the assigned mission.
+turn  1  unit_moved        P1 [7, 10] -> [8, 10]
+turn  1  unit_moved        P2 [6, 10] -> [6, 9]
+turn  1  unit_moved        P3 [5, 10] -> [5, 11]
+turn  2  unit_moved        P1 [8, 10] -> [9, 10]
+turn  2  unit_moved        P2 [6, 9] -> [7, 9]
+turn  2  unit_moved        P3 [5, 11] -> [6, 11]
+turn  3  unit_moved        P1 [9, 10] -> [10, 10]
+turn  3  unit_moved        P2 [7, 9] -> [8, 9]
+turn  3  unit_moved        P3 [6, 11] -> [7, 11]
+turn  3  order_sent        {'arrival_turn': 6, 'destination': [10, 10], 'order_id': 'O7', 'side': 'provincial', 'unit_id': 'P4', 'version': 1}
+turn  4  unit_moved        P1 [10, 10] -> [11, 10]
+turn  4  unit_moved        P2 [8, 9] -> [9, 9]
+turn  4  unit_moved        P3 [7, 11] -> [8, 11]
 turn  4  volley            {'exposure': 57, 'rounds': 32, 'target_id': 'P1', 'unit_id': 'B1'}
+turn  5  local_decision    B1 defend: Enemy within effective range; halt locally, use cover and return fire.
+turn  5  local_decision    P1 defend: Enemy within effective range; halt locally, use cover and return fire.
+turn  5  unit_moved        P2 [9, 9] -> [10, 9]
+turn  5  unit_moved        P3 [8, 11] -> [9, 11]
+turn  5  volley            {'exposure': 57, 'rounds': 32, 'target_id': 'P1', 'unit_id': 'B1'}
 turn  5  volley            {'exposure': 72, 'returning_fire': True, 'rounds': 40, 'target_id': 'B1', 'unit_id': 'P1'}
 turn  5  casualties        {'count': 1, 'remaining': 39, 'unit_id': 'P1'}
+turn  6  order_delivered   {'order_id': 'O7', 'unit_id': 'P4', 'version': 1}
+turn  6  local_decision    P4 continue: No enemy within effective range; maintain the assigned mission.
+turn  6  unit_moved        P2 [10, 9] -> [11, 9]
+turn  6  unit_moved        P3 [9, 11] -> [10, 11]
+turn  6  unit_moved        P4 [4, 10] -> [5, 10]
+turn  6  volley            {'exposure': 57, 'rounds': 32, 'target_id': 'P1', 'unit_id': 'B1'}
+turn  6  volley            {'exposure': 57, 'rounds': 32, 'target_id': 'P2', 'unit_id': 'B3'}
+turn  6  volley            {'exposure': 70, 'returning_fire': True, 'rounds': 39, 'target_id': 'B1', 'unit_id': 'P1'}
 turn  6  casualties        {'count': 1, 'remaining': 31, 'unit_id': 'B1'}
 turn  6  order_sent        {'arrival_turn': 7, 'destination': None, 'order_id': 'O8', 'side': 'provincial', 'unit_id': 'P1', 'version': 2}
+turn  6  order_sent        {'arrival_turn': 7, 'destination': None, 'order_id': 'O9', 'side': 'provincial', 'unit_id': 'P2', 'version': 2}
+turn  6  order_sent        {'arrival_turn': 7, 'destination': None, 'order_id': 'O10', 'side': 'provincial', 'unit_id': 'P3', 'version': 2}
 turn  7  fire_posture_set  {'fire_posture': 'open_fire', 'order_id': 'O8', 'unit_id': 'P1'}
+turn  7  order_delivered   {'order_id': 'O8', 'unit_id': 'P1', 'version': 2}
+turn  7  fire_posture_set  {'fire_posture': 'open_fire', 'order_id': 'O9', 'unit_id': 'P2'}
+turn  7  order_delivered   {'order_id': 'O9', 'unit_id': 'P2', 'version': 2}
+turn  7  fire_posture_set  {'fire_posture': 'open_fire', 'order_id': 'O10', 'unit_id': 'P3'}
+turn  7  order_delivered   {'order_id': 'O10', 'unit_id': 'P3', 'version': 2}
 turn  7  local_decision    B1 withdraw: We are withdrawing because credible sightings indicate a much stronger enemy.
+turn  7  local_decision    B3 withdraw: We are withdrawing because credible sightings indicate a much stronger enemy.
+turn  7  local_decision    P2 defend: Enemy within effective range; halt locally, use cover and return fire.
+turn  7  unit_moved        B1 [13, 10] -> [13, 11]
+turn  7  unit_moved        B3 [13, 9] -> [14, 9]
+turn  7  unit_moved        P3 [10, 11] -> [11, 11]
+turn  7  unit_moved        P4 [5, 10] -> [6, 10]
+turn  7  volley            {'exposure': 55, 'rounds': 31, 'target_id': 'P3', 'unit_id': 'B1'}
 turn  7  volley            {'exposure': 216, 'rounds': 120, 'target_id': 'B1', 'unit_id': 'P3'}
 turn  7  casualties        {'count': 2, 'remaining': 29, 'unit_id': 'B1'}
+turn  8  local_decision    P1 observe: Enemy sighted beyond effective range; observe, report and maintain mission.
+turn  8  local_decision    P2 observe: Enemy sighted beyond effective range; observe, report and maintain mission.
+turn  8  local_decision    P3 defend: Enemy within effective range; halt locally, use cover and return fire.
+turn  8  unit_moved        B1 [13, 11] -> [14, 11]
+turn  8  unit_moved        P4 [6, 10] -> [7, 10]
 turn  8  battle_ended      {'reason': 'The attackers held the bridge uncontested for 60 seconds.', 'winner': 'provincial'}
+capture 2 reason The attackers held the bridge uncontested for 60 seconds.
 ```
 
 Scenario time is 09:25 plus 30 seconds a turn: turn 4 is 09:27:00 and turn 8 is 09:29:00.
@@ -101,11 +168,11 @@ In both, the British lose more than the provincials. The simulated totals are a 
 | `two-companies` | provincial, 8 | P1 38, B1 42, B2 45: provincial 2, British 3 |
 | `british-west-bank` | provincial, 20 | P1 35, P2 116, B1 0, B2 23, B3 0: provincial 9, British 73. B1 routed turn 7, B3 turn 15 |
 
-The policies were written for the entry's geometry. In `british-west-bank` the British stand on the militia's approach hexes, so this run tests the variant's data, not a reconstruction of the orders.
+`british-west-bank` is an authored counterfactual, not a sourced reading: S47, S48 and S49 are silent on the banks. The policies were written for the entry's geometry. In it the British stand on the militia's approach hexes, so this run tests the variant's data, not a reconstruction of the orders.
 
 ## 7. Gaps and divergences
 
-1. **Fire release order.** The hold-fire rule released the front company at turn 5, one interval before Buttrick's order went out and two before it arrived. In the record, his order released the fire (S47). The policy can only send an order after a delivered loss, and the rule releases a unit as soon as it takes losses.
+1. **Fire release order.** The hold-fire rule released the front company at turn 5, one interval before Buttrick's order went out and two before it arrived. In the record, his order released the fire (S47). The policy's trigger is a provincial loss known to headquarters. Headquarters rides with P1, the command unit, and `engine.view` gives it P1's true state, so it knew of P1's loss at turn 5 at once. The order still waited for the next decision at turn 6 (decisions come every 3 turns) and one interval of delivery, while the rule releases a unit in the interval it takes losses.
 2. **Warning shots.** S47's three shots into the river are not modelled. The no-casualty volley at turn 4 resembles them only through loss credit.
 3. **Davis and Hosmer.** No officer fell: P1 lost 1 man against an officer step of 13. Doc 47 records that a single early volley cannot kill an officer.
 4. **The British withdrawal.** The guard gave way by local doctrine before any company broke, so the reconstructed fall-back order played no part. Whether S47's withdrawal was ordered is not known (43 §1).
@@ -115,6 +182,7 @@ The policies were written for the entry's geometry. In `british-west-bank` the B
 8. **Losses** are low against S47 (section 6), with the assumed smoothbore effect of 60 per cent.
 9. **Not modelled:** the grenadier companies and the 11:00 return (S47), and the sources 43 §6 question 8 lists as not read (Gage's orders, Barker's diary, the depositions, Laurie's account).
 10. **Desk.** The command desk cannot draw the river (43 row 8), so Concord is headless only.
+11. **Authored bridge geometry drives the outcome.** `BRIDGE` (12, 10) is on an even row of the odd-row grid. Its radius-1 ring has three west-bank hexes, (11, 9), (11, 10) and (11, 11), and one east-bank hex, (13, 10). `APPROACH` sends P1 to P3 onto those three west-bank hexes. Only B1 stands inside the ring: B2 at (14, 10) and B3 at (13, 9) are 2 hexes from the bridge, and the guard order holds them there. The capture rule (`victory.py:76`, `holding == {attacker}`) is therefore met as soon as one company, B1, leaves the ring, as it did at turn 7. The geometry is authored, not sourced. A sensitivity variant with the bridge on an odd row, for example (12, 11), where the ring has one west-bank hex and three east-bank hexes, is future work and not part of this run.
 
 ## 8. Tests
 
