@@ -1,10 +1,11 @@
 """Common mission templates. All rates are authored, uncalibrated POC rules."""
 from copy import deepcopy
-from . import grid,features
+from . import grid,features,gates
 from . import tactics_v8 as tactics
 from .engine_v2 import InvalidOrder
 
 VERSION='common-orders-v3'
+GATE_VERSION='common-orders-v4'  # v3 plus Close the gate (poc-10, battles with a gate).
 ROUNDS_PER_TROOP=40
 LOAD_ROUNDS_PER_TROOP=5
 REST_RECOVERY=6
@@ -42,8 +43,14 @@ def catalog(s):
     if s.get('rules')=='poc-5':
         from .orders_v5 import catalog as previous_catalog
         return previous_catalog(s)
-    entries=TEMPLATES if s.get('rules') in ('poc-8','poc-9') else TEMPLATES[:2]
-    return [dict(deepcopy(t),message_key='order.template.'+t['id'],version=VERSION) for t in entries]
+    entries=TEMPLATES if s.get('rules') in ('poc-8','poc-9','poc-10') else TEMPLATES[:2]
+    version=VERSION
+    if gates.present(s):entries,version=entries+[gates.TEMPLATE],GATE_VERSION
+    return [dict(deepcopy(t),message_key='order.template.'+t['id'],version=version) for t in entries]
+
+def available(s):
+    """Templates an order may name: poc-10 battles with a gate add Close the gate."""
+    return TEMPLATES+([gates.TEMPLATE] if gates.present(s) else [])
 
 def known_sites(s,side):
     # Positions are in the initial briefing. Remaining stocks require a local report.
@@ -51,7 +58,7 @@ def known_sites(s,side):
             for d in s.get('supply_sites',[]) if d['side']==side]
 
 def validate(s,side,order):
-    template=next((t for t in TEMPLATES if t['id']==order.get('stance')),None)
+    template=next((t for t in available(s) if t['id']==order.get('stance')),None)
     if not template:raise InvalidOrder('Choose an available order template.')
     if template['destination']=='hex':
         if not grid.valid(order.get('destination')):raise InvalidOrder('Choose a destination hex inside the battlefield.')
@@ -97,6 +104,9 @@ def decide(s,u,contacts):
     decision['policy']=VERSION
     stance=u['stance']
     if u['status']=='routed':return decision
+    if stance=='close_gate':  # poc-10: the gate party stays at its work under fire.
+        decision.update(action='hold',target=None,reason='Closing the gate; the party holds at its work under fire.')
+        return decision
     threats=[c['pos'] for c in contacts if grid.distance(u['pos'],c['pos'])<=5]
     # A commanded withdrawal is distinct from panic. Recon avoids closing on contact.
     if stance=='retreat' or (stance=='recon' and (threats or decision['under_fire'])):

@@ -29,16 +29,21 @@ def location(s,side):
             'status':u['status'] if u else 'lost','operational':operational(s,side),
             'profile':deepcopy(PROFILE)}
 
-def envelope(s,origin,recipient,address,method='courier',handling=0):
-    route=grid.path(s['cells'],origin,address)
+def envelope(s,origin,recipient,address,method='courier',handling=0,cells=None):
+    """A packet from origin to address. Its ``expected_turn`` is planned over
+    ``cells``, the sender's knowledge (poc-10 gates), else the live cells.
+    Over known cells with no known route, the expected turn is None (unknown)."""
+    plan=s['cells'] if cells is None else cells
+    route=grid.path(plan,origin,address)
     previous=origin;cost=0
     for p in route:
-        cost+=grid.cost(s['cells'],previous,p);previous=p
+        cost+=grid.cost(plan,previous,p);previous=p
     delay=max(1,(cost+PROFILE['cost_per_turn']-1)//PROFILE['cost_per_turn'])+handling
+    if cells is not None and not route and list(origin)!=list(address):delay=None
     return {'method':method,'origin':list(origin),'pos':list(origin),'address':list(address),
             'recipient_id':recipient,'credit':0,'sent_turn':s['turn'],
             'ready_turn':s['turn']+1+handling,'last_progress_turn':s['turn'],
-            'expected_turn':s['turn']+delay,'expires_turn':s['turn']+PROFILE['expiry_turns']+handling,
+            'expected_turn':None if delay is None else s['turn']+delay,'expires_turn':s['turn']+PROFILE['expiry_turns']+handling,
             'status':'en_route','forwardings':0}
 
 def progress(s,packet,emit):

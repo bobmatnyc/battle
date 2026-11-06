@@ -18,14 +18,16 @@ from . import grid
 # Sides and roles of every edition before poc-9, which fixed them in the rules.
 SIDES = ("union", "confederate")
 LEGACY_ROLES = {"union": "defender", "confederate": "attacker"}
-RULES_VERSION = "poc-9"
-EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9")
+RULES_VERSION = "poc-10"
+EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9", "poc-10")
 # poc-9 takes side ids, names, roles, the player side and the victory kind from
 # the entry (stored in the snapshot); these remain fixed by the rules.
 ROLES = ("defender", "attacker")
 SIDE_ID = re.compile(r"[a-z][a-z0-9_]{0,31}")
 SECONDS_PER_TURN = 30  # engine.issue states delays as turns * 30 seconds.
 ORDER_CATALOG = ("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in")
+# poc-10: an entry whose map declares a gate offers Close the gate as well.
+GATE_ORDER_CATALOG = ORDER_CATALOG + ("close_gate",)
 COMMUNICATIONS = "civil-war-courier-v1"  # comms.PROFILE, the only profile.
 
 
@@ -95,6 +97,24 @@ class VictoryEntry:
 
 
 @dataclass(frozen=True)
+class GateEntry:
+    """Authored gate labour (poc-10), stored in the snapshot as ``gate_rules``.
+
+    Labour units, as Dig in counts them: a party adds ``min(strength,
+    work_cap)`` per interval. Closing needs ``close_labour``, barring a closed
+    gate a further ``bar_labour``; attackers force a closed (not barred) gate
+    with ``force_labour``. No source gives these numbers: they are POC
+    sensitivity parameters, labelled by ``basis``.
+    """
+
+    close_labour: int
+    bar_labour: int
+    force_labour: int
+    work_cap: int
+    basis: str = "authored POC sensitivity parameter; not a historical estimate"
+
+
+@dataclass(frozen=True)
 class MapEntry:
     """Terrain reference: a cell builder, authored features and display data."""
 
@@ -141,6 +161,7 @@ class ScenarioEntry:
     voice_profile: str
     tools_per_unit: int = 20
     player_side: str | None = None
+    gates: GateEntry | None = None
 
     @property
     def player(self):
@@ -184,8 +205,16 @@ def validate(entry):
         problems.append(f"map must be {grid.COLS}x{grid.ROWS} hexes of {grid.METRES_PER_HEX} m")
     if entry.seconds_per_turn != SECONDS_PER_TURN:
         problems.append(f"turns must be {SECONDS_PER_TURN} seconds")
-    if tuple(entry.order_catalog) != ORDER_CATALOG:
-        problems.append(f"order catalog must be {ORDER_CATALOG}")
+    catalog = GATE_ORDER_CATALOG if _has_gates(entry) else ORDER_CATALOG
+    if tuple(entry.order_catalog) != catalog:
+        problems.append(f"order catalog must be {catalog}")
+    if _has_gates(entry) != (entry.gates is not None):
+        problems.append("authored gate labour is required exactly when a building declares openings")
+    elif entry.gates and not all(
+        type(v) is int and v > 0
+        for v in (entry.gates.close_labour, entry.gates.bar_labour, entry.gates.force_labour, entry.gates.work_cap)
+    ):
+        problems.append("gate labour values must be positive integers")
     if entry.communications != COMMUNICATIONS:
         problems.append(f"communications must be {COMMUNICATIONS!r}")
     if entry.voice_profile != VOICE_PROFILE:
@@ -296,6 +325,32 @@ def _terrain_problems(cells):
     return problems
 
 
+def _has_gates(entry):
+    return any(b.get("openings") for b in entry.map.features.get("buildings", ()))
+
+
+def _opening_problems(b):
+    """A gated building: its ``pos`` in its compound, each opening on the
+    edge between a compound hex and an outside neighbour, a known state."""
+    from . import gates
+
+    compound = [tuple(p) for p in b.get("compound", [b["pos"]])]
+    problems = []
+    if tuple(b["pos"]) not in compound or not all(grid.valid(list(p)) for p in compound):
+        problems.append(f"building {b['id']!r} compound must hold its hex and stay on the grid")
+    ids = [o.get("id") for o in b["openings"]]
+    if len(set(ids)) != len(ids):
+        problems.append(f"building {b['id']!r} opening ids must be unique")
+    for o in b["openings"]:
+        inside, outside = tuple(o["inside"]), tuple(o["outside"])
+        if o.get("state") not in gates.STATES:
+            problems.append(f"opening {o.get('id')!r} state must be one of {gates.STATES}")
+        if (inside not in compound or outside in compound or not grid.valid(list(outside))
+                or list(outside) not in grid.neighbors(list(inside))):
+            problems.append(f"opening {o.get('id')!r} must join a compound hex to an outside neighbour")
+    return problems
+
+
 def _feature_problems(features):
     problems = []
     for road in features.get("roads", ()):
@@ -305,6 +360,8 @@ def _feature_problems(features):
         for f in features.get(kind, ()):
             if not grid.valid(list(f["pos"])):
                 problems.append(f"{kind[:-1]} {f['id']!r} at {f['pos']} is off the grid")
+            elif kind == "buildings" and f.get("openings"):
+                problems.extend(_opening_problems(f))
     return problems
 
 
@@ -332,6 +389,8 @@ def build_state(entry, rules=None):
     sides = tuple(entry.sides)
     if not _at_least(rules, 'poc-9') and sides != SIDES:
         raise ValueError(f"{rules} supports only the sides {SIDES}.")
+    if not _at_least(rules, 'poc-10') and _has_gates(entry):
+        raise ValueError(f"{rules} has no gates; building openings need poc-10.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))
@@ -386,6 +445,9 @@ def build_state(entry, rules=None):
                       for side, spec in entry.sides.items()]
         s['player_side'] = entry.player
         s['victory'] = victory.KINDS[entry.victory.kind].setup(entry)
+    if _at_least(rules, 'poc-10') and entry.gates:
+        from dataclasses import asdict
+        s['gate_rules'] = asdict(entry.gates)
     return s
 
 

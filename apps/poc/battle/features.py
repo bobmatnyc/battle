@@ -26,6 +26,9 @@ def setup(s,layout):
         c=s['cells'][grid.key(f['pos'])];c.update(cover=max(c['cover'],f['cover']),obstacle_height=f['height'],building=f['id'],move_cost=max(c['move_cost'],140))
     for f in works:
         c=s['cells'][grid.key(f['pos'])];c['cover']=max(c['cover'],f['cover'])
+    if any(f.get('openings') for f in buildings):
+        from . import gates
+        gates.setup(s,buildings)  # poc-10 walls and gates, briefed in their initial state.
     s['briefing_cells']=deepcopy(s['cells'])
     s['feature_reports']={side:{f['id']:dict(deepcopy(f),observed_turn=0,received_turn=0) for f in s['map_features']} for side in s['contacts']}
     s['feature_observations']={}
@@ -49,12 +52,16 @@ def report(s):
         memory=s['feature_observations'].setdefault(u['id'],{})
         observed=[]
         for f in s['map_features']:
-            if f['kind']!='fortification' or f['briefed']:continue
+            gate=bool(f.get('openings'))  # poc-10: gate state is observed like fieldworks.
+            if not gate and (f['kind']!='fortification' or f['briefed']):continue
             if grid.distance(u['pos'],f['pos'])>3 or not grid.visible(s['cells'],u['pos'],f['pos']):continue
-            if memory.get(f['id'])==f['updated_turn']:continue
+            if memory.get(f['id'],0 if gate else None)==f['updated_turn']:continue
             memory[f['id']]=f['updated_turn'];observed.append(deepcopy(f))
         if observed:
-            engine.enqueue(s,u['side'],f'{u["id"]} to headquarters: fieldworks observed at '+', '.join(str(f['pos']) for f in observed)+'.',
+            works=[f for f in observed if not f.get('openings')]
+            parts=['fieldworks observed at '+', '.join(str(f['pos']) for f in works)] if works else []
+            parts+=[f'{f["name"]} gate {o["state"]}' for f in observed if f.get('openings') for o in f['openings']]
+            engine.enqueue(s,u['side'],f'{u["id"]} to headquarters: '+'; '.join(parts)+'.',
                            data={'features':observed},kind='terrain',sender=u['id'])
 
 

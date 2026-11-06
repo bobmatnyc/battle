@@ -38,6 +38,6 @@ def assess(view):
                        'oldest_report_seconds':max((u['age_seconds'] for u in rows),default=0)},
             'contacts':[{'id':c['id'],'strength_range':c.get('strength_range'),'confidence':c.get('confidence'),
                          'age_seconds':c['age']*view['seconds_per_turn']} for c in view['contacts']],
-            'units':rows,'standing_templates':standing.catalog(),
+            'units':rows,'standing_templates':view.get('standing_templates') or standing.catalog(),
             'command_operational':view.get('command',{}).get('operational',False),
             'limitations':'Authored readiness heuristics, not a historical combat rating or victory prediction. Enemy sightings may overlap or be stale; unseen troops are unknown.'}

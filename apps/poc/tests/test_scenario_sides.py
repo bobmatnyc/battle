@@ -65,7 +65,7 @@ class RulesEditionTests(unittest.TestCase):
         self.assertEqual(digest(final), POC8_LRT_RUN_SHA256)
 
     def test_little_round_top_poc9_plays_identically_to_poc8(self):
-        start = scenario.create()
+        start = scenario.create("poc-9")
         self.assertEqual(start["rules"], "poc-9")
         self.assertEqual(start["scenario"], "little-round-top-v9")
         self.assertEqual(
@@ -191,7 +191,7 @@ class LiveServiceSideTests(unittest.TestCase):
     def test_clock_step_commands_union_when_the_player_is_confederate(self):
         entry = dataclasses.replace(
             DUEL, id="test-duel-confederate-player",
-            labels={"poc-9": "test-duel-confederate-player-v1"}, player_side="confederate",
+            labels={"poc-10": "test-duel-confederate-player-v1"}, player_side="confederate",
         )
         state = self.step_once(entry)
         self.assertEqual(state["player_side"], "confederate")
