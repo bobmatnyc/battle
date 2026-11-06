@@ -45,8 +45,10 @@ def path(cells, start, goal, blocked=()):
         _, current = heapq.heappop(frontier)
         if list(current) == goal:
             break
+        # poc-10: a cell lists the neighbours behind a wall or shut gate.
+        walls = cells[key(current)].get('walls', ())
         for nxt in neighbors(current):
-            if key(nxt) in blocked and nxt != goal:
+            if key(nxt) in blocked and nxt != goal or nxt in walls:
                 continue
             nt = tuple(nxt)
             nc = spent[current] + cost(cells, current, nxt)

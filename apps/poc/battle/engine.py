@@ -1,6 +1,6 @@
 """Pure deterministic state transitions. Models never adjudicate effects."""
 from copy import deepcopy
-from . import grid,recon,tactics,comms,formations,features,recommendations,standing,victory
+from . import grid,recon,tactics,comms,formations,features,gates,recommendations,standing,victory
 from . import orders as order_rules
 from .scenario import SIDES
 from .scenario_entry import LEGACY_ROLES
@@ -58,8 +58,8 @@ def report_refusal(s,side,unit_id):
     return None
 
 def validate_order(s,side,order):
-    if s.get('rules')!='poc-9':
-        from .engine_v8 import validate_order as legacy_validate
+    if s.get('rules')!='poc-10':
+        from .engine_v9 import validate_order as legacy_validate
         return legacy_validate(s,side,order)
     if not comms.operational(s,side):
         raise InvalidOrder('Command detachment is disrupted; subordinates continue under standing orders.')
@@ -76,8 +76,8 @@ def validate_order(s,side,order):
     return u
 
 def issue(s,side,order,source='human'):
-    if s.get('rules')!='poc-9':
-        from .engine_v8 import issue as legacy_issue
+    if s.get('rules')!='poc-10':
+        from .engine_v9 import issue as legacy_issue
         return legacy_issue(s,side,order,source)
     u=validate_order(s,side,order)
     order=order_rules.prepare(s,side,order)
@@ -98,12 +98,12 @@ def issue(s,side,order,source='human'):
 
 def summary(u):
     result={k:deepcopy(u[k]) for k in ('id','side','name','pos','initial','strength','ammo','morale','suppression','fatigue','status','target','stance','order_version')}
-    result.update({k:deepcopy(u[k]) for k in ('unit_type','weapon_class','skill','recon_role','recon_skill','local_action','local_reason','tactical_target','merged_into','mission_result','supply_site','tools','standing_profile','standing_version') if k in u})
+    result.update({k:deepcopy(u[k]) for k in ('unit_type','weapon_class','skill','recon_role','recon_skill','local_action','local_reason','tactical_target','merged_into','mission_result','supply_site','tools','standing_profile','standing_version','cut_off') if k in u})
     return result
 
 def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
-    if s.get('rules')!='poc-9':
-        from .engine_v8 import enqueue as legacy_enqueue
+    if s.get('rules')!='poc-10':
+        from .engine_v9 import enqueue as legacy_enqueue
         return legacy_enqueue(s,side,text,data,kind,delay,sender)
     commander=comms.command_unit(s,side)
     sender_id=sender or (data or {}).get('observer_id') or (data or {}).get('id')
@@ -121,8 +121,8 @@ def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
     emit(s,'report_sent',report_id=packet['id'],side=side,report_kind=kind,arrival_turn=report['arrival_turn'],transport=deepcopy(packet))
 
 def deliver_reports(s):
-    if s.get('rules')!='poc-9':
-        from .engine_v8 import deliver_reports as legacy_deliver
+    if s.get('rules')!='poc-10':
+        from .engine_v9 import deliver_reports as legacy_deliver
         return legacy_deliver(s)
     pending=[]
     for report in s['reports']:
@@ -181,7 +181,10 @@ def advance(s):
     if s.get('rules')=='poc-8':
         from .engine_v8 import advance as eighth_advance
         return eighth_advance(s)
-    if s.get('rules')!='poc-9':raise ValueError('Unsupported battle rules version.')
+    if s.get('rules')=='poc-9':
+        from .engine_v9 import advance as ninth_advance
+        return ninth_advance(s)
+    if s.get('rules')!='poc-10':raise ValueError('Unsupported battle rules version.')
     if s['status']!='active':
         raise ValueError('This battle has ended. Start a new battle.')
     s['turn']+=1
@@ -277,6 +280,7 @@ def advance(s):
         elif (u['morale']<28 or u['strength']<12) and u['status']!='routed':
             u['status']='routed'; emit(s,'unit_routed',unit_id=u['id'])
             enqueue(s,u['side'],f'{u["id"]}: formation breaking; withdrawing toward headquarters.',kind='morale',sender=u['id'])
+    gates.progress(s)  # poc-10: gate labour continues under fire, adjudicated after it.
     order_rules.progress(s)  # Recovery/loading is adjudicated after fire, never during it.
     features.report(s)
     comms.sync(s)
@@ -325,9 +329,9 @@ def view(s,side=None):
     What: the commander view for ``side``; None means the snapshot's player
     side (Union before poc-9). Earlier editions use their frozen views.
     Test: `test_renamed_side_duel_runs_headless_and_replays`."""
-    if s.get('rules')!='poc-9':
-        from .engine_v8 import view as legacy_view
-        return legacy_view(s,side or 'union')
+    if s.get('rules')!='poc-10':
+        from .engine_v9 import view as legacy_view
+        return legacy_view(s,side)
     side=side or player_side(s)
     units=[deepcopy(u) for u in s['friendly_reports'][side].values() if u.get('status')!='merged']
     commander=comms.command_unit(s,side)
@@ -349,7 +353,7 @@ def view(s,side=None):
             'orders':orders,'dispatches':deepcopy(s['dispatches'][side][-60:]),'side':side,
             'weather':deepcopy(s['weather']),'hq':list(commander['pos']) if commander else s['hq'][side],
             'command':comms.location(s,side),
-            'standing_templates':standing.catalog(),
+            'standing_templates':standing.catalog(s),
             'standing_orders':standing.visible(s,side),
             'recommendations':recommendations.visible(s,side),
             'map_features':features.known(s,side),
@@ -365,7 +369,7 @@ def god_view(s):
                   contacts=[],orders=deepcopy(s['orders']),reports=deepcopy(s['reports']),
                   events=deepcopy(s['events']),decisions=deepcopy(s['decisions']),
                   headquarters=deepcopy(s['hq']),
-                  commands={side:comms.location(s,side) for side in sides(s)} if s.get('rules') in ('poc-3','poc-4','poc-5','poc-6','poc-7','poc-8','poc-9') else {},
+                  commands={side:comms.location(s,side) for side in sides(s)} if s.get('rules') in ('poc-3','poc-4','poc-5','poc-6','poc-7','poc-8','poc-9','poc-10') else {},
                   dispatches=[dict(deepcopy(d),side=side) for side in sides(s) for d in s['dispatches'][side]])
     result.update(standing_orders=deepcopy(s.get('standing_orders',[])),recommendations=deepcopy(s.get('recommendations',[])),map_features=deepcopy(s.get('map_features',[])),supply_sites=deepcopy(s.get('supply_sites',[])),formation_ops=deepcopy(s.get('formation_ops',[])),retired_units=deepcopy(s.get('retired_units',[])))
     return result

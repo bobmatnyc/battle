@@ -3,9 +3,10 @@
 Thresholds are transparent POC tuning values, not historical measurements.
 """
 from copy import deepcopy
-from . import comms
+from . import comms,gates
 
 VERSION='standing-orders-v1'
+GATE_VERSION='standing-orders-v2'  # v1 plus Close the gate on a breach (poc-10, battles with a gate).
 TEMPLATES=[
     {'id':'balanced','label':'Balanced',
      'intent':'Carry out the mission, use cover and fall back when the detachment is in serious danger.',
@@ -21,11 +22,16 @@ TEMPLATES=[
      'morale_floor':60,'suppression_limit':50,'enemy_ratio':1.0,'reserve_volleys':3,'fire_range':3},
 ]
 
-def catalog():
-    return [dict(deepcopy(t),version=VERSION,message_key='standing.template.'+t['id']) for t in TEMPLATES]
+def templates(s=None):
+    """Templates on offer: poc-10 battles with a gate add Close the gate on a breach."""
+    return TEMPLATES+([gates.STANDING] if s is not None and gates.present(s) else [])
+
+def catalog(s=None):
+    return [dict(deepcopy(t),version=VERSION if t in TEMPLATES else GATE_VERSION,
+                 message_key='standing.template.'+t['id']) for t in templates(s)]
 
 def profile(u):
-    return next((t for t in TEMPLATES if t['id']==u.get('standing_profile')),TEMPLATES[0])
+    return next((t for t in TEMPLATES+[gates.STANDING] if t['id']==u.get('standing_profile')),TEMPLATES[0])
 
 def recommend(u):
     # Takes an observer-visible unit report, never a simulation or enemy state.
@@ -37,9 +43,9 @@ def recommend(u):
 
 def issue(s,side,instruction):
     from . import engine
-    if s.get('rules') not in ('poc-8','poc-9'):raise ValueError('Reset to enable configurable standing orders in a new battle.')
+    if s.get('rules') not in ('poc-8','poc-9','poc-10'):raise ValueError('Reset to enable configurable standing orders in a new battle.')
     if not isinstance(instruction,dict) or set(instruction)!={'unit_id','profile_id'}:raise ValueError('Choose a unit and standing-order template.')
-    if instruction['profile_id'] not in [t['id'] for t in TEMPLATES]:raise ValueError('Unknown standing-order template.')
+    if instruction['profile_id'] not in [t['id'] for t in templates(s)]:raise ValueError('Unknown standing-order template.')
     u=engine.validate_order(s,side,{'unit_id':instruction['unit_id'],'stance':'hold','destination':None})
     commander=comms.command_unit(s,side)
     packet=comms.envelope(s,commander['pos'],u['id'],s['friendly_reports'][side][u['id']]['pos'],
@@ -50,7 +56,7 @@ def issue(s,side,instruction):
           'arrival_turn':packet['expected_turn'],'status':'en_route','transport':packet,'template_version':VERSION}
     s['standing_orders'].append(item)
     engine.emit(s,'standing_order_sent',order=deepcopy(item))
-    label=next(t['label'] for t in TEMPLATES if t['id']==instruction['profile_id'])
+    label=next(t['label'] for t in templates(s) if t['id']==instruction['profile_id'])
     engine.message(s,side,f'General, {label.lower()} instructions dispatched to {u["id"]}. The present mission remains in force.',kind='standing')
     return item
 

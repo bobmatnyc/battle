@@ -74,7 +74,7 @@ def receive(s,report):
 
 def respond(s,side,rid,response):
     from . import engine
-    if s.get('rules') not in ('poc-8','poc-9'):raise ValueError('Use Reset for commander recommendations.')
+    if s.get('rules') not in ('poc-8','poc-9','poc-10'):raise ValueError('Use Reset for commander recommendations.')
     r=next((r for r in s['recommendations'] if r['id']==rid and r['side']==side and 'received_turn' in r),None)
     if not r:raise ValueError('No delivered recommendation with that ID is available.')
     if response not in ('accept','dismiss'):raise ValueError('Choose accept or dismiss.')
