@@ -20,12 +20,12 @@ from battle.config import Settings
 from battle.contracts import UnknownScenario
 from battle.presentation import present_view
 from battle.scenario import LITTLE_ROUND_TOP
-from battle.scenario_entry import build_state
+from battle.scenario_entry import SupplyEntry, build_state
 from battle.services.battle import BattleService
 from battle.services.commander import CommanderService
 from battle.services.queries import BattleQueries
 from battle.services.replay import ReplayService
-from scenario_fixtures import DUEL
+from scenario_fixtures import DUEL, flat_terrain
 from test_services import ManualClock, MemoryRepository
 
 POC = Path(__file__).resolve().parent.parent
@@ -137,6 +137,132 @@ class CatalogTests(unittest.TestCase):
             with self.subTest(problem=problem):
                 with self.assertRaisesRegex(ValueError, problem):
                     ScenarioRegistry([dataclasses.replace(DUEL, **change)])
+
+
+def with_side(entry, side, **change):
+    return dataclasses.replace(
+        entry, sides={**entry.sides, side: dataclasses.replace(entry.sides[side], **change)}
+    )
+
+
+def with_first_unit(entry, **change):
+    return dataclasses.replace(
+        entry, units=(dataclasses.replace(entry.units[0], **change),) + entry.units[1:]
+    )
+
+
+def battle_service(catalog, repository=None):
+    repository = repository or MemoryRepository()
+    simulation = RulesSimulation()
+    return BattleService(
+        repository,
+        simulation,
+        CommanderService(simulation, RecordingProvider(), scenarios=catalog),
+        catalog,
+        BattleQueries(
+            repository,
+            simulation,
+            ReplayService(repository, simulation),
+            assess=analysis.assess,
+            present=present_view,
+        ),
+        ManualClock,
+    )
+
+
+class RegistrationFindingTests(unittest.TestCase):
+    """Entries that would fail mid-battle are refused when the catalog is built."""
+
+    def assertRefused(self, entry, problem):
+        with self.assertRaisesRegex(ValueError, problem):
+            ScenarioRegistry([LITTLE_ROUND_TOP, entry])
+
+    def test_registry_refuses_off_grid_headquarters_and_supply(self):
+        first = next(iter(DUEL.sides))
+        # Reviewer repro: a rally point off the map breaks the first rout.
+        self.assertRefused(with_side(DUEL, first, headquarters=(99, 99)), "headquarters .* off the grid")
+        supply = SupplyEntry("Off-map stock", (99, 99), 100, "rifled muskets")
+        self.assertRefused(with_side(DUEL, first, supply=supply), "supply point .* off the grid")
+
+    def test_registry_refuses_overrides_of_unit_identity(self):
+        # Reviewer repro: an override moving a unit off the map.
+        self.assertRefused(with_first_unit(DUEL, overrides={"pos": [99, 99]}), "may not set pos")
+        for name, value in (("id", "X9"), ("side", list(DUEL.sides)[1])):
+            with self.subTest(field=name):
+                self.assertRefused(with_first_unit(DUEL, overrides={name: value}), f"may not set {name}")
+
+    def test_registry_dry_run_refuses_terrain_gaps_and_off_grid_features(self):
+        def gappy():
+            cells = flat_terrain()
+            del cells["0,0"]
+            return cells
+
+        def oversized():
+            return {**flat_terrain(), "24,0": {"pos": [24, 0], "elevation": 1, "terrain": "open",
+                                               "move_cost": 100, "cover": 10}}
+
+        features = DUEL.map.features
+        cases = {
+            "terrain misses 1 grid hexes": dict(terrain=gappy),
+            "terrain has 1 cells off the grid": dict(terrain=oversized),
+            "building 'shed' at .* off the grid": dict(features={**features, "buildings": (
+                {"id": "shed", "kind": "building", "name": "Shed", "pos": [99, 99], "cover": 40, "height": 6},)}),
+            "road 'lane' has points off the grid": dict(features={**features, "roads": (
+                {"id": "lane", "kind": "road", "name": "Lane", "points": [[1, 1], [30, 1]]},)}),
+            "work 'trench' at .* off the grid": dict(features={**features, "works": (
+                {"id": "trench", "kind": "fortification", "name": "Trench", "pos": [0, 21], "cover": 60,
+                 "progress": 100, "effort": 400, "required": 400, "updated_turn": 0},)}),
+        }
+        for problem, change in cases.items():
+            with self.subTest(problem=problem):
+                entry = dataclasses.replace(DUEL, map=dataclasses.replace(DUEL.map, **change))
+                self.assertRefused(entry, problem)
+        # The player catalog and the fixture still pass the dry run.
+        self.assertEqual(registry().ids(), ("little-round-top", "test-duel"))
+
+
+class ServiceFindingTests(unittest.TestCase):
+    def test_new_game_refuses_falsy_scenario_ids(self):
+        app = battle_service(registry())
+        try:
+            for bad in ("", 0, [], {}):
+                with self.subTest(bad=bad):
+                    before = app.game_id
+                    revision = app.repository.load(before)["revision"]
+                    with self.assertRaises(UnknownScenario):
+                        app.execute("new", {"scenario": bad}, game_id=before, revision=revision)
+                    self.assertEqual(app.game_id, before)
+            for absent in ({}, {"scenario": None}):
+                with self.subTest(absent=absent):
+                    before = app.game_id
+                    revision = app.repository.load(before)["revision"]
+                    app.execute("new", absent, game_id=before, revision=revision)
+                    self.assertNotEqual(app.game_id, before)
+                    self.assertEqual(app.repository.load(app.game_id)["scenario"], "little-round-top-v8")
+        finally:
+            app.close()
+
+    def test_scripted_paths_and_map_survive_an_unmapped_label(self):
+        # A duel save opened by a catalog that lacks the duel entry.
+        repository = MemoryRepository()
+        repository.create(registry().create("test-duel"))
+        app = battle_service(LittleRoundTopCatalog(), repository)
+        try:
+            state = repository.load(app.game_id)
+            self.assertEqual(state["scenario"], "test-duel-v1")
+            self.assertEqual(app.map()["setting"]["location"], LITTLE_ROUND_TOP.location)
+            decision = app.commander.decide(state, side="confederate", mode="scripted")
+            self.assertEqual(decision["source"], "scripted")
+            reply = app.commander.chat(state, "Status?", mode="scripted")
+            self.assertEqual(reply["source"], "scripted")
+            # The provider path still refuses rather than sending another battle's mission.
+            with self.assertRaises(UnknownScenario):
+                app.commander.decide(state, side="confederate", mode="openrouter")
+            with self.assertRaises(UnknownScenario):
+                app.commander.chat(state, "Status?", mode="openrouter")
+            self.assertEqual(app.commander.provider.calls, [])
+        finally:
+            app.close()
 
 
 class SecondScenarioTests(unittest.TestCase):

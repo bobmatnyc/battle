@@ -113,6 +113,7 @@ class CommanderService:
         What: the injected catalog's entry for ``state``. Without a catalog,
         Little Round Top serves only its own snapshots; any other scenario
         raises ValueError rather than receiving another battle's mission.
+        Only the provider path calls this.
         Test: `test_commander_without_catalog_refuses_other_scenarios`.
         """
         if self.scenarios is not None:
@@ -122,6 +123,21 @@ class CommanderService:
                 f"No scenario catalog injected for {state.get('scenario')!r}."
             )
         return DEFAULT_SCENARIO
+
+    def display_scenario(self, state):
+        """Why: scripted text reaches no model and changes no state, so an
+        unmapped snapshot label must not break it, as it never did before
+        scenarios became entries.
+        What: ``scenario(state)`` when the label is known, else the catalog
+        default (Little Round Top without a catalog).
+        Test: `test_scripted_paths_and_map_survive_an_unmapped_label`.
+        """
+        try:
+            return self.scenario(state)
+        except ValueError:  # UnknownScenario is a ValueError.
+            if self.scenarios is not None:
+                return self.scenarios.resolve()
+            return DEFAULT_SCENARIO
 
     def decide(self, state, side="confederate", mode="openrouter"):
         """Why: a model may command one side; every outcome must be auditable.
@@ -242,10 +258,17 @@ class CommanderService:
         return record
 
     def chat(self, state, text, mode="openrouter"):
+        """Why: the player's staff adviser answers from authorized reports.
+        What: in ``openrouter`` mode asks the provider with the battle's own
+        scenario prompt (an unmapped label raises, as in ``decide``); a
+        provider failure, or scripted mode, gives the scripted summary, whose
+        charge comes from ``display_scenario`` and so never fails on the label.
+        Test: `test_scripted_paths_and_map_survive_an_unmapped_label`.
+        """
         observation = self.simulation.observation(state, "union")
-        scenario = self.scenario(state)
         error = None
         if mode == "openrouter":
+            scenario = self.scenario(state)
             try:
                 result, metadata = self.provider.request(
                     system_prompt("union", scenario)
@@ -263,6 +286,7 @@ class CommanderService:
                 }
             except Exception as exc:
                 error = failure_kind(exc)
+        scenario = self.display_scenario(state)
         answer = (
             f"General, our command comprises {len(observation['units'])} detachments, "
             f"with {len(observation['contacts'])} enemy sightings reported to headquarters. "

@@ -12,6 +12,7 @@ from ..contracts import (
     Conflict,
     ScenarioCatalog,
     Simulation,
+    UnknownScenario,
 )
 from .queries import BattleQueries
 
@@ -108,9 +109,19 @@ class BattleService:
         return result
 
     def map(self):
-        """The command-desk map of the current game's scenario."""
+        """Why: the command desk must draw the current game's own terrain.
+        What: the map of the catalog entry owning the current game's snapshot
+        label. A label this catalog does not know (a save from another catalog)
+        gets the default scenario's map, as before scenarios were entries,
+        rather than an error. Display only; no rule or prompt reads it.
+        Test: `test_scripted_paths_and_map_survive_an_unmapped_label`.
+        """
         state = self.repository.load(self.game_id)
-        return self.scenarios.map(self.scenarios.for_state(state).id)
+        try:
+            scenario_id = self.scenarios.for_state(state).id
+        except UnknownScenario:
+            scenario_id = None
+        return self.scenarios.map(scenario_id)
 
     def _ensure_paused(self):
         clock = self.clock.status()
@@ -120,7 +131,14 @@ class BattleService:
             )
 
     def execute(self, command, payload, *, game_id, revision):
-        """Application commands have no URL, HTTP request, database or provider schema."""
+        """Why: application commands have no URL, HTTP request, database or
+        provider schema.
+        What: runs ``command`` against the current game at ``revision``.
+        ``new`` uses the service's scenario only when ``scenario`` is absent
+        or None; any other value must be a known id, else ``UnknownScenario``
+        (HTTP 400) and the current game is kept.
+        Test: `test_new_game_refuses_falsy_scenario_ids`.
+        """
         self._ensure_paused()  # Reject promptly during an outstanding provider call.
         with self.lock:
             self._ensure_paused()  # Recheck after acquiring the serialization lock.
@@ -128,9 +146,11 @@ class BattleService:
             if game_id != self.game_id or revision != state["revision"]:
                 raise Conflict("Battle changed. Refresh before issuing another order.")
             if command == "new":
-                # Resolve before creating, so an unknown id changes nothing.
+                # Only an absent or null id means the default; "", 0, [] and {}
+                # are unknown ids. Resolve before creating, so they change nothing.
+                scenario_id = payload.get("scenario")
                 scenario = self.scenarios.create(
-                    payload.get("scenario") or self.scenario_id
+                    self.scenario_id if scenario_id is None else scenario_id
                 )
                 self.game_id = self.repository.create(scenario)
                 self.clock.control("reset")

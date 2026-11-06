@@ -3,7 +3,7 @@
 from .. import command_policy, engine, runtime
 from ..contracts import UnknownScenario
 from ..scenario import LITTLE_ROUND_TOP
-from ..scenario_entry import build_state, map_document, validate
+from ..scenario_entry import build_state, dry_run, map_document, validate
 
 
 class RulesSimulation:
@@ -17,16 +17,17 @@ class RulesSimulation:
 class ScenarioRegistry:
     """Why: several scenarios must share one catalog, chosen by id for new
     games and by snapshot label for saved ones.
-    What: validates every entry against the current rules on construction,
-    refuses duplicate ids or labels, and resolves ``scenario_id`` (None means
+    What: validates every entry against the current rules and dry-runs its
+    build once on construction, refuses duplicate ids or labels, and resolves ``scenario_id`` (None means
     ``default``) or a state's ``scenario`` label to its entry. Unknown ids
     raise ``UnknownScenario`` naming the known ids.
     Test: `test_catalog_resolves_ids_and_refuses_unknown_scenarios`,
-    `test_catalog_resolves_saved_games_by_label`.
+    `test_catalog_resolves_saved_games_by_label`,
+    `test_registry_dry_run_refuses_terrain_gaps_and_off_grid_features`.
     """
 
     def __init__(self, entries, default=None):
-        entries = tuple(validate(entry) for entry in entries)
+        entries = tuple(dry_run(validate(entry)) for entry in entries)
         if not entries:
             raise ValueError("A scenario catalog needs at least one entry.")
         self._entries = {}

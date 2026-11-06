@@ -148,8 +148,12 @@ def validate(entry):
     for something the current rules cannot do.
     What: raises ValueError listing every mismatch with the poc-8 engine: side
     ids and roles, victory model, grid geometry, turn length, order catalog,
-    communications, voice, unit roster and command attachment.
-    Test: `test_catalog_refuses_entry_the_rules_cannot_run`.
+    communications, voice, unit roster and command attachment, headquarters
+    and supply hexes on the grid, and unit overrides that would replace a
+    unit's id, side or hex.
+    Test: `test_catalog_refuses_entry_the_rules_cannot_run`,
+    `test_registry_refuses_off_grid_headquarters_and_supply`,
+    `test_registry_refuses_overrides_of_unit_identity`.
     """
     from .presentation import VOICE_PROFILE
 
@@ -190,6 +194,11 @@ def validate(entry):
     return entry
 
 
+# Fields a unit override may not replace: the roster and command attachment
+# are checked against them, so an override would bypass those checks.
+FIXED_UNIT_FIELDS = ("id", "side", "pos")
+
+
 def _roster_problems(entry):
     ids = [u.id for u in entry.units]
     positions = [tuple(u.pos) for u in entry.units]
@@ -199,11 +208,76 @@ def _roster_problems(entry):
     for u in entry.units:
         if u.side not in entry.sides or not grid.valid(list(u.pos)):
             problems.append(f"unit {u.id} has an unknown side or invalid hex")
+        fixed = [name for name in FIXED_UNIT_FIELDS if name in u.overrides]
+        if fixed:
+            problems.append(f"unit {u.id} overrides may not set {', '.join(fixed)}")
+    for side, spec in entry.sides.items():
+        if not grid.valid(list(spec.headquarters)):
+            problems.append(f"{side} headquarters {spec.headquarters} is off the grid")
+        if spec.supply and not grid.valid(list(spec.supply.pos)):
+            problems.append(f"{side} supply point {spec.supply.pos} is off the grid")
     by_id = {u.id: u for u in entry.units}
     for side, spec in entry.sides.items():
         attached = by_id.get(spec.command_unit)
         if attached is None or attached.side != side:
             problems.append(f"{side} command unit {spec.command_unit!r} is not a {side} unit")
+    return problems
+
+
+def dry_run(entry):
+    """Why: some faults only show once an entry is built (a terrain builder that
+    misses hexes, a feature off the map), and must not surface mid-battle.
+    What: builds ``entry`` once in its own edition and raises ValueError unless
+    the build succeeds, the terrain has exactly one cell per grid hex with the
+    fields movement and fire read, and every feature position, road point and
+    road hex lies on the grid. Returns ``entry``.
+    Test: `test_registry_dry_run_refuses_terrain_gaps_and_off_grid_features`.
+    """
+    problems = _feature_problems(entry.map.features)
+    if not problems:
+        try:
+            state = build_state(entry)
+        except Exception as exc:
+            problems.append(f"build_state failed: {type(exc).__name__}: {exc}")
+        else:
+            problems.extend(_terrain_problems(state["cells"]))
+            for f in state.get("map_features", []):
+                hexes = ([f["pos"]] if "pos" in f else []) + list(f.get("hexes", []))
+                if not all(grid.valid(list(p)) for p in hexes):
+                    problems.append(f"built feature {f.get('id')!r} leaves the grid")
+    if problems:
+        raise ValueError(f"Scenario {entry.id!r} cannot run: " + "; ".join(problems))
+    return entry
+
+
+CELL_FIELDS = ("pos", "elevation", "terrain", "move_cost", "cover")
+
+
+def _terrain_problems(cells):
+    expected = {grid.key([c, r]) for r in range(grid.ROWS) for c in range(grid.COLS)}
+    problems = []
+    missing, extra = expected - set(cells), set(cells) - expected
+    if missing:
+        problems.append(f"terrain misses {len(missing)} grid hexes, e.g. {sorted(missing)[0]}")
+    if extra:
+        problems.append(f"terrain has {len(extra)} cells off the grid, e.g. {sorted(extra)[0]}")
+    for k in sorted(expected & set(cells)):
+        cell = cells[k]
+        if any(name not in cell for name in CELL_FIELDS) or grid.key(cell["pos"]) != k:
+            problems.append(f"terrain cell {k} lacks {', '.join(CELL_FIELDS)} or names another hex")
+            break
+    return problems
+
+
+def _feature_problems(features):
+    problems = []
+    for road in features.get("roads", ()):
+        if not all(grid.valid(list(p)) for p in road["points"]):
+            problems.append(f"road {road['id']!r} has points off the grid")
+    for kind in ("buildings", "works"):
+        for f in features.get(kind, ()):
+            if not grid.valid(list(f["pos"])):
+                problems.append(f"{kind[:-1]} {f['id']!r} at {f['pos']} is off the grid")
     return problems
 
 

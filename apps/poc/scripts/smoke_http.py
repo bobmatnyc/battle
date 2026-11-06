@@ -79,6 +79,9 @@ with tempfile.TemporaryDirectory() as tmp:
         time.sleep(.6)
         assert request('/api/state')['revision']==saved
         request('/api/clock',{'game_id':gid,'command':'speed','speed':-1},expected=400)
+        for bad in ('',0,[],{}):  # Only an absent or null scenario means the default.
+            request('/api/new',{'game_id':gid,'revision':saved,'scenario':bad},expected=400)
+        assert request('/api/state')['game_id']==gid
         state=request('/api/new',{'game_id':gid,'revision':saved})
         assert state['clock']['speed']==10 and not state['clock']['running']  # Reset restores default pacing.
         state=request('/api/formations',{'game_id':state['game_id'],'revision':state['revision'],
