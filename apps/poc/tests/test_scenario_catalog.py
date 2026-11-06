@@ -40,10 +40,17 @@ LRT_STATE_SHA256 = {
     "poc-7": "36baf293938e4f4306a7b0555297aabff7959c82e1a4109fe49cb6a39aa9d962",
     "poc-8": "351ddb3394dda90498066d4e6efa5f120be5774b9afe6480dc98e209e1f90311",
 }
-LRT_PROMPT_SHA256 = {
+# lrt-side-v2, used by the batch-A runs (docs/research/40) and up to poc-13 part A.
+LRT_PROMPT_V2_SHA256 = {
     "union": "5610516d16b9d275756c57c0bd0f9b1b52ca8e4dffa11bb480b76d770dd0c123",
     "confederate": "6e359c8a3508fe20d19d4baeceb9293b3362c1c578d3f597086c017fccc5d0b9",
 }
+# lrt-side-v3 (poc-13B): v2 with hold_fire/open_fire in the null-destination list.
+LRT_PROMPT_SHA256 = {
+    "union": "aefce49436d3a9c667b66adc03cf1d6a2a9ef69e46720a6d14c81f82e4c3db22",
+    "confederate": "5d251b37edb1a70c3974b02c454630f499bf52f2a1458b936fedf87d4f89e67a",
+}
+V3_CLAUSE, V2_CLAUSE = "dig_in/hold_fire/open_fire use null", "dig_in use null"
 LRT_MAP_SHA256 = "bd39cef2937dd5e6a0d478306dd99aaecf470bb54e46b750cec5006b7dcf32fa"
 
 
@@ -76,11 +83,14 @@ class LittleRoundTopEntryTests(unittest.TestCase):
         self.assertEqual(json.dumps(catalog.create()), json.dumps(scenario.create()))
         self.assertEqual(sha256(json.dumps(catalog.map())), LRT_MAP_SHA256)
 
-    def test_little_round_top_prompt_is_byte_identical_to_lrt_side_v2(self):
-        self.assertEqual(LITTLE_ROUND_TOP.prompt_version, "lrt-side-v2")
+    def test_little_round_top_prompt_is_byte_identical_to_lrt_side_v3(self):
+        self.assertEqual(LITTLE_ROUND_TOP.prompt_version, "lrt-side-v3")
         for side, digest in LRT_PROMPT_SHA256.items():
             with self.subTest(side=side):
                 self.assertEqual(sha256(command_policy.system_prompt(side)), digest)
+                # poc-13B: v3 is v2 with only the fire orders added to one clause.
+                v2 = command_policy.system_prompt(side).replace(V3_CLAUSE, V2_CLAUSE)
+                self.assertEqual(sha256(v2), LRT_PROMPT_V2_SHA256[side])
                 self.assertEqual(
                     command_policy.system_prompt(side, LITTLE_ROUND_TOP),
                     command_policy.system_prompt(side),
@@ -312,7 +322,7 @@ class SecondScenarioTests(unittest.TestCase):
             commander.decide(state, side="union")
         # Little Round Top still needs no catalog, as before.
         decision = commander.decide(scenario.create(), side="union")
-        self.assertEqual(decision["prompt_version"], "lrt-side-v2")
+        self.assertEqual(decision["prompt_version"], "lrt-side-v3")
 
 
 class SelectionTests(unittest.TestCase):

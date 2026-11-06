@@ -7,6 +7,7 @@ from ..contracts import DecisionProvider, ProviderFailure, ScenarioCatalog, Simu
 from ..command_policy import (
     DEFAULT_SCENARIO, GATE_POLICIES, scripted_actions, system_prompt,
 )
+from ..presentation import scripted_text
 
 # Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
 # the exception names the provider adapter reports. Anything else is replaced
@@ -174,6 +175,10 @@ class CommanderService:
             "requested_model": self.provider.model,
             "effort": self.effort,
             "prompt_version": scenario.prompt_version,
+            # poc-13B: the edition and order catalog the prompt was shown, so
+            # model runs on different catalogs are never compared as equal.
+            "rules": state.get("rules"),
+            "order_catalog": next(iter(observation.get("order_templates") or [{}])).get("version"),
         }
         started = self.timer()
         try:
@@ -237,7 +242,8 @@ class CommanderService:
             "source": "scripted",
             "side": side,
             "orders": self.simulation.validate_orders(state, side, orders),
-            "text": "General, we shall proceed according to our standing orders.",
+            # poc-13B: the entry's voice; 1863 and 1815 keep the original line.
+            "text": scripted_text(self.display_scenario(state).voice_profile),
             "observation": observation,
             "turn": state["turn"],
             "fallback": False,

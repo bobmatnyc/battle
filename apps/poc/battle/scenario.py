@@ -45,7 +45,7 @@ LITTLE_ROUND_TOP = ScenarioEntry(
     title='Little Round Top',
     variant=None,
     rules=RULES_VERSION,
-    prompt_version='lrt-side-v2',
+    prompt_version='lrt-side-v3',  # poc-13B: fire orders added to the null-destination list.
     prompt_setting='Little Round Top, 1863',
     labels={'poc-1':'little-round-top-v2','poc-2':'little-round-top-v2',
             'poc-3':'little-round-top-v3','poc-4':'little-round-top-v4',

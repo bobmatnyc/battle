@@ -26,9 +26,11 @@ def fire_problems(entry, fire):
 def water_problems(entry, cells):
     """Why: a river must be data the rules can run, refused at registration.
     What: problems with poc-13 water: ``water`` must be true where present, a
-    ``crossing`` (one of CROSSINGS) only on a water cell, and no unit,
-    headquarters, supply point or objective on impassable water.
-    Test: `test_registration_refuses_bad_water_data`."""
+    ``crossing`` (one of CROSSINGS) only on a water cell, no unit,
+    headquarters, supply point or objective on impassable water, and no
+    water, crossing or not, on a building's compound or gateway hexes.
+    Test: `test_registration_refuses_bad_water_data`,
+    `test_registration_refuses_water_in_a_compound_or_gateway`."""
     problems = []
     for k in sorted(cells):
         c = cells[k]
@@ -38,6 +40,12 @@ def water_problems(entry, cells):
             problems.append(f"terrain cell {k} crossing must be one of {CROSSINGS} on a water cell")
     if problems or not any(c.get("water") for c in cells.values()):
         return problems
+    # poc-13B (review LOW): gate passage and walls are not defined over water.
+    for b in entry.map.features.get("buildings", ()):
+        hexes = [b["pos"], *b.get("compound", ())]
+        hexes += [p for o in b.get("openings", ()) for p in (o["inside"], o["outside"])]
+        if any(cells[grid.key(list(p))].get("water") for p in hexes):
+            problems.append(f"building {b['id']!r} has water in a compound or gateway hex")
     places = [(f"unit {u.id!r}", u.pos) for u in entry.units]
     places += [(f"{side} headquarters", s.headquarters) for side, s in entry.sides.items()]
     places += [(f"{side} supply", s.supply.pos) for side, s in entry.sides.items() if s.supply]

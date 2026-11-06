@@ -102,7 +102,7 @@ HOUGOUMONT_NORTH_GATE = ScenarioEntry(
     title='Hougoumont: the north gate',
     variant=None,
     rules=RULES_VERSION,
-    prompt_version='hougoumont-side-v1',
+    prompt_version='hougoumont-side-v2',  # poc-13B: fire orders added to the null-destination list.
     prompt_setting='Hougoumont, Waterloo, 1815',
     labels={'poc-10': 'hougoumont-north-gate-v1', 'poc-11': 'hougoumont-north-gate-v2',
             'poc-12': 'hougoumont-north-gate-v3', 'poc-13': 'hougoumont-north-gate-v4'},

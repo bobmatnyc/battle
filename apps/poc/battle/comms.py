@@ -11,7 +11,11 @@ PROFILE={'id':'civil-war-courier-v1','label':'1863 · voice / foot courier',
          'methods':['voice','courier'],'cost_per_turn':200,'expiry_turns':20}
 # Hougoumont (docs/research/42): the 1863 transport rates under an 1815 label.
 # Period rates (gallopers, aides-de-camp) are deferred; transport reads PROFILE.
-PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'})}
+# poc-13B (docs/research/47): 1775 speech carries ``voice_reach`` hexes from the
+# command detachment; farther units get a runner at the 1863 rates. The reach
+# is an assumption, not a measured earshot.
+COLONIAL={**PROFILE,'id':'colonial-1775-voice-v1','label':'1775 · voice / runner','voice_reach':2}
+PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL)}
 
 def command_unit(s,side):
     uid=s['commanders'][side]['unit_id']
@@ -19,7 +23,8 @@ def command_unit(s,side):
 
 def operational(s,side):
     u=command_unit(s,side)
-    return bool(u and u['strength']>0 and u['status'] not in ('lost','routed'))
+    # poc-13B: a leaderless detachment cannot command; no earlier unit has the flag.
+    return bool(u and u['strength']>0 and u['status'] not in ('lost','routed') and not u.get('leaderless'))
 
 def sync(s):
     for side in s['commanders']:
@@ -60,6 +65,10 @@ def progress(s,packet,emit):
         return 'expired'
     # Voice applies only to the detachment carrying the commander.
     target=next((u for u in s['units'] if u['id']==packet['recipient_id']),None)
+    if packet['method']=='voice' and 'speaker_id' in packet:
+        # poc-13B: a spoken order to a unit now out of earshot goes on by runner.
+        from .command import relay
+        if relay(s,packet,target,emit):return 'en_route'
     if packet['method']=='voice':
         packet['pos']=list(target['pos']) if target else packet['pos']
     else:

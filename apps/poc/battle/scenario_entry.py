@@ -13,7 +13,8 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from . import grid, scenario_checks
+from . import grid, scenario_checks, scenario_command
+from .scenario_command import CommandEntry, WeaponEntry
 
 # Sides and roles of every edition before poc-9, which fixed them in the rules.
 SIDES = ("union", "confederate")
@@ -30,7 +31,8 @@ ORDER_CATALOG = ("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in
 GATE_ORDER_CATALOG = ORDER_CATALOG + ("close_gate",)
 PROVENANCE = ("sourced:", "reconstruction:", "authored:")
 # comms.PROFILES ids; the Napoleonic profile shares the 1863 transport rates.
-COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1")
+# poc-13B: the 1775 profile adds a voice reach (scenario_command).
+COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1", scenario_command.COLONIAL_COMMUNICATIONS)
 
 
 def unit(uid, side, name, pos):
@@ -233,6 +235,8 @@ class ScenarioEntry:
     gates: GateEntry | None = None
     gateway_push: GatewayPushEntry | None = None
     fire: FireEntry | None = None  # poc-13; None means FireEntry().
+    command: CommandEntry | None = None  # poc-13B succession; None: none.
+    weapons: Mapping[str, WeaponEntry] | None = None  # poc-13B; None: rifle baseline.
     desk: DeskBrief | None = None
     # Field name -> "sourced: ...", "reconstruction: ..." or "authored: ...".
     # Documentation only: never stored in a snapshot or shown in a prompt.
@@ -296,6 +300,8 @@ def validate(entry):
     elif push and not all(type(v) is int and v > 0 for v in (push.push_labour, push.push_cap)):
         problems.append("gateway push values must be positive integers")
     problems.extend(scenario_checks.fire_problems(entry, entry.fire or FireEntry()))
+    problems.extend(scenario_command.command_problems(entry))  # poc-13B
+    problems.extend(scenario_command.weapon_problems(entry))
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
     if entry.voice_profile not in VOICE_PROFILES:
@@ -478,6 +484,8 @@ def build_state(entry, rules=None):
         raise ValueError(f"{rules} has no gates; building openings need poc-10.")
     if not _at_least(rules, 'poc-13') and scenario_checks.has_water(entry):
         raise ValueError(f"{rules} has no impassable water; a river needs poc-13.")
+    if not _at_least(rules, 'poc-13') and scenario_command.declares(entry):
+        raise ValueError(f"{rules} has no succession, voice reach or weapon table; they need poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))
@@ -545,6 +553,7 @@ def build_state(entry, rules=None):
         for u in units:
             u.setdefault('fire_posture', s['fire_rules']['default_posture'])
             s['friendly_reports'][u['side']][u['id']]['fire_posture'] = u['fire_posture']
+        scenario_command.setup(s, entry, units)  # poc-13B: writes nothing without the data.
     return s
 
 

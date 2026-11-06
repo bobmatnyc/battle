@@ -266,13 +266,26 @@ def scripted_actions(policy, observation, role):
 VOICES = VOICE_PROFILES
 
 
+def _transport(scenario):
+    """poc-13B: a voice-reach profile (1775) states its reach; others keep the runner line."""
+    from .comms import PROFILES
+
+    reach = PROFILES[scenario.communications].get("voice_reach")
+    if not reach:
+        return "Orders travel by runner."
+    return (f"Orders reach units within {reach} hexes of your command detachment by voice; "
+            "farther units, and a unit that moves out of earshot before the word reaches it, get them by runner.")
+
+
 def _common(scenario):
     m = scenario.map
+    # poc-13B: hold_fire/open_fire take a null destination (review MEDIUM); the
+    # text changed, so Little Round Top is lrt-side-v3 and Hougoumont hougoumont-side-v2.
     return f"""You are a commander in a small historical strategy GAME, {scenario.prompt_setting}.
 You know only the supplied delivered reports, never hidden world state. Every hex is {m.metres_per_hex}m, each turn {scenario.seconds_per_turn} seconds.
-You may order only supplied friendly units. Orders travel by runner. Unit commanders act autonomously on local contact: defend, seek cover, or withdraw when condition or credible enemy estimates warrant it. A movement destination remains the mission during a temporary local reaction. Enemy strength ranges and composition are estimates at observation time, not exact or current counts. Scouts improve estimates; slower intelligence still obeys report delivery. Do not issue repeated orders merely to suppress self-preservation.
+You may order only supplied friendly units. {_transport(scenario)} Unit commanders act autonomously on local contact: defend, seek cover, or withdraw when condition or credible enemy estimates warrant it. A movement destination remains the mission during a temporary local reaction. Enemy strength ranges and composition are estimates at observation time, not exact or current counts. Scouts improve estimates; slower intelligence still obeys report delivery. Do not issue repeated orders merely to suppress self-preservation.
 Each unit in observation.units has accepts_orders and order_refusal, taken from headquarters' delivered reports, and order_contract.orderable_units lists the units that can take orders now. Order ONLY units in that list. A formation reported routed (breaking and withdrawing), lost or merged refuses orders, and no unit accepts orders while your command detachment is disrupted. If the list is empty, return an empty orders list.
-Legal orders use {{"unit_id":"U1", "stance":"<template id>", "destination":[column,row] or null}}. Use ONLY the supplied order_contract and order_templates. Hex templates need a destination; hold/rest/resupply/dig_in use null. Resupply uses recorded ammunition points and finite stocks. Rest does not heal casualties. Recon does not grant extra skills. Respect existing rest, retreat and resupply missions until conditions require a change.
+Legal orders use {{"unit_id":"U1", "stance":"<template id>", "destination":[column,row] or null}}. Use ONLY the supplied order_contract and order_templates. Hex templates need a destination; hold/rest/resupply/dig_in/hold_fire/open_fire use null. Resupply uses recorded ammunition points and finite stocks. Rest does not heal casualties. Recon does not grant extra skills. Respect existing rest, retreat and resupply missions until conditions require a change.
 Columns 0..{m.cols - 1}, rows 0..{m.rows - 1}. At most one order per unit, at most 3 orders. No new equipment or abilities.
 Return JSON {{"text":"brief commander dispatch", "orders":[...]}}. No Markdown.
 """
@@ -291,9 +304,9 @@ def system_prompt(side, scenario=None):
     """Why: a player-side model must see only its own side's mission (fog of war).
     What: returns the shared rules text for ``scenario`` (default Little Round
     Top) plus ``side``'s mission from the entry and the entry's voice rules.
-    Little Round Top's text is byte-identical to prompt version ``lrt-side-v2``.
+    Little Round Top's text is byte-identical to prompt version ``lrt-side-v3``.
     Test: `test_player_prompt_excludes_opponent_mission_and_truth`,
-    `test_little_round_top_prompt_is_byte_identical_to_lrt_side_v2`.
+    `test_little_round_top_prompt_is_byte_identical_to_lrt_side_v3`.
     """
     scenario = scenario or DEFAULT_SCENARIO
     return (

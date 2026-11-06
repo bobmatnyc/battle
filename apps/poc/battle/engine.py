@@ -1,6 +1,6 @@
 """Pure deterministic state transitions. Models never adjudicate effects."""
 from copy import deepcopy
-from . import grid,recon,tactics,comms,formations,features,gates,recommendations,standing,victory
+from . import grid,recon,tactics,comms,command,formations,features,gates,recommendations,standing,victory
 from . import orders as order_rules
 from .scenario import SIDES
 from .scenario_entry import LEGACY_ROLES
@@ -55,6 +55,7 @@ def report_refusal(s,side,unit_id):
     report=s['friendly_reports'][side].get(unit_id,{})
     if not report:return 'not_reported'
     if report.get('status') in REFUSING_STATUSES:return 'reported_'+report['status']
+    if report.get('leaderless'):return 'reported_leaderless'  # poc-13B: no officer left.
     return None
 
 def validate_order(s,side,order):
@@ -84,7 +85,8 @@ def issue(s,side,order,source='human'):
     commander=comms.command_unit(s,side)
     version=max([o['version'] for o in s['orders'] if o['unit_id']==u['id']]+[u['order_version']])+1
     known=s['friendly_reports'][side][u['id']]['pos']
-    method='voice' if u['id']==commander['id'] else 'courier'
+    # poc-13B: a voice-reach profile speaks to units headquarters knows are in earshot.
+    method='voice' if command.spoken(s,side,commander,u,known) else 'courier'
     # poc-10: estimate over the gate states headquarters knows, never the true ones.
     # poc-13: always over known terrain, so a recipient beyond water with no
     # crossing gets no estimate rather than a one-interval guess.
@@ -92,6 +94,8 @@ def issue(s,side,order,source='human'):
     packet=comms.envelope(s,commander['pos'],u['id'],known,method,cells=s['cells'] if cells is None else cells)
     oid=f'O{len(s["orders"])+1}'
     packet['id']=oid
+    if method=='voice' and u['id']!=commander['id']:
+        packet.update(speaker_id=commander['id'],voice_reach=command.voice_reach(s,side),expected_turn=s['turn']+1)
     item={'id':oid,'side':side,**deepcopy(order),'source':source,'version':version,
           'sent_turn':s['turn'],'arrival_turn':packet['expected_turn'],'status':'en_route','transport':packet}
     s['orders'].append(item)
@@ -106,7 +110,7 @@ def estimate(s,arrival_turn):
 
 def summary(u):
     result={k:deepcopy(u[k]) for k in ('id','side','name','pos','initial','strength','ammo','morale','suppression','fatigue','status','target','stance','order_version')}
-    result.update({k:deepcopy(u[k]) for k in ('unit_type','weapon_class','skill','recon_role','recon_skill','local_action','local_reason','tactical_target','merged_into','mission_result','supply_site','tools','standing_profile','standing_version','cut_off','fire_posture') if k in u})
+    result.update({k:deepcopy(u[k]) for k in ('unit_type','weapon_class','skill','recon_role','recon_skill','local_action','local_reason','tactical_target','merged_into','mission_result','supply_site','tools','standing_profile','standing_version','cut_off','fire_posture','officers','leaderless') if k in u})
     return result
 
 def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
@@ -212,13 +216,18 @@ def volley(s,u,damage,suppression):
     a unit holding fire is marked ``returning_fire`` (poc-13)."""
     enemies=[e for e in s['units'] if e['side']!=u['side'] and e['strength']>0
              and grid.distance(u['pos'],e['pos'])<=5 and grid.visible(s['cells'],u['pos'],e['pos'])]
-    enemies=[e for e in enemies if grid.distance(u['pos'],e['pos'])<=standing.profile(u)['fire_range']]
+    # poc-13B: a weapon table (smoothbore, 1775) shortens the range and the effect.
+    weapon=s.get('weapon_rules',{}).get(u.get('weapon_class'))
+    reach=min(standing.profile(u)['fire_range'],weapon['range_hexes'] if weapon else 5)
+    enemies=[e for e in enemies if grid.distance(u['pos'],e['pos'])<=reach]
     if not enemies: return
     target=min(enemies,key=lambda e:(grid.distance(u['pos'],e['pos']),e['id']))
     d=grid.distance(u['pos'],target['pos']); cover=s['cells'][grid.key(target['pos'])]['cover']
     rounds=min(u['ammo'],u['strength']); u['ammo']-=rounds
     # Integer exposure accumulation; synthetic POC coefficient, not historical ballistics.
-    effect=rounds*(8-d)*(100-cover)*(100-u['suppression']//2)//9000
+    exposure=(8-d) if not weapon else (weapon['range_hexes']+1-d)*7//weapon['range_hexes']
+    effect=rounds*exposure*(100-cover)*(100-u['suppression']//2)//9000
+    if weapon:effect=effect*weapon['effect_pct']//100
     effect=max(1,effect)
     damage[target['id']]+=effect
     suppression[target['id']]+=max(2,rounds//4)
@@ -280,7 +289,7 @@ def advance(s):
         posture=o['stance'] in order_rules.POSTURES
         if o['version']<=(u.get('fire_posture_version',0) if posture else u['order_version']):
             o['status']='superseded'
-        elif u['status'] in ('routed','lost','merged'):
+        elif u['status'] in ('routed','lost','merged') or u.get('leaderless'):  # poc-13B
             o['status']='refused'
         elif posture:
             o['status']='delivered'; u.update(fire_posture=o['stance'],fire_posture_version=o['version'])
@@ -360,10 +369,12 @@ def advance(s):
         u['suppression']=min(100,u['suppression']+suppression[u['id']])
         u['morale']=max(0,u['morale']-losses*4-(2 if u['suppression']>65 else 0))
         if losses: emit(s,'casualties',unit_id=u['id'],count=losses,remaining=u['strength'])
+        command.officer_losses(s,u,losses,emit,enqueue)  # poc-13B: an officer may fall.
         if u['strength']==0: u['status']='lost'
         elif (u['morale']<28 or u['strength']<12) and u['status']!='routed':
             u['status']='routed'; emit(s,'unit_routed',unit_id=u['id'])
             enqueue(s,u['side'],f'{u["id"]}: formation breaking; withdrawing toward headquarters.',kind='morale',sender=u['id'])
+    command.succession(s,emit,message)  # poc-13B: a fallen command passes on.
     gates.progress(s)  # poc-10: gate labour continues under fire, adjudicated after it.
     gates.push(s)  # poc-11: attackers push through a held gateway, also under fire.
     order_rules.progress(s)  # Recovery/loading is adjudicated after fire, never during it.

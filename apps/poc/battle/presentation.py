@@ -31,8 +31,22 @@ Never invent a messenger, sighting or event merely for atmosphere. These voice
 instructions apply only to prose, never to JSON keys, IDs or legal order values.
 The current demo's output locale is English; localization is a product requirement.'''
 
+# poc-13B: the 1775 voice (docs/research/47), on the same rules as the others.
+COLONIAL_VOICE_PROFILE = 'colonial-1775-en-v1'
+COLONIAL_VOICE_INSTRUCTION = '''Write the human-readable text as a concise military report
+appropriate to the American Revolution in 1775. Address the player as Colonel;
+use restrained, readable period phrasing such as companies, the column, the ground,
+powder and ball, the regulars, word passed, runner, and orders. Avoid modern radio
+idioms such as roger, copy that, over and out, and modern slang. Do not use caricatured
+dialect, invent historical quotations, or obscure the meaning with theatrical archaism.
+Keep every reported fact, uncertainty, map reference and delivery limitation intact.
+Never invent a messenger, sighting or event merely for atmosphere. These voice
+instructions apply only to prose, never to JSON keys, IDs or legal order values.
+The current demo's output locale is English; localization is a product requirement.'''
+
 # Voice profile id -> prose instruction. A scenario entry names one of these.
-VOICE_PROFILES = {VOICE_PROFILE: VOICE_INSTRUCTION, NAPOLEONIC_VOICE_PROFILE: NAPOLEONIC_VOICE_INSTRUCTION}
+VOICE_PROFILES = {VOICE_PROFILE: VOICE_INSTRUCTION, NAPOLEONIC_VOICE_PROFILE: NAPOLEONIC_VOICE_INSTRUCTION,
+                  COLONIAL_VOICE_PROFILE: COLONIAL_VOICE_INSTRUCTION}
 
 EN_DISPATCH = {
     'order.move.sent': 'To {unit}: Instructions to change position are on their way by runner. Delivery expected in {seconds} seconds.',
@@ -54,6 +68,40 @@ PATTERNS = [
     (r'(?P<unit>\w+): formation breaking; withdrawing toward headquarters\.', 'unit.routed'),
     (r'Enemy formation reported near hex (?P<column>\d+),(?P<row>\d+)\.', 'contact.reported'),
 ]
+
+# poc-13B: 1775 order text (docs/research/47). Display only: the stored
+# dispatch text, events and replay inputs are unchanged. The words name each
+# order template in period phrasing; they quote no historical order.
+COLONIAL_ORDER_WORDS = {
+    'hold': 'Stand fast', 'move': 'Shift your ground', 'rest': 'Rest the men',
+    'retreat': 'Fall back', 'resupply': 'Draw powder and ball', 'recon': 'Scout the ground',
+    'dig_in': 'Throw up a breastwork', 'close_gate': 'Shut the gate',
+    'hold_fire': 'Hold your fire unless fired upon', 'open_fire': 'Open fire',
+}
+COLONIAL_PATTERNS = [
+    (r'(?P<unit>\w+): (?P<stance>\w+) order dispatched by voice\. (?P<estimate>.*)', 'order.spoken'),
+    (r'(?P<unit>\w+): (?P<stance>\w+) order dispatched by runner\. (?P<estimate>.*)', 'order.carried'),
+]
+COLONIAL_DISPATCH = {
+    'order.spoken': 'To {unit}: {words}. Given by word of mouth. {estimate}',
+    'order.carried': 'To {unit}: {words}. A runner carries the word. {estimate}',
+    'order.delivered': '{unit} to the Colonel: Your order {order} is received.',
+    'order.superseded': '{unit} to the Colonel: Order {order} is set aside for later word.',
+    'order.refused': '{unit} to the Colonel: We cannot carry out order {order}.',
+    'unit.arrived': '{unit} to the Colonel: We are come to the ground appointed.',
+    'unit.routed': '{unit} to the Colonel: The company is giving way and falls back.',
+}
+# Voice id -> (patterns tried first, dispatch text, order words).
+VOICE_DISPATCH = {COLONIAL_VOICE_PROFILE: (COLONIAL_PATTERNS, COLONIAL_DISPATCH, COLONIAL_ORDER_WORDS)}
+
+# Text of a scripted decision record, by voice; other voices keep the 1863 line.
+SCRIPTED_TEXT = 'General, we shall proceed according to our standing orders.'
+SCRIPTED_TEXTS = {COLONIAL_VOICE_PROFILE: 'Colonel, the companies will proceed according to their standing orders.'}
+
+
+def scripted_text(voice_profile):
+    """The scripted decision's text in ``voice_profile`` (poc-13B: 1775 has its own)."""
+    return SCRIPTED_TEXTS.get(voice_profile, SCRIPTED_TEXT)
 
 
 def scenario_brief(entry, side):
@@ -97,20 +145,27 @@ def scenario_brief(entry, side):
 
 
 def present_view(observation, entry=None):
-    """Voice id comes from the battle's scenario ``entry``; None (a saved game
-    whose label no catalog knows) keeps the original 1863 voice."""
+    """Why: dispatches must read in the scenario's period voice.
+    What: ``observation`` with display text per dispatch. The voice id comes
+    from the battle's scenario ``entry``; None (a saved game whose label no
+    catalog knows) keeps the original 1863 voice. A voice in
+    ``VOICE_DISPATCH`` tries its own patterns first and overrides the text.
+    Test: `test_1775_order_text_is_in_the_period_voice`."""
     result = deepcopy(observation)
     result['display_locale'] = 'en'
-    result['voice_profile'] = entry.voice_profile if entry else VOICE_PROFILE
+    result['voice_profile'] = voice = entry.voice_profile if entry else VOICE_PROFILE
+    patterns, table, words = VOICE_DISPATCH.get(voice, ((), {}, {}))
+    texts = {**EN_DISPATCH, **table}
     for dispatch in result.get('dispatches', []):
         dispatch['display_text'] = dispatch['text'].replace(': dig_in order dispatched', ': dig in order dispatched')
-        for pattern, key_pattern in PATTERNS:
+        for pattern, key_pattern in (*patterns, *PATTERNS):
             match = re.fullmatch(pattern, dispatch['text'])
             if not match:
                 continue
             args = match.groupdict()
             key = key_pattern.format(**args)
+            shown = dict(args, words=words.get(args.get('stance'), args.get('stance', '')))
             dispatch.update(message_key=key, message_args=args,
-                            display_text=EN_DISPATCH[key].format(**args))
+                            display_text=texts[key].format(**shown))
             break
     return result

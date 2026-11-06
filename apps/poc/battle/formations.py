@@ -1,6 +1,6 @@
 """Bounded aggregate reorganization; authored POC rules, no individual roster."""
 from copy import deepcopy
-from . import grid,comms,gates
+from . import grid,comms,command,gates
 
 MIN_STRENGTH=12
 MAX_STRENGTH=80
@@ -118,6 +118,7 @@ def progress(s):
             child.pop('fire_posture_version',None)  # poc-13: keep the posture, start its order scope afresh.
             for field in ('initial','ammo','loss_credit','move_credit','tools'):
                 child[field]=a[field]*n//a['strength'];a[field]-=child[field]
+            command.split_officers(a,child,n)  # poc-13B: officers are apportioned, never copied.
             a['strength']-=n
             s['units'].append(child)
             # Only the parent's own local evidence is inherited, never HQ/other-side truth.
@@ -134,6 +135,7 @@ def progress(s):
             a['morale']=min(a['morale'],b['morale'])
             for field in ('suppression','fatigue','last_attacked_turn','withdraw_until'):a[field]=max(a[field],b[field])
             a['move_credit']=min(a['move_credit'],b['move_credit'])
+            command.combine_officers(a,b)  # poc-13B
             s['retired_units'].append(dict(deepcopy(b),retired_turn=s['turn'],merged_into=a['id']))
             b.update(strength=0,initial=0,ammo=0,tools=0,loss_credit=0,move_credit=0,status='merged',merged_into=a['id'],target=None)
             engine.emit(s,'units_combined',operation_id=op['id'],before=before,after=[deepcopy(a),deepcopy(b)])
