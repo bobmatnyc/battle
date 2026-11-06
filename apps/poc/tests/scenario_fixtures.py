@@ -40,7 +40,7 @@ DUEL = ScenarioEntry(
     rules=RULES_VERSION,
     prompt_version="test-duel-v1",
     prompt_setting="Test Duel, 1863",
-    labels={"poc-8": "test-duel-v1", "poc-9": "test-duel-v2", "poc-10": "test-duel-v3", "poc-11": "test-duel-v4"},
+    labels={"poc-8": "test-duel-v1", "poc-9": "test-duel-v2", "poc-10": "test-duel-v3", "poc-11": "test-duel-v4", "poc-12": "test-duel-v5"},
     location="Synthetic test ground",
     date="1863-07-01",
     start_time="09:00:00",
@@ -140,7 +140,7 @@ def gate_entry(state="open", positions=None, armed=(), id="test-gate", extra=())
         DUEL,
         id=id,
         title="Test gate",
-        labels={"poc-10": id + "-v1", "poc-11": id + "-v2"},
+        labels={"poc-10": id + "-v1", "poc-11": id + "-v2", "poc-12": id + "-v3"},
         sides={
             "blue": dataclasses.replace(blue, headquarters=(9, 10), mission="Blue gate mission: keep the walled farm."),
             "grey": dataclasses.replace(

@@ -26,13 +26,14 @@ FARM, BACK_ROOM, OUTSIDE_WALLS = [10, 10], [9, 10], (9, 13)
 KEY = "walled-farm/farm-gate"
 
 
-def held_gateway(b1=OUTSIDE_WALLS, farm=True):
+def held_gateway(b1=OUTSIDE_WALLS, farm=True, rules="poc-11"):
     """B2 holds the gateway and G1 stands on the outside hex, both armed. B3
     fills the farm (else it is free and B2 takes cover in it); B1 stands at
-    ``b1``. By default only the back room is free inside the walls."""
+    ``b1``. By default only the back room is free inside the walls. The
+    poc-11 rule is the default here; poc-12 changes it (test_contact)."""
     extra = (("B2", "blue", GATEWAY),) + ((("B3", "blue", FARM),) if farm else ())
     entry = gate_entry(positions={"B1": b1, "G1": GATE_OUTSIDE, "G2": (20, 18)}, extra=extra, armed=("B2", "G1"))
-    return build_state(dry_run(validate(entry)))
+    return build_state(dry_run(validate(entry)), rules)
 
 
 def push_in(s):
@@ -141,7 +142,7 @@ def at_the_north_gate(rules):
 
 
 class HougoumontPushTests(unittest.TestCase):
-    def test_scripted_hougoumont_run_on_poc11(self):
+    def test_scripted_hougoumont_run_on_poc12(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "hougoumont.sqlite"
             result = build_headless(db, scenario_id=HOUGOUMONT.id, scenarios=catalog()).run()
@@ -150,7 +151,7 @@ class HougoumontPushTests(unittest.TestCase):
         # Both gate-aware controls (docs/research/44): the French halt under fire from
         # the walls before the outside hex, so nobody pushes; the garrison is shot away.
         self.assertEqual(result["run"]["opponent"], "scripted-gate-attacker-v1")
-        self.assertEqual((final["rules"], final["winner"], final["turn"]), ("poc-11", "french", 58))
+        self.assertEqual((final["rules"], final["winner"], final["turn"]), ("poc-12", "french", 58))
         self.assertEqual(final["reason"], "Allied formations can no longer hold the farm.")
         self.assertEqual((events(final, "gateway_push"), final["push_effort"]), ([], {}))
         farm = next(f for f in final["map_features"] if f["id"] == "hougoumont")
@@ -191,7 +192,7 @@ def as_poc10(state):
 
 class Poc11EditionTests(unittest.TestCase):
     def test_little_round_top_poc11_plays_identically_to_poc10(self):
-        start = scenario.create()
+        start = scenario.create("poc-11")
         self.assertEqual((start["rules"], start["scenario"]), ("poc-11", "little-round-top-v11"))
         self.assertNotIn("push_rules", start)
         self.assertEqual(as_poc10(start), scenario.create("poc-10"))

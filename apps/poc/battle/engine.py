@@ -58,8 +58,8 @@ def report_refusal(s,side,unit_id):
     return None
 
 def validate_order(s,side,order):
-    if s.get('rules')!='poc-11':
-        from .engine_v10 import validate_order as legacy_validate
+    if s.get('rules')!='poc-12':
+        from .engine_v11 import validate_order as legacy_validate
         return legacy_validate(s,side,order)
     if not comms.operational(s,side):
         raise InvalidOrder('Command detachment is disrupted; subordinates continue under standing orders.')
@@ -76,8 +76,8 @@ def validate_order(s,side,order):
     return u
 
 def issue(s,side,order,source='human'):
-    if s.get('rules')!='poc-11':
-        from .engine_v10 import issue as legacy_issue
+    if s.get('rules')!='poc-12':
+        from .engine_v11 import issue as legacy_issue
         return legacy_issue(s,side,order,source)
     u=validate_order(s,side,order)
     order=order_rules.prepare(s,side,order)
@@ -107,8 +107,8 @@ def summary(u):
     return result
 
 def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
-    if s.get('rules')!='poc-11':
-        from .engine_v10 import enqueue as legacy_enqueue
+    if s.get('rules')!='poc-12':
+        from .engine_v11 import enqueue as legacy_enqueue
         return legacy_enqueue(s,side,text,data,kind,delay,sender)
     commander=comms.command_unit(s,side)
     sender_id=sender or (data or {}).get('observer_id') or (data or {}).get('id')
@@ -126,8 +126,8 @@ def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
     emit(s,'report_sent',report_id=packet['id'],side=side,report_kind=kind,arrival_turn=report['arrival_turn'],transport=deepcopy(packet))
 
 def deliver_reports(s):
-    if s.get('rules')!='poc-11':
-        from .engine_v10 import deliver_reports as legacy_deliver
+    if s.get('rules')!='poc-12':
+        from .engine_v11 import deliver_reports as legacy_deliver
         return legacy_deliver(s)
     pending=[]
     for report in s['reports']:
@@ -192,7 +192,10 @@ def advance(s):
     if s.get('rules')=='poc-10':
         from .engine_v10 import advance as tenth_advance
         return tenth_advance(s)
-    if s.get('rules')!='poc-11':raise ValueError('Unsupported battle rules version.')
+    if s.get('rules')=='poc-11':
+        from .engine_v11 import advance as eleventh_advance
+        return eleventh_advance(s)
+    if s.get('rules')!='poc-12':raise ValueError('Unsupported battle rules version.')
     if s['status']!='active':
         raise ValueError('This battle has ended. Start a new battle.')
     s['turn']+=1
@@ -342,8 +345,8 @@ def view(s,side=None):
     What: the commander view for ``side``; None means the snapshot's player
     side (Union before poc-9). Earlier editions use their frozen views.
     Test: `test_renamed_side_duel_runs_headless_and_replays`."""
-    if s.get('rules')!='poc-11':
-        from .engine_v10 import view as legacy_view
+    if s.get('rules')!='poc-12':
+        from .engine_v11 import view as legacy_view
         return legacy_view(s,side)
     side=side or player_side(s)
     units=[deepcopy(u) for u in s['friendly_reports'][side].values() if u.get('status')!='merged']
@@ -382,7 +385,7 @@ def god_view(s):
                   contacts=[],orders=deepcopy(s['orders']),reports=deepcopy(s['reports']),
                   events=deepcopy(s['events']),decisions=deepcopy(s['decisions']),
                   headquarters=deepcopy(s['hq']),
-                  commands={side:comms.location(s,side) for side in sides(s)} if s.get('rules') in ('poc-3','poc-4','poc-5','poc-6','poc-7','poc-8','poc-9','poc-10','poc-11') else {},
+                  commands={side:comms.location(s,side) for side in sides(s)} if s.get('rules') in ('poc-3','poc-4','poc-5','poc-6','poc-7','poc-8','poc-9','poc-10','poc-11','poc-12') else {},
                   dispatches=[dict(deepcopy(d),side=side) for side in sides(s) for d in s['dispatches'][side]])
     result.update(standing_orders=deepcopy(s.get('standing_orders',[])),recommendations=deepcopy(s.get('recommendations',[])),map_features=deepcopy(s.get('map_features',[])),supply_sites=deepcopy(s.get('supply_sites',[])),formation_ops=deepcopy(s.get('formation_ops',[])),retired_units=deepcopy(s.get('retired_units',[])))
     return result

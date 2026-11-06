@@ -191,7 +191,7 @@ class LiveServiceSideTests(unittest.TestCase):
     def test_clock_step_commands_union_when_the_player_is_confederate(self):
         entry = dataclasses.replace(
             DUEL, id="test-duel-confederate-player",
-            labels={"poc-11": "test-duel-confederate-player-v1"}, player_side="confederate",
+            labels={"poc-12": "test-duel-confederate-player-v1"}, player_side="confederate",
         )
         state = self.step_once(entry)
         self.assertEqual(state["player_side"], "confederate")

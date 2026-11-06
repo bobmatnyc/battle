@@ -52,7 +52,7 @@ LITTLE_ROUND_TOP = ScenarioEntry(
             'poc-5':'little-round-top-v5','poc-6':'little-round-top-v6',
             'poc-7':'little-round-top-v7','poc-8':'little-round-top-v8',
             'poc-9':'little-round-top-v9','poc-10':'little-round-top-v10',
-            'poc-11':'little-round-top-v11'},
+            'poc-11':'little-round-top-v11','poc-12':'little-round-top-v12'},
     location='Little Round Top · Gettysburg, Pennsylvania',
     date='1863-07-02',
     start_time='16:30:00',
