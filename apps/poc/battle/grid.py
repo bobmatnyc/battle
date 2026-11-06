@@ -35,6 +35,11 @@ def cost(cells, a, b):
     movement=70 if list(b) in ta.get('road_neighbors',[]) else tb['move_cost']
     return movement + max(0, tb['elevation']-ta['elevation']) * 3
 
+def passable(cell):
+    """poc-13: impassable water (``water``) is crossed only at a ``crossing``
+    (bridge or ford). Cells without ``water`` (every earlier edition) pass."""
+    return not cell.get('water') or bool(cell.get('crossing'))
+
 def path(cells, start, goal, blocked=()):
     if not valid(start) or not valid(goal):
         raise ValueError('Destination is outside the battlefield.')
@@ -48,7 +53,7 @@ def path(cells, start, goal, blocked=()):
         # poc-10: a cell lists the neighbours behind a wall or shut gate.
         walls = cells[key(current)].get('walls', ())
         for nxt in neighbors(current):
-            if key(nxt) in blocked and nxt != goal or nxt in walls:
+            if key(nxt) in blocked and nxt != goal or nxt in walls or not passable(cells[key(nxt)]):
                 continue
             nt = tuple(nxt)
             nc = spent[current] + cost(cells, current, nxt)

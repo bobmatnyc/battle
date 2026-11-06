@@ -267,7 +267,9 @@ class GateEditionTests(unittest.TestCase):
         s = battle()
         self.assertEqual(s["gate_rules"]["basis"], "authored POC sensitivity parameter; not a historical estimate")
         templates = engine.view(s)["order_templates"]
-        self.assertEqual((templates[-1]["id"], templates[-1]["version"]), ("close_gate", "common-orders-v4"))
+        # poc-13 appends Hold fire and Open fire after Close the gate.
+        self.assertEqual([(t["id"], t["version"]) for t in templates[-3:]],
+                         [("close_gate", "common-orders-v6"), ("hold_fire", "common-orders-v6"), ("open_fire", "common-orders-v6")])
 
     def test_gate_fixture_runs_headless_and_replays(self):
         catalog = ScenarioRegistry([LITTLE_ROUND_TOP, gate_entry(armed=("B1", "G1", "G2"))])

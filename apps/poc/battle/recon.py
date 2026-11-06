@@ -7,6 +7,9 @@ from copy import deepcopy
 from . import grid
 
 PROFILES={'line':35,'scout':80,'spy':95}
+# Intervals a delivered contact stays in the commander view and, from poc-13,
+# in the assault check of tactics_v10.
+CONTACT_MAX_AGE=6
 
 def estimate(enemy, quality, distance):
     quantum=40 if quality<25 else 20 if quality<50 else 10 if quality<80 else 5

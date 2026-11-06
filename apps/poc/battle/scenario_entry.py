@@ -13,7 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from . import grid
+from . import grid, scenario_checks
 
 # Sides and roles of every edition before poc-9, which fixed them in the rules.
 SIDES = ("union", "confederate")
@@ -167,6 +167,23 @@ class GatewayPushEntry:
 
 
 @dataclass(frozen=True)
+class FireEntry:
+    """Fire discipline (poc-13), stored in the snapshot as ``fire_rules``.
+
+    ``default_posture`` (``hold_fire`` or ``open_fire``) is every unit's
+    posture unless a unit override names ``fire_posture``. A ``hold_fire``
+    unit fires only when fired upon (docs/research/46). Whether a warning
+    shot (enemy fire that causes the unit no casualties in that interval)
+    counts as being fired upon is ``warning_shots_release``; no source
+    settles it, so it is an authored sensitivity flag, off by default.
+    """
+
+    default_posture: str = "open_fire"
+    warning_shots_release: bool = False
+    basis: str = "authored sensitivity parameter; not a historical estimate"
+
+
+@dataclass(frozen=True)
 class MapEntry:
     """Terrain reference: a cell builder, authored features and display data."""
 
@@ -215,6 +232,7 @@ class ScenarioEntry:
     player_side: str | None = None
     gates: GateEntry | None = None
     gateway_push: GatewayPushEntry | None = None
+    fire: FireEntry | None = None  # poc-13; None means FireEntry().
     desk: DeskBrief | None = None
     # Field name -> "sourced: ...", "reconstruction: ..." or "authored: ...".
     # Documentation only: never stored in a snapshot or shown in a prompt.
@@ -277,6 +295,7 @@ def validate(entry):
         problems.append("authored gateway push is required exactly when a building declares openings")
     elif push and not all(type(v) is int and v > 0 for v in (push.push_labour, push.push_cap)):
         problems.append("gateway push values must be positive integers")
+    problems.extend(scenario_checks.fire_problems(entry, entry.fire or FireEntry()))
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
     if entry.voice_profile not in VOICE_PROFILES:
@@ -362,6 +381,7 @@ def dry_run(entry):
             problems.append(f"build_state failed: {type(exc).__name__}: {exc}")
         else:
             problems.extend(_terrain_problems(state["cells"]))
+            problems.extend(scenario_checks.water_problems(entry, state["cells"]))
             for f in state.get("map_features", []):
                 hexes = ([f["pos"]] if "pos" in f else []) + list(f.get("hexes", []))
                 if not all(grid.valid(list(p)) for p in hexes):
@@ -456,6 +476,8 @@ def build_state(entry, rules=None):
         raise ValueError(f"{rules} supports only the sides {SIDES}.")
     if not _at_least(rules, 'poc-10') and _has_gates(entry):
         raise ValueError(f"{rules} has no gates; building openings need poc-10.")
+    if not _at_least(rules, 'poc-13') and scenario_checks.has_water(entry):
+        raise ValueError(f"{rules} has no impassable water; a river needs poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))
@@ -517,6 +539,12 @@ def build_state(entry, rules=None):
         from dataclasses import asdict
         s['push_rules'] = asdict(entry.gateway_push)
         s['push_effort'] = {}
+    if _at_least(rules, 'poc-13'):
+        from dataclasses import asdict
+        s['fire_rules'] = asdict(entry.fire or FireEntry())
+        for u in units:
+            u.setdefault('fire_posture', s['fire_rules']['default_posture'])
+            s['friendly_reports'][u['side']][u['id']]['fire_posture'] = u['fire_posture']
     return s
 
 

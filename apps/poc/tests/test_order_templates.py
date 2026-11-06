@@ -19,7 +19,7 @@ def supply_fixture():
 class OrderTemplateTests(unittest.TestCase):
     def test_shared_catalog_is_versioned_and_restricted_for_old_games(self):
         s=fixture();ids=[t['id'] for t in engine.view(s)['order_templates']]
-        self.assertEqual(ids,['hold','move','rest','retreat','resupply','recon','dig_in'])
+        self.assertEqual(ids,['hold','move','rest','retreat','resupply','recon','dig_in','hold_fire','open_fire'])
         self.assertEqual(ids,inference.observation_for(s,'union')['order_contract']['stances'])
         self.assertEqual(inference.observation_for(scenario.create(rules='poc-4'),'union')['order_contract']['stances'],['hold','move'])
         self.assertTrue(all(t['message_key'] and t['version'] for t in orders.catalog(s)))

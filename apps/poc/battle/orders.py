@@ -1,11 +1,13 @@
 """Common mission templates. All rates are authored, uncalibrated POC rules."""
 from copy import deepcopy
 from . import grid,features,gates
-from . import tactics_v8 as tactics,tactics_v9
+from . import tactics_v8 as tactics,tactics_v9,tactics_v10
 from .engine_v2 import InvalidOrder
 
 VERSION='common-orders-v3'
 GATE_VERSION='common-orders-v4'  # v3 plus Close the gate (poc-10, battles with a gate).
+# poc-13: Hold fire and Open fire, in every battle (docs/research/46).
+FIRE_VERSION,FIRE_GATE_VERSION='common-orders-v5','common-orders-v6'
 ROUNDS_PER_TROOP=40
 LOAD_ROUNDS_PER_TROOP=5
 REST_RECOVERY=6
@@ -33,6 +35,17 @@ TEMPLATES=[
      'effect':'Work takes time and increases fatigue. Tools and ground determine progress; fire interrupts construction. Cover remains on this hex when the unit leaves.'},
 ]
 
+# poc-13 fire discipline: these set the unit's fire posture and leave its mission alone.
+FIRE_TEMPLATES=[
+    {'id':'hold_fire','label':'Hold fire','destination':'none',
+     'intent':'Do not fire unless fired upon. Keep your present instructions.',
+     'effect':'The detachment does not open fire; it returns fire once enemy fire strikes it. Its mission is unchanged.'},
+    {'id':'open_fire','label':'Open fire','destination':'none',
+     'intent':'Engage the enemy within range. Keep your present instructions.',
+     'effect':'The detachment fires on the nearest enemy in range. Its mission is unchanged.'},
+]
+POSTURES=tuple(t['id'] for t in FIRE_TEMPLATES)
+
 def catalog(s):
     if s.get('rules')=='poc-7':
         from .orders_v7 import catalog as seventh_catalog
@@ -46,11 +59,14 @@ def catalog(s):
     entries=TEMPLATES if s.get('rules') in ('poc-8','poc-9','poc-10','poc-11','poc-12','poc-13') else TEMPLATES[:2]
     version=VERSION
     if gates.present(s):entries,version=entries+[gates.TEMPLATE],GATE_VERSION
+    if s.get('rules')=='poc-13':
+        entries,version=entries+FIRE_TEMPLATES,FIRE_GATE_VERSION if gates.present(s) else FIRE_VERSION
     return [dict(deepcopy(t),message_key='order.template.'+t['id'],version=version) for t in entries]
 
 def available(s):
-    """Templates an order may name: poc-10 battles with a gate add Close the gate."""
-    return TEMPLATES+([gates.TEMPLATE] if gates.present(s) else [])
+    """Templates an order may name: poc-10 battles with a gate add Close the
+    gate; poc-13 adds Hold fire and Open fire."""
+    return TEMPLATES+([gates.TEMPLATE] if gates.present(s) else [])+(FIRE_TEMPLATES if s.get('rules')=='poc-13' else [])
 
 def known_sites(s,side):
     # Positions are in the initial briefing. Remaining stocks require a local report.
@@ -62,6 +78,8 @@ def validate(s,side,order):
     if not template:raise InvalidOrder('Choose an available order template.')
     if template['destination']=='hex':
         if not grid.valid(order.get('destination')):raise InvalidOrder('Choose a destination hex inside the battlefield.')
+        # poc-13: the briefed map shows the water; earlier maps have none.
+        if not grid.passable(s['cells'][grid.key(order['destination'])]):raise InvalidOrder('That hex is impassable water; choose a bank, bridge or ford.')
     elif order.get('destination') is not None:
         raise InvalidOrder('This template selects its own position; omit the destination.')
     if template['id']=='resupply' and not known_sites(s,side):
@@ -101,7 +119,9 @@ def complete(s,u,reason):
 
 def decide(s,u,contacts):
     # poc-12: assaults on a gated compound press on within 5 hexes (tactics_v9).
-    decision=(tactics_v9 if s.get('rules') in ('poc-12','poc-13') else tactics).decide(s,u,contacts)
+    # poc-13: tactics_v10 also ages out stale contacts and keeps off water.
+    policy={'poc-12':tactics_v9,'poc-13':tactics_v10}.get(s.get('rules'),tactics)
+    decision=policy.decide(s,u,contacts)
     decision['policy']=VERSION
     stance=u['stance']
     if u['status']=='routed':return decision
@@ -117,7 +137,8 @@ def decide(s,u,contacts):
                 occupied={grid.key(f['pos']) for f in s['units'] if f['side']==u['side'] and f['id']!=u['id'] and f['strength']>0 and grid.visible(s['cells'],u['pos'],f['pos'])}
                 distance=lambda p:min(grid.distance(p,t) for t in threats)
                 candidates=[p for p in grid.neighbors(u['pos']) if grid.key(p) not in occupied
-                            and distance(p)>=distance(u['pos']) and p not in threats]
+                            and distance(p)>=distance(u['pos']) and p not in threats
+                            and grid.passable(s['cells'][grid.key(p)])]  # poc-13 water; none earlier.
                 step=min(candidates,key=lambda p:((-distance(p),grid.distance(p,target)) if stance=='recon' else (grid.distance(p,target),-distance(p)))+(-s['cells'][grid.key(p)]['cover'],p)) if candidates else None
                 decision.update(action='fall_back',target=step,reason='Fall back without closing upon the observed enemy.' if step else 'No safe withdrawal step is known; defend while seeking a way out.')
             else:

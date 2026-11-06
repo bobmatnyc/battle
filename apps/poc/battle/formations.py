@@ -30,6 +30,7 @@ def validate(s,side,request):
             raise ValueError('Each resulting formation needs at least 12 reported troops.')
         if not grid.valid(p) or grid.distance(a['pos'],p)!=1:raise ValueError('Select an adjacent hex for the detached formation.')
         if cells and gates.across_wall(cells,a['pos'],p):raise ValueError('A wall or shut gate separates that hex from the formation.')
+        if not grid.passable(s['cells'][grid.key(p)]):raise ValueError('That hex is impassable water.')  # poc-13
         if any(u['pos']==p and u['status'] not in ('lost','merged') for u in known['units']):raise ValueError('That hex is reported occupied by a friendly formation.')
     else:
         b=units[ids[1]]
@@ -114,6 +115,7 @@ def progress(s):
                          local_action='hold',local_reason='Detachment formed; await orders.',tactical_target=None)
             child['standing_version']=0  # Inherit doctrine, start the new command scope at version zero.
             child.pop('mission_result',None);child.pop('supply_site',None)
+            child.pop('fire_posture_version',None)  # poc-13: keep the posture, start its order scope afresh.
             for field in ('initial','ammo','loss_credit','move_credit','tools'):
                 child[field]=a[field]*n//a['strength'];a[field]-=child[field]
             a['strength']-=n

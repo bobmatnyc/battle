@@ -103,7 +103,7 @@ with tempfile.TemporaryDirectory() as tmp:
         assert next(u for u in state['units'] if u['id']=='U2')['ammo']==1600
         request('/api/formations',{'game_id':state['game_id'],'revision':state['revision'],
             'instruction':{'kind':'split','unit_id':'C1','count':20,'destination':[5,19]}},expected=400)
-        assert [t['id'] for t in state['order_templates']]==['hold','move','rest','retreat','resupply','recon','dig_in']
+        assert [t['id'] for t in state['order_templates']]==['hold','move','rest','retreat','resupply','recon','dig_in','hold_fire','open_fire']
         assert {f['kind'] for f in state['map_features']}=={'road','building','fortification'}
         assert len(state['supply_sites'])==1 and 'ammo' not in state['supply_sites'][0]
         for stance,dest in [('rest',None),('retreat',[13,15]),('recon',[13,15]),('resupply',None),('dig_in',None)]:

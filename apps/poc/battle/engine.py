@@ -86,7 +86,10 @@ def issue(s,side,order,source='human'):
     known=s['friendly_reports'][side][u['id']]['pos']
     method='voice' if u['id']==commander['id'] else 'courier'
     # poc-10: estimate over the gate states headquarters knows, never the true ones.
-    packet=comms.envelope(s,commander['pos'],u['id'],known,method,cells=gates.known_cells(s,side))
+    # poc-13: always over known terrain, so a recipient beyond water with no
+    # crossing gets no estimate rather than a one-interval guess.
+    cells=gates.known_cells(s,side)
+    packet=comms.envelope(s,commander['pos'],u['id'],known,method,cells=s['cells'] if cells is None else cells)
     oid=f'O{len(s["orders"])+1}'
     packet['id']=oid
     item={'id':oid,'side':side,**deepcopy(order),'source':source,'version':version,
@@ -103,7 +106,7 @@ def estimate(s,arrival_turn):
 
 def summary(u):
     result={k:deepcopy(u[k]) for k in ('id','side','name','pos','initial','strength','ammo','morale','suppression','fatigue','status','target','stance','order_version')}
-    result.update({k:deepcopy(u[k]) for k in ('unit_type','weapon_class','skill','recon_role','recon_skill','local_action','local_reason','tactical_target','merged_into','mission_result','supply_site','tools','standing_profile','standing_version','cut_off') if k in u})
+    result.update({k:deepcopy(u[k]) for k in ('unit_type','weapon_class','skill','recon_role','recon_skill','local_action','local_reason','tactical_target','merged_into','mission_result','supply_site','tools','standing_profile','standing_version','cut_off','fire_posture') if k in u})
     return result
 
 def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
@@ -190,6 +193,38 @@ def contest(s,moves,occupied):
         allowed.append((u,p,cost))
     return allowed
 
+def fired_upon(s,u,turn):
+    """Why: a ``hold_fire`` unit returns fire only on evidence it observes.
+    What: True when the events of interval ``turn`` show ``u`` under enemy
+    fire that caused it casualties (``casualties``), or under any enemy fire
+    (``unit_under_fire``) when the authored ``warning_shots_release`` is on.
+    Test: `test_hold_fire_unit_returns_fire_when_fired_upon`,
+    `test_warning_shots_release_only_when_authored`."""
+    kind='unit_under_fire' if s['fire_rules']['warning_shots_release'] else 'casualties'
+    for e in reversed(s['events']):
+        if e['turn']<turn:return False
+        if e['turn']==turn and e['kind']==kind and e.get('unit_id')==u['id']:return True
+    return False
+
+def volley(s,u,damage,suppression):
+    """One unit's volley at the nearest visible enemy in range, from the
+    pre-damage snapshot; adds to ``damage`` and ``suppression``. A volley by
+    a unit holding fire is marked ``returning_fire`` (poc-13)."""
+    enemies=[e for e in s['units'] if e['side']!=u['side'] and e['strength']>0
+             and grid.distance(u['pos'],e['pos'])<=5 and grid.visible(s['cells'],u['pos'],e['pos'])]
+    enemies=[e for e in enemies if grid.distance(u['pos'],e['pos'])<=standing.profile(u)['fire_range']]
+    if not enemies: return
+    target=min(enemies,key=lambda e:(grid.distance(u['pos'],e['pos']),e['id']))
+    d=grid.distance(u['pos'],target['pos']); cover=s['cells'][grid.key(target['pos'])]['cover']
+    rounds=min(u['ammo'],u['strength']); u['ammo']-=rounds
+    # Integer exposure accumulation; synthetic POC coefficient, not historical ballistics.
+    effect=rounds*(8-d)*(100-cover)*(100-u['suppression']//2)//9000
+    effect=max(1,effect)
+    damage[target['id']]+=effect
+    suppression[target['id']]+=max(2,rounds//4)
+    extra={'returning_fire':True} if u.get('fire_posture')=='hold_fire' else {}
+    emit(s,'volley',unit_id=u['id'],target_id=target['id'],rounds=rounds,exposure=effect,**extra)
+
 def advance(s):
     """Mutates only supplied state; all fire uses the same pre-damage snapshot."""
     if s.get('rules')=='poc-1':
@@ -241,10 +276,15 @@ def advance(s):
         if transport_status=='expired':
             o['status']='expired';emit(s,'order_expired',order_id=o['id']);continue
         u=find_unit(s,o['unit_id'])
-        if o['version']<=u['order_version']:
+        # poc-13: a fire-discipline order changes the posture only, never the mission.
+        posture=o['stance'] in order_rules.POSTURES
+        if o['version']<=(u.get('fire_posture_version',0) if posture else u['order_version']):
             o['status']='superseded'
         elif u['status'] in ('routed','lost','merged'):
             o['status']='refused'
+        elif posture:
+            o['status']='delivered'; u.update(fire_posture=o['stance'],fire_posture_version=o['version'])
+            emit(s,'fire_posture_set',unit_id=u['id'],order_id=o['id'],fire_posture=o['stance'])
         else:
             o['status']='delivered'; u['order_version']=o['version']
             u['target']=deepcopy(o.get('destination')); u['stance']=o['stance']
@@ -297,21 +337,18 @@ def advance(s):
         if p==u['target'] and u['stance'] not in ('resupply','recon'):
             order_rules.complete(s,u,'Assigned position reached.')
     damage={u['id']:0 for u in s['units']}; suppression={u['id']:0 for u in s['units']}
+    holding=[]
     for u in sorted(s['units'],key=lambda x:x['id']):
         if u['strength']<=0 or u['ammo']<=0 or u['status']=='routed': continue
-        enemies=[e for e in s['units'] if e['side']!=u['side'] and e['strength']>0
-                 and grid.distance(u['pos'],e['pos'])<=5 and grid.visible(s['cells'],u['pos'],e['pos'])]
-        enemies=[e for e in enemies if grid.distance(u['pos'],e['pos'])<=standing.profile(u)['fire_range']]
-        if not enemies: continue
-        target=min(enemies,key=lambda e:(grid.distance(u['pos'],e['pos']),e['id']))
-        d=grid.distance(u['pos'],target['pos']); cover=s['cells'][grid.key(target['pos'])]['cover']
-        rounds=min(u['ammo'],u['strength']); u['ammo']-=rounds
-        # Integer exposure accumulation; synthetic POC coefficient, not historical ballistics.
-        effect=rounds*(8-d)*(100-cover)*(100-u['suppression']//2)//9000
-        effect=max(1,effect)
-        damage[target['id']]+=effect
-        suppression[target['id']]+=max(2,rounds//4)
-        emit(s,'volley',unit_id=u['id'],target_id=target['id'],rounds=rounds,exposure=effect)
+        # poc-13: a unit holding fire fires only if fired upon in the previous interval ...
+        if u.get('fire_posture')=='hold_fire' and not fired_upon(s,u,s['turn']-1):
+            holding.append(u);continue
+        volley(s,u,damage,suppression)
+    # ... or in this one. The released set is fixed before any return volley.
+    warning=s['fire_rules']['warning_shots_release']
+    released=[u for u in holding if suppression[u['id']]>0
+              and (warning or (u['loss_credit']+damage[u['id']])//100>0)]
+    for u in released:volley(s,u,damage,suppression)
     for u in s['units']:
         if u['status']=='merged':continue
         if suppression[u['id']]>0:
@@ -388,7 +425,7 @@ def view(s,side=None):
         units.append(dict(summary(commander),observed_turn=s['turn'],received_turn=s['turn']))
         units.sort(key=lambda u:u['id'])
     contacts=[dict(deepcopy(c),age=s['turn']-c['observed_turn']) for c in s['contacts'][side].values()
-              if s['turn']-c['observed_turn']<=6]
+              if s['turn']-c['observed_turn']<=recon.CONTACT_MAX_AGE]
     # Do not disclose delivery before an acknowledgement reaches HQ.
     orders=[]
     for o in s['orders']:
