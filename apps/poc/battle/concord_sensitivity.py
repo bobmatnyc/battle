@@ -12,8 +12,10 @@ river column per row, approach, start hexes, headquarters, town).
 ``SENSITIVITY`` holds each variant as a ``scenario_concord.Variant``.
 ``POLICIES`` holds the two scripted Concord policies rebound to each
 variant's hexes: the same code objects as ``concord_policy``, with only the
-four geometry constants replaced (``rebind``). Nothing here changes the
-baseline entry, its policies or any rule.
+four geometry constants replaced (``rebind``). ``earshot`` and
+``RELEASE_SENSITIVITY`` hold the unsourced release-scope sensitivity of
+docs/research/50. Nothing here changes the baseline entry, its policies or
+any rule.
 Test: `test_baseline_geometry_rebuilds_the_baseline_entry`,
 `test_ring_geometry_of_each_variant`, `test_rebound_policies_run_the_baseline_code`.
 """
@@ -23,10 +25,10 @@ from dataclasses import dataclass, replace
 
 from . import concord_policy, grid
 from .scenario_concord import (
-    APPROACH, BRIDGE, BRIDGE_MOVE_COST, BRITISH_THREE, PROVINCIALS, RIVER_COL, TOWN, Variant,
+    APPROACH, BRIDGE, BRIDGE_MOVE_COST, BRITISH_THREE, CONCORD_NORTH_BRIDGE, PROVINCIALS, RIVER_COL, TOWN, Variant,
     _open_fire, concord_entry,
 )
-from .scenario_entry import UnitEntry
+from .scenario_entry import RULES_VERSION, UnitEntry
 
 
 @dataclass(frozen=True)
@@ -245,3 +247,34 @@ for _name, _g in SENSITIVITY_GEOMETRY.items():
 # Policy id -> the side and variant it fits (command_policy.NAMED_POLICIES).
 NEEDS = {policy: f"the {side} side of the Concord {name} variant"
          for name in SENSITIVITY_GEOMETRY for side, policy in _policy_ids(name).items()}
+
+
+# docs/research/50: the command's order opening every company in earshot is
+# a sensitivity reading with no source, kept apart from the geometry variants.
+EARSHOT = "sensitivity-earshot-release"
+_EARSHOT_NOTE = ("the command's open-fire order also opens every hold-fire company within the 2-hex voice reach "
+                 "(release_scope earshot), not only the company that met the release condition; no source says "
+                 "which companies heard Buttrick's order (S47)")
+
+
+def earshot(entry):
+    """Why: doc 50 must measure the earshot release on real runs of each case.
+    What: ``entry`` (a v2 Concord entry) with ``release_scope`` ``earshot``,
+    its id, title, variant and label suffixed with ``EARSHOT``, and an
+    ``authored: sensitivity:`` provenance note. Nothing else changes.
+    Test: `test_earshot_release_is_a_labelled_sensitivity_variant`.
+    """
+    ident = f"{entry.id}-{EARSHOT}"
+    note = "; ".join(x for x in (entry.provenance.get("sensitivity", "").removeprefix("authored: sensitivity: "),
+                                 _EARSHOT_NOTE) if x)
+    return replace(entry, id=ident, title=f"{entry.title} ({EARSHOT})",
+                   variant=EARSHOT if entry.variant is None else f"{entry.variant}+{EARSHOT}",
+                   labels={RULES_VERSION: f"{ident}-v2"}, fire=replace(entry.fire, release_scope="earshot"),
+                   provenance={**entry.provenance, "sensitivity": f"authored: sensitivity: {note}"})
+
+
+RELEASE_SENSITIVITY = {EARSHOT: Variant(
+    question="sensitivity: doc 50 (b) (does the command's order open every company in earshot)",
+    reading=f"sensitivity: {_EARSHOT_NOTE}",
+    source="authored release scope, no source; keeps every other field of the baseline entry",
+    entry=earshot(CONCORD_NORTH_BRIDGE))}

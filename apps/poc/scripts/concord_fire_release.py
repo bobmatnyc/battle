@@ -3,59 +3,34 @@
 Why: doc 50 judges the ``release_by`` ``command`` change on the baseline,
 the doc 43 variants and the doc 49 geometry variants, not on one run, and
 separates its two effects: who releases the front company (attribution) and
-the other hold-fire companies the same order opens (extra release).
+the other hold-fire companies an earshot order would open (extra release).
 What: for each case runs, each headless in its own temporary database:
-``before`` (``scenario_concord.before``: each company releases itself), and
-``after`` (the v2 entry); plus a diagnostic ``attribution-only`` run, the
-v2 entry with ``command.release`` restricted to the companies that meet the
-release condition themselves. The diagnostic is a counterfactual of this
-script, not a rule or scenario. Prints one JSON object per case: winner, end
-turn, who released P1 and when, the first provincial volley, losses, the
-historical event checks, and the companies the order opened before their own
-release with their volleys.
+``before`` (``scenario_concord.before``: each company releases itself),
+``after`` (the v2 entry: the command releases the company hit), and
+``earshot`` (``concord_sensitivity.earshot``: the unsourced sensitivity in
+which the order opens every company in voice reach). Prints one JSON object
+per run: winner, end turn, who released P1 and when, the first provincial
+volley, losses and the historical event checks; then the companies the
+earshot order opened before their release in ``after``, with their volleys.
 Usage, from apps/poc: ``python3 scripts/concord_fire_release.py``.
 """
 
 import json
 import sys
 import tempfile
-from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from battle import command  # noqa: E402
 from battle.adapters.rules import ScenarioRegistry  # noqa: E402
 from battle.bootstrap import build_headless, build_replay  # noqa: E402
-from battle.concord_sensitivity import SENSITIVITY  # noqa: E402
+from battle.concord_sensitivity import SENSITIVITY, earshot  # noqa: E402
 from battle.scenario_concord import CONCORD_NORTH_BRIDGE, VARIANTS, before  # noqa: E402
 
 CASES = {"baseline": CONCORD_NORTH_BRIDGE,
          **{name: VARIANTS[name].entry for name in ("british-west-bank", "planks-lifted", "two-companies")},
          **{name: variant.entry for name, variant in SENSITIVITY.items()}}
-RELEASE = command.release
-
-
-def _triggered_only(s, triggered, emit, enqueue, message):
-    """``command.release`` that opens only ``triggered``: the others in
-    earshot are hidden from it for the call and restored unchanged."""
-    ids = {u["id"] for u in triggered}
-    hidden = [u for u in s["units"] if u.get("fire_posture") == "hold_fire" and u["id"] not in ids]
-    for u in hidden:
-        u["fire_posture"] = "hidden"
-    try:
-        return RELEASE(s, triggered, emit, enqueue, message)
-    finally:
-        for u in hidden:
-            u["fire_posture"] = "hold_fire"
-
-
-@contextmanager
-def attribution_only():
-    with mock.patch.object(command, "release", _triggered_only):
-        yield
 
 
 def run(entry):
@@ -131,26 +106,25 @@ def row(entry, result, final):
     }
 
 
-def extra(after, alone):
-    """Companies the full order opened before their release in the
-    attribution-only run, and their volleys before that turn."""
+def extra(wide, alone):
+    """Companies the earshot order opened before their release in the
+    hit-scope run, and their volleys before that turn."""
     found = {}
-    for uid, (turn, how) in after["releases"].items():
+    for uid, (turn, how) in wide["releases"].items():
         if uid == "P1" or "command" not in how:
             continue
         own = alone["releases"].get(uid)
         if own is None or own[0] > turn:
-            early = [t for t in after["volleys"].get(uid, []) if own is None or t < own[0]]
+            early = [t for t in wide["volleys"].get(uid, []) if own is None or t < own[0]]
             found[uid] = {"opened": turn, "own_release": own, "volleys_before_own": len(early)}
     return found
 
 
 def main():
     for name, entry in CASES.items():
-        rows = {"before": row(entry, *run(before(entry))), "after": row(entry, *run(entry))}
-        with attribution_only():
-            rows["attribution_only"] = row(entry, *run(entry))
-        rows["extra_release"] = extra(rows["after"], rows["attribution_only"])
+        rows = {"before": row(entry, *run(before(entry))), "after": row(entry, *run(entry)),
+                "earshot": row(entry, *run(earshot(entry)))}
+        rows["extra_release"] = extra(rows["earshot"], rows["after"])
         print(f"== {name}")
         for key, value in rows.items():
             print(key, json.dumps(value, sort_keys=True))

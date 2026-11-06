@@ -168,6 +168,10 @@ class GatewayPushEntry:
     basis: str = "authored sensitivity parameter; not a historical estimate"
 
 
+# FireEntry defaults left out of a snapshot (docs/research/50).
+OMITTED = (('release_by', 'unit'), ('release_scope', 'hit'))
+
+
 @dataclass(frozen=True)
 class FireEntry:
     """Fire discipline (poc-13), stored in the snapshot as ``fire_rules``.
@@ -178,12 +182,13 @@ class FireEntry:
     shot (enemy fire that causes the unit no casualties in that interval)
     counts as being fired upon is ``warning_shots_release``; no source
     settles it, so it is an authored sensitivity flag, off by default.
-    ``release_by``, ``unit`` or ``command``: who releases it (docs/research/50).
+    ``release_by`` (unit|command), ``release_scope`` (hit|earshot): docs/research/50.
     """
 
     default_posture: str = "open_fire"
     warning_shots_release: bool = False
     release_by: str = "unit"
+    release_scope: str = "hit"
     basis: str = "authored sensitivity parameter; not a historical estimate"
 
 
@@ -564,10 +569,9 @@ def build_state(entry, rules=None):
         s['push_effort'] = {}
     if _at_least(rules, 'poc-13'):
         from dataclasses import asdict
-        s['fire_rules'] = asdict(entry.fire or FireEntry())
         # docs/research/50: only a non-default release is written, so every
         # earlier poc-13 snapshot and digest stays as it was.
-        if s['fire_rules']['release_by'] == 'unit': del s['fire_rules']['release_by']
+        s['fire_rules'] = {k: v for k, v in asdict(entry.fire or FireEntry()).items() if (k, v) not in OMITTED}
         for u in units:
             u.setdefault('fire_posture', s['fire_rules']['default_posture'])
             s['friendly_reports'][u['side']][u['id']]['fire_posture'] = u['fire_posture']

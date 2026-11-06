@@ -5,7 +5,7 @@ this prints them from a fresh run so the numbers can be checked.
 What: runs ``concord-north-bridge`` (or ``--scenario``) headless in a new
 temporary database (``--variant NAME``: that doc 43 variant from
 ``scenario_concord.VARIANTS``, or that doc 49 variant from
-``concord_sensitivity.SENSITIVITY``, instead; ``--before``: its form before
+``concord_sensitivity.SENSITIVITY`` or ``RELEASE_SENSITIVITY``, instead; ``--before``: its form before
 docs/research/50, ``scenario_concord.before``), prints the run summary, then one line per key event
 (orders, fire, casualties, officers, routs, local withdrawals, the end).
 The engine draws no random number, so every run prints the same lines.
@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from battle.adapters.rules import ScenarioRegistry  # noqa: E402
 from battle.bootstrap import build_headless, build_replay  # noqa: E402
-from battle.concord_sensitivity import SENSITIVITY  # noqa: E402
+from battle.concord_sensitivity import RELEASE_SENSITIVITY, SENSITIVITY  # noqa: E402
 from battle.scenario_concord import CONCORD_NORTH_BRIDGE, VARIANTS, before  # noqa: E402
 
 KEY = ("order_sent", "order_delivered", "order_refused", "fire_posture_set", "volley", "casualties",
@@ -37,12 +37,13 @@ def line(e):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", default="concord-north-bridge")
-    parser.add_argument("--variant", choices=sorted({**VARIANTS, **SENSITIVITY}))
+    known = {**VARIANTS, **SENSITIVITY, **RELEASE_SENSITIVITY}
+    parser.add_argument("--variant", choices=sorted(known))
     parser.add_argument("--before", action="store_true", help="each company releases itself (doc 48)")
     args = parser.parse_args()
     scenarios, scenario_id = None, args.scenario
     if args.variant or args.before:
-        entry = {**VARIANTS, **SENSITIVITY}[args.variant].entry if args.variant else CONCORD_NORTH_BRIDGE
+        entry = known[args.variant].entry if args.variant else CONCORD_NORTH_BRIDGE
         entry = before(entry) if args.before else entry
         scenarios, scenario_id = ScenarioRegistry([entry]), entry.id
     with tempfile.TemporaryDirectory() as tmp:

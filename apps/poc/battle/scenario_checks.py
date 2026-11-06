@@ -11,16 +11,21 @@ from . import grid
 CROSSINGS = ("bridge", "ford")
 FIRE_POSTURES = ("hold_fire", "open_fire")
 RELEASE_BY = ("unit", "command")  # docs/research/50
+RELEASE_SCOPES = ("hit", "earshot")
 
 
 def fire_problems(entry, fire):
     """poc-13 fire discipline: known postures, a boolean warning-shot flag and
-    a known ``release_by``. Test: `test_registration_refuses_an_unknown_release_by`."""
+    a known ``release_by`` and ``release_scope``.
+    Test: `test_registration_refuses_an_unknown_release_by`,
+    `test_registration_refuses_an_unknown_release_scope`."""
     problems = []
     if fire.default_posture not in FIRE_POSTURES or type(fire.warning_shots_release) is not bool:
         problems.append(f"fire default posture must be one of {FIRE_POSTURES} and warning_shots_release a boolean")
     if fire.release_by not in RELEASE_BY:
         problems.append(f"fire release_by must be one of {RELEASE_BY}")
+    if fire.release_scope not in RELEASE_SCOPES:
+        problems.append(f"fire release_scope must be one of {RELEASE_SCOPES}")
     for u in entry.units:
         if "fire_posture" in u.overrides and u.overrides["fire_posture"] not in FIRE_POSTURES:
             problems.append(f"unit {u.id!r} fire posture must be one of {FIRE_POSTURES}")

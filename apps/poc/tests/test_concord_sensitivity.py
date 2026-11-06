@@ -35,11 +35,30 @@ BEFORE_RUN_SHA256 = "8755f91fab16f90beae38aa4e77aa4bba07b4ffdcc779f09aa693822bd1
 # The same commit: sha256 of ``scripts/concord_timeline.py`` stdout (now
 # ``--before``) with the ``game_id`` value replaced by an ellipsis.
 BEFORE_TIMELINE_SHA256 = "b4c03cfb5a9c4ebd9d4be9d0578d226b0d40d36361eaa23c89725044e3d3bda1"
-# After docs/research/50 (the v2 entry, command fire release), the same two
-# digests of the baseline run.
-AFTER_RUN_SHA256 = "b03a3d1b7ec3f19ddd1e361fe27fb28353e61c6aa291b0de13bdb21d471960fa"
-AFTER_TIMELINE_SHA256 = "5a8c36dcf626b2a492655b813536dd5b0e92fc98a0a683d3466412ce75b73a72"
+# After docs/research/50 (the v2 entry: command fire release, hit scope), the
+# same two digests of the baseline run.
+AFTER_RUN_SHA256 = "8672d94d86a04fc375a56567aa029d4d59049b243523951bdaaa8a4fee2a05dd"
+AFTER_TIMELINE_SHA256 = "340c2cbe33b6d94be051fab15a9385053b1d429d52ebed73ea0dc98c86f27067"
+# Taken at a377ff8, when v2 opened every company in earshot: the same two
+# digests, now of the ``sensitivity-earshot-release`` variant with its id,
+# label and ``release_scope`` key mapped back to that commit's (``as_a377ff8``).
+EARSHOT_RUN_SHA256 = "b03a3d1b7ec3f19ddd1e361fe27fb28353e61c6aa291b0de13bdb21d471960fa"
+EARSHOT_TIMELINE_SHA256 = "5a8c36dcf626b2a492655b813536dd5b0e92fc98a0a683d3466412ce75b73a72"
 GAME_ID = re.compile(r"'game_id': '[0-9a-f]+'")
+EARSHOT_ID = "concord-north-bridge-sensitivity-earshot-release"
+
+
+def as_a377ff8(text):
+    """``text`` (JSON or a printed dict) with the earshot variant's id, label,
+    variant and ``release_scope`` replaced by the a377ff8 baseline's."""
+    for q in ('"', "'"):
+        null = "null" if q == '"' else "None"
+        for a, b in ((f"{q}{EARSHOT_ID}-v2{q}", f"{q}concord-north-bridge-v2{q}"),
+                     (f"{q}{EARSHOT_ID}{q}", f"{q}concord-north-bridge{q}"),
+                     (f"{q}variant{q}: {q}sensitivity-earshot-release{q}", f"{q}variant{q}: {null}"),
+                     (f"{q}release_scope{q}: {q}earshot{q}, ", "")):
+            text = text.replace(a, b)
+    return text
 
 
 def run(entry, tmp, name):
@@ -58,11 +77,12 @@ def masked_timeline(seed, *args):
     return GAME_ID.sub("'game_id': '…'", out)
 
 
-def run_digest(entry):
+def run_digest(entry, normalise=lambda text: text):
     with tempfile.TemporaryDirectory() as tmp:
         result, final, _ = run(entry, tmp, "baseline.sqlite")
     summary = {k: v for k, v in result.items() if k != "game_id"}
-    return hashlib.sha256(json.dumps({"result": summary, "final": final}, sort_keys=True).encode()).hexdigest()
+    text = normalise(json.dumps({"result": summary, "final": final}, sort_keys=True))
+    return hashlib.sha256(text.encode()).hexdigest()
 
 
 class BaselinePinTests(unittest.TestCase):
@@ -75,14 +95,21 @@ class BaselinePinTests(unittest.TestCase):
     def test_baseline_run_keeps_its_pinned_digest(self):
         self.assertEqual(run_digest(ENTRY), AFTER_RUN_SHA256)
 
+    def test_earshot_variant_reproduces_the_a377ff8_run(self):
+        from battle.concord_sensitivity import RELEASE_SENSITIVITY
+        entry = RELEASE_SENSITIVITY["sensitivity-earshot-release"].entry
+        self.assertEqual(entry.id, EARSHOT_ID)
+        self.assertEqual(run_digest(entry, as_a377ff8), EARSHOT_RUN_SHA256)
+
     def test_baseline_timeline_is_the_same_under_two_hash_seeds(self):
         # One process has one hash seed, so a replay inside it cannot show
         # an order that depends on set or dict hashing; two processes can.
-        for args, pin in (((), AFTER_TIMELINE_SHA256), (("--before",), BEFORE_TIMELINE_SHA256)):
+        for args, pin in (((), AFTER_TIMELINE_SHA256), (("--before",), BEFORE_TIMELINE_SHA256),
+                          (("--variant", "sensitivity-earshot-release"), EARSHOT_TIMELINE_SHA256)):
             with self.subTest(args=args):
                 first, second = masked_timeline(1, *args), masked_timeline(2, *args)
                 self.assertEqual(first, second)
-                self.assertEqual(hashlib.sha256(first.encode()).hexdigest(), pin)
+                self.assertEqual(hashlib.sha256(as_a377ff8(first).encode()).hexdigest(), pin)
 
 
 class SensitivityEntryTests(unittest.TestCase):

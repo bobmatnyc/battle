@@ -9,7 +9,7 @@ from .clock import SimulationClock
 from .config import Settings
 from .presentation import present_view
 from .scenario import LITTLE_ROUND_TOP
-from .scenario_concord import CONCORD_NORTH_BRIDGE
+from .scenario_concord import CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1
 from .scenario_hougoumont import HOUGOUMONT_NORTH_GATE
 from .services.battle import BattleService
 from .services.commander import CommanderService
@@ -20,8 +20,9 @@ from .storage import Store
 # Player-facing scenarios; the first is the default. Test fixtures stay out.
 PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE)
 # Headless runs also offer Concord, whose river the command desk cannot draw
-# yet (docs/research/43, row 8; docs/research/48).
-HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE,)
+# yet (docs/research/43, row 8; docs/research/48), and its v1 entry, so saved
+# v1 games still open (docs/research/50).
+HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1)
 
 
 def build_scenarios():

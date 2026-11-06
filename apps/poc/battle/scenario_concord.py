@@ -157,6 +157,9 @@ RELEASE_PROVENANCE = {
                                "(warning shots release no one, as 'fire')",
     "fire.release_by.out_of_reach": "sourced: a company out of earshot keeps Barrett's own rule, 'Do not fire "
                                     "unless first fired upon' (S47)",
+    "fire.release_scope": "reconstruction: the order opens only the company that met the release condition, the "
+                          "one Buttrick stood in; S47 does not say which other companies heard it (the earshot "
+                          "reading is the unsourced sensitivity-earshot-release)",
 }
 FIRE_BEFORE = FireEntry(default_posture="hold_fire")  # v1: each company releases itself (doc 48).
 FIRE = FireEntry(default_posture="hold_fire", release_by="command")  # v2: docs/research/50.
@@ -234,6 +237,11 @@ CONCORD_NORTH_BRIDGE = concord_entry(british=_open_fire(BRITISH_THREE))
 # Before docs/research/50: the v1 entry, each company releasing itself. Kept
 # buildable and pinned to its old digests; in no catalog.
 CONCORD_NORTH_BRIDGE_BEFORE = before(CONCORD_NORTH_BRIDGE)
+# The same v1 entry under its own id, so saved concord-north-bridge-v1 games
+# (the 2026-11-06 baseline archive, made at d6f1748) resolve through
+# ``for_state``. Headless catalog only, never a player scenario.
+CONCORD_NORTH_BRIDGE_V1 = replace(CONCORD_NORTH_BRIDGE_BEFORE, id="concord-north-bridge-v1",
+                                  title="Concord North Bridge (v1, before docs/research/50)")
 
 
 @dataclass(frozen=True)

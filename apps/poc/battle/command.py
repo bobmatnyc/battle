@@ -143,20 +143,23 @@ def release(s,triggered,emit,enqueue,message):
     for each side with a unit in ``triggered`` (hold-fire units meeting the
     unchanged release condition) whose operational command unit is that unit
     or within voice reach of it, the command gives a spoken ``open_fire``
-    order, sent and delivered this interval, to every hold-fire unit of the
-    side in voice reach that accepts orders. Returns the ids it opened; none
-    under ``unit``. Units out of reach keep their own release.
-    Test: `test_command_releases_the_unit_and_every_hold_fire_unit_in_voice_reach`,
+    order, sent and delivered this interval: under ``release_scope`` ``hit``
+    to each such triggered unit only, under ``earshot`` to every hold-fire
+    unit of the side in voice reach that accepts orders. Returns the ids it
+    opened; none under ``unit``. Units out of reach keep their own release.
+    Test: `test_hit_scope_releases_only_the_unit_that_meets_the_release_condition`,
+    `test_earshot_scope_releases_the_unit_and_every_hold_fire_unit_in_voice_reach`,
     `test_unit_out_of_voice_reach_keeps_its_own_release`."""
     if s['fire_rules'].get('release_by','unit')!='command':return set()
-    opened=set()
+    opened=set();hit={u['id'] for u in triggered}
+    earshot=s['fire_rules'].get('release_scope','hit')=='earshot'
     for side in (x['id'] for x in s['sides']):
         if not comms.operational(s,side):continue
         commander=comms.command_unit(s,side);reach=voice_reach(s,side)
         heard=lambda u:u['side']==side and grid.distance(commander['pos'],u['pos'])<=reach
         if not any(heard(u) for u in triggered):continue
         for u in sorted(s['units'],key=lambda x:x['id']):
-            if (heard(u) and u.get('fire_posture')=='hold_fire' and u['strength']>0
+            if (heard(u) and (earshot or u['id'] in hit) and u.get('fire_posture')=='hold_fire' and u['strength']>0
                     and u['status'] not in ('routed','lost','merged') and not u.get('leaderless')):
                 _spoken_open_fire(s,side,commander,u,reach,emit,enqueue,message)
                 opened.add(u['id'])
