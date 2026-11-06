@@ -99,13 +99,15 @@ Observed outcome mix: the 7 Confederate-player runs ended in two ways. Three end
 
 ## Artifact manifest
 
-**Local only, not published; /tmp may be cleared.** The files live in `/tmp/battle-m2-batch1/`. Each row gives the file name, size in bytes and sha256. For a `.sqlite` file, the last column is the `game_id`. To replay one, run from `apps/poc`:
+**Local only, not published (git-ignored archive).** The files live in `apps/poc/artifacts/batch-a-2026-11-06/`. Each row gives the file name, size in bytes and sha256. For a `.sqlite` file, the last column is the `game_id`. To replay one:
 
 ```sh
-python3 -m battle --db /tmp/battle-m2-batch1/<run>.sqlite --replay <game_id>
+cd apps/poc && cp artifacts/batch-a-2026-11-06/<run>.sqlite /tmp/<run>.sqlite && python3 -m battle --db /tmp/<run>.sqlite --replay <game_id>
 ```
 
-Replay re-applies the recorded decisions and never calls a provider. The `.out` file of each run holds the stored result line, `.exit` the process exit code (0 for all 16 runs), `.analysis` a per-run token and cost summary, and `.err` the error stream. `driver-*.log` and `gate-*.log` are driver and check logs. The `-shm` and `-wal` files for `scripted-union-1` were present with the set; the other databases had none.
+Replay can modify the database, so run it on a copy, as above, and never on the archived file. Replay re-applies the recorded decisions and never calls a provider. The `.out` file of each run holds the stored result line, `.exit` the process exit code (0 for all 16 runs), `.analysis` a per-run token and cost summary, and `.err` the error stream. `driver-*.log` and `gate-*.log` are driver and check logs. The `-shm` and `-wal` files for `scripted-union-1` were present with the set; the other databases had none.
+
+**Archive verification (2026-11-06).** 86 of 86 files match the sha256 values in the manifest below. All 16 databases replay `identical` from scratch copies. The archived hashes are unchanged after the replays: `shasum -c SHA256SUMS` reports 86 OK. The `SHA256SUMS` file sits in the archive folder with the files.
 
 | File | Bytes | sha256 | game_id |
 |---|---|---|---|
