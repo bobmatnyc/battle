@@ -1,4 +1,4 @@
-"""Hougoumont north gate, 18 June 1815: a poc-10 catalog entry.
+"""Hougoumont north gate, 18 June 1815: a catalog entry (poc-10, poc-11).
 
 Why: the third of the first five selections (docs/research/37 §2) turns on
 whether the north gate is shut. What: one ``ScenarioEntry``,
@@ -9,7 +9,7 @@ entry's ``provenance`` and in docs/research/42-hougoumont-scenario.md.
 """
 from .grid import COLS, METRES_PER_HEX, ROWS, key, neighbors
 from .scenario_entry import (
-    GATE_ORDER_CATALOG, RULES_VERSION, DeskBrief, GateEntry, MapEntry, ScenarioEntry,
+    GATE_ORDER_CATALOG, RULES_VERSION, DeskBrief, GateEntry, GatewayPushEntry, MapEntry, ScenarioEntry,
     SideBrief, SideEntry, SupplyEntry, UnitEntry, VictoryEntry,
 )
 
@@ -104,7 +104,7 @@ HOUGOUMONT_NORTH_GATE = ScenarioEntry(
     rules=RULES_VERSION,
     prompt_version='hougoumont-side-v1',
     prompt_setting='Hougoumont, Waterloo, 1815',
-    labels={'poc-10': 'hougoumont-north-gate-v1'},
+    labels={'poc-10': 'hougoumont-north-gate-v1', 'poc-11': 'hougoumont-north-gate-v2'},
     location='Hougoumont · Waterloo, Belgium',
     date='1815-06-18',
     start_time='11:20:00',
@@ -162,6 +162,9 @@ HOUGOUMONT_NORTH_GATE = ScenarioEntry(
     # gate in 3 intervals and bars it in 2 more; two parties of 20 or more
     # force a closed gate in 3.
     gates=GateEntry(close_labour=45, bar_labour=30, force_labour=120, work_cap=20),
+    # poc-11, authored sensitivity parameter: a party of 20 or more on the
+    # outside hex carries a held gateway in 3 intervals (docs/research/44).
+    gateway_push=GatewayPushEntry(push_labour=60, push_cap=20),
     provenance={
         'location': 'sourced: Hougoumont, held by a Guards detachment (S44)',
         'date': 'sourced: 18 June 1815 (S44)',
@@ -181,6 +184,7 @@ HOUGOUMONT_NORTH_GATE = ScenarioEntry(
                           '(Closing the Gates; secondary, uncited)',
         'units.skill': 'authored: default skill, morale and cartridges of the POC detachment',
         'gates': 'authored: sensitivity parameters (doc 37 open question 6); no source gives them',
+        'gateway_push': 'authored: sensitivity parameter (doc 44); no source gives the effort to carry the gateway',
         'victory': 'authored: courtyard possession for 6 turns, deadline 60 turns',
         'voice_profile': 'authored: minimal 1815 dispatch voice',
         'desk': 'authored: command-desk text; the 11:50 deadline and 180 seconds follow from '

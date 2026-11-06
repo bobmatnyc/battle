@@ -83,7 +83,7 @@ Use the pinned, locally vendored MapLibre renderer for the POC, with the shared 
 
 Reconnaissance was introduced in `poc-2`; preserve `poc-1` transitions in `battle/engine_v1.py` and never silently migrate existing battles. Enemy composition/strength are observation-derived estimates, with independent source/time evidence for identification. Scouts and spies improve estimation through explicit authored profiles, not omniscience. Delayed intelligence must not overwrite fresher position/strength. Local standing behavior defends, seeks cover or withdraws from local observations and own condition while preserving delivered mission intent. Do not replace observation estimates with exact enemy inventory or require user action for self-defense. See `docs/research/20-reconnaissance-and-standing-reactions.md`. Spy assets are currently scenario/fixture support; no spy deployment interface is implemented.
 
-Preserve saved rules editions: `engine_v1.py` through `engine_v4.py` and `formations_v4.py` contain frozen transitions. New rules use `poc-10`; do not silently change existing snapshots. Observer presentation does not mutate battle state or trigger inference.
+Preserve saved rules editions: `engine_v1.py` through `engine_v4.py` and `formations_v4.py` contain frozen transitions. New rules use `poc-11`; do not silently change existing snapshots. Observer presentation does not mutate battle state or trigger inference.
 
 Unit inspection and limited split/combine are now authorized and implemented in poc-4. Keep the panel observer-aware; orders use normal transport, and both participants must receive combine instructions. Require safe regrouping, preserve aggregate resources/residuals and lineage, retire absorbed IDs, and report results through communications. See `docs/research/22-unit-panel-and-formation-actions.md`. Broader training and force provisioning remain deferred.
 
@@ -109,7 +109,7 @@ Side ids, names, roles, the player side and the victory kind come from the scena
 
 ## Building gates — 2026-11-05
 
-New games use `poc-10`. Gate state lives on building openings and changes only through delivered orders, delivered standing orders, labour and forcing in `battle/gates.py`; never set it from a model or the UI. Gate labour values are authored entry data (`GateEntry`), labelled as sensitivity parameters. Keep `engine_v9.py` frozen for `poc-9` replay. See `docs/research/41-poc10-gates.md`.
+New games use `poc-11`, which adds the gateway push (`gates.push`, authored `GatewayPushEntry`; see `docs/research/44-poc11-gateway-push.md`). Gate state lives on building openings and changes only through delivered orders, delivered standing orders, labour and forcing in `battle/gates.py`; never set it from a model or the UI. Gate labour values are authored entry data (`GateEntry`), labelled as sensitivity parameters. Keep `engine_v9.py` and `engine_v10.py` frozen for `poc-9` and `poc-10` replay. See `docs/research/41-poc10-gates.md`.
 
 ## Structured demo architecture — 2026-11-05
 

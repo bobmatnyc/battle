@@ -31,7 +31,7 @@ class HougoumontEntryTests(unittest.TestCase):
         self.assertEqual(build_scenarios().resolve("hougoumont-north-gate"), ENTRY)
         dry_run(validate(ENTRY))
         s = build_state(ENTRY)
-        self.assertEqual((s["rules"], s["scenario"]), ("poc-10", "hougoumont-north-gate-v1"))
+        self.assertEqual((s["rules"], s["scenario"]), ("poc-11", "hougoumont-north-gate-v2"))
         self.assertEqual(s["sides"], [{"id": "allied", "name": "Allied", "role": "defender"},
                                       {"id": "french", "name": "French", "role": "attacker"}])
         self.assertEqual(s["player_side"], "allied")
@@ -142,7 +142,7 @@ class HougoumontServiceTests(unittest.TestCase):
             self.assertIn(result["winner"], ("allied", "french", "draw"))
             self.assertEqual(build_replay(db).verify(result["game_id"]), result["replay"])
             final = build_replay(db).repository.load(result["game_id"])
-            self.assertEqual((final["rules"], final["status"]), ("poc-10", "complete"))
+            self.assertEqual((final["rules"], final["status"]), ("poc-11", "complete"))
             self.assertEqual({d["side"] for d in final["decisions"]}, {"french"})
 
     def test_clock_step_with_the_allied_player_commands_the_french(self):

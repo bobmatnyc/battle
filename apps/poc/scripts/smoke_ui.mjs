@@ -55,10 +55,10 @@ assert.equal(vm.runInContext("BattleTimeline.date({start_local:'1863-07-02T23:59
 assert.equal(vm.runInContext("BattleTimeline.time({start_local:'1863-07-02T23:59:30'},30)",context),'00:00');
 vm.runInContext('state.turn=0; replay=false',context);
 console.log('Timeline passed: calendar, location, recorded timestamps and midnight rollover.');
-// Little Round Top labels under poc-10: the player's side comes from the view, not a literal.
+// Little Round Top labels under poc-11: the player's side comes from the view, not a literal.
 const notice=element('rules-notice');notice.classList={...notice.classList,toggle(name,on){notice.hiddenState=on;}};
 vm.runInContext('render()',context);
-assert.equal(vm.runInContext('state.rules',context),'poc-10');
+assert.equal(vm.runInContext('state.rules',context),'poc-11');
 assert.equal(notice.hiddenState,true);
 assert.match(element('map').innerHTML,/class="place-label">Little Round Top</);
 assert.match(element('map').innerHTML,/SUMMIT OBJECTIVE/);
@@ -71,7 +71,7 @@ vm.runInContext("state.winner='draw';render()",context);
 assert.match(element('outcome').innerHTML,/The battle ends in a draw\./);
 vm.runInContext("state.rules='poc-8';render()",context);
 assert.equal(notice.hiddenState,false);
-vm.runInContext("Object.assign(state,{rules:'poc-10',status:'active',winner:null,reason:null});render()",context);
+vm.runInContext("Object.assign(state,{rules:'poc-11',status:'active',winner:null,reason:null});render()",context);
 console.log('Side labels passed: Little Round Top map labels, player HQ, outcome headlines and earlier-rules notice.');
 assert.match(element('map').innerHTML,/skill 70 · energy 100 · morale 85/);
 assert.match(element('unit-list').innerHTML,/Skill<b>70%/);

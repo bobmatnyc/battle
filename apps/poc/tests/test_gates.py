@@ -276,7 +276,7 @@ class GateEditionTests(unittest.TestCase):
             result = build_headless(db, scenario_id="test-gate", scenarios=catalog).run()
             self.assertEqual(result["replay"]["status"], "identical")
             self.assertEqual(build_replay(db).verify(result["game_id"]), result["replay"])
-            self.assertEqual(build_replay(db).repository.load(result["game_id"])["rules"], "poc-10")
+            self.assertEqual(build_replay(db).repository.load(result["game_id"])["rules"], "poc-11")
 
 
 # Taken at cb7faa0, before poc-10: the scripted poc-9 Little Round Top run
@@ -292,7 +292,9 @@ def as_poc9(state):
     return json.loads(text.replace('"poc-10"', '"poc-9"').replace("little-round-top-v10", "little-round-top-v9"))
 
 
-def advance_through_service(state, steps):
+def advance_through_service(state, steps, entries=(LITTLE_ROUND_TOP,)):
+    """``state`` stored and advanced ``steps`` clock steps by a scripted
+    BattleService whose catalog is ``entries``."""
     from battle import analysis
     from battle.adapters.openrouter import DisabledProvider
     from battle.adapters.rules import RulesSimulation
@@ -303,10 +305,10 @@ def advance_through_service(state, steps):
     from battle.services.replay import ReplayService
     from test_services import ManualClock, MemoryRepository
 
-    repository, sim = MemoryRepository(), RulesSimulation()
+    scenarios, repository, sim = ScenarioRegistry(list(entries)), MemoryRepository(), RulesSimulation()
     repository.create(state)
     app = BattleService(
-        repository, sim, CommanderService(sim, DisabledProvider()), ScenarioRegistry([LITTLE_ROUND_TOP]),
+        repository, sim, CommanderService(sim, DisabledProvider(), scenarios=scenarios), scenarios,
         BattleQueries(repository, sim, ReplayService(repository, sim), assess=analysis.assess, present=present_view),
         ManualClock, mode="scripted",
     )
@@ -317,7 +319,7 @@ def advance_through_service(state, steps):
 
 class Poc10EditionTests(unittest.TestCase):
     def test_little_round_top_poc10_plays_identically_to_poc9(self):
-        start = scenario.create()
+        start = scenario.create("poc-10")
         self.assertEqual((start["rules"], start["scenario"]), ("poc-10", "little-round-top-v10"))
         self.assertNotIn("gate_rules", start)
         self.assertEqual(as_poc9(start), scenario.create("poc-9"))

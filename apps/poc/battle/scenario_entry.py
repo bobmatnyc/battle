@@ -18,8 +18,8 @@ from . import grid
 # Sides and roles of every edition before poc-9, which fixed them in the rules.
 SIDES = ("union", "confederate")
 LEGACY_ROLES = {"union": "defender", "confederate": "attacker"}
-RULES_VERSION = "poc-10"
-EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9", "poc-10")
+RULES_VERSION = "poc-11"
+EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9", "poc-10", "poc-11")
 # poc-9 takes side ids, names, roles, the player side and the victory kind from
 # the entry (stored in the snapshot); these remain fixed by the rules.
 ROLES = ("defender", "attacker")
@@ -153,6 +153,20 @@ class GateEntry:
 
 
 @dataclass(frozen=True)
+class GatewayPushEntry:
+    """Authored push through a held gateway (poc-11), stored as ``push_rules``.
+
+    Attackers on a gate's outside hex add ``min(strength, push_cap)`` per
+    interval against an enemy in the gateway; at ``push_labour`` the holder
+    gives way (docs/research/44). Sensitivity parameters, labelled by ``basis``.
+    """
+
+    push_labour: int
+    push_cap: int
+    basis: str = "authored sensitivity parameter; not a historical estimate"
+
+
+@dataclass(frozen=True)
 class MapEntry:
     """Terrain reference: a cell builder, authored features and display data."""
 
@@ -200,6 +214,7 @@ class ScenarioEntry:
     tools_per_unit: int = 20
     player_side: str | None = None
     gates: GateEntry | None = None
+    gateway_push: GatewayPushEntry | None = None
     desk: DeskBrief | None = None
     # Field name -> "sourced: ...", "reconstruction: ..." or "authored: ...".
     # Documentation only: never stored in a snapshot or shown in a prompt.
@@ -257,6 +272,11 @@ def validate(entry):
         for v in (entry.gates.close_labour, entry.gates.bar_labour, entry.gates.force_labour, entry.gates.work_cap)
     ):
         problems.append("gate labour values must be positive integers")
+    push = entry.gateway_push
+    if _has_gates(entry) != (push is not None):
+        problems.append("authored gateway push is required exactly when a building declares openings")
+    elif push and not all(type(v) is int and v > 0 for v in (push.push_labour, push.push_cap)):
+        problems.append("gateway push values must be positive integers")
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
     if entry.voice_profile not in VOICE_PROFILES:
@@ -493,6 +513,10 @@ def build_state(entry, rules=None):
     if _at_least(rules, 'poc-10') and entry.gates:
         from dataclasses import asdict
         s['gate_rules'] = asdict(entry.gates)
+    if _at_least(rules, 'poc-11') and entry.gateway_push:
+        from dataclasses import asdict
+        s['push_rules'] = asdict(entry.gateway_push)
+        s['push_effort'] = {}
     return s
 
 
