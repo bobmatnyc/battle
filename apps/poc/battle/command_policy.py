@@ -39,6 +39,73 @@ def fallback_orders(observation, role=None):
     return orders[:3]
 
 
+# Scripted control for the defender of a gated scenario (docs/research/42).
+GATE_DEFENDER_POLICY = "scripted-gate-defender-v1"
+GATE_STANDING = "close_on_breach"
+
+
+def _known_gate(observation):
+    """The first known gated building and its first opening, or (None, None)."""
+    for f in observation.get("map_features", ()):
+        if f.get("openings"):
+            return f, f["openings"][0]
+    return None, None
+
+
+def gate_defender_actions(observation):
+    """Why: the defender of a walled compound must keep and shut its gate, the
+    decision a gated scenario turns on; ``fallback_orders`` ignores the gate.
+    What: returns ``(standing, orders)`` from the side's own observation. The
+    gate party is the live unit nearest the gateway (then by id). It gets the
+    ``close_on_breach`` standing instruction once, holds the gateway, and is
+    ordered to ``close_gate`` when a delivered contact stands inside the
+    compound and the known gate is not barred. Other units fill the compound
+    ring as ``fallback_orders`` does, skipping the gateway. At most three
+    orders. Both lists go through normal delivery; nothing is applied here.
+    Without a known gate it returns ``([], fallback_orders(observation,
+    "defender"))``.
+    Test: `test_gate_defender_keeps_the_gate_party_and_orders_close_on_breach`,
+    `test_hougoumont_gate_defender_run_records_policy_and_replays`.
+    """
+    if observation.get("command", {}).get("operational") is False:
+        return [], []
+    feature, gate = _known_gate(observation)
+    live = sorted((u for u in observation["units"] if u["status"] not in ("lost", "routed")),
+                  key=lambda u: u["id"])
+    if feature is None or not live:
+        return [], fallback_orders(observation, "defender")
+    gateway = list(gate["inside"])
+    party = min(live, key=lambda u: (grid.distance(u["pos"], gateway), u["id"]))
+    standing = []
+    templates = {t["id"] for t in observation.get("standing_templates", ())}
+    issued = any(o["unit_id"] == party["id"] and o["profile_id"] == GATE_STANDING
+                 for o in observation.get("standing_orders", ()))
+    if GATE_STANDING in templates and party.get("standing_profile") != GATE_STANDING and not issued:
+        standing.append({"unit_id": party["id"], "profile_id": GATE_STANDING})
+    compound = [list(p) for p in feature["compound"]]
+    breach = any(list(c["pos"]) in compound for c in observation.get("contacts", ()))
+    orders = []
+    if party["stance"] == "close_gate":
+        pass  # Already at work; a new order would restart nothing and cost a courier.
+    elif breach and gate["state"] != "barred":
+        orders.append({"unit_id": party["id"], "stance": "close_gate", "destination": None})
+    elif party["pos"] != gateway:
+        if party.get("target") != gateway:
+            orders.append({"unit_id": party["id"], "stance": "move", "destination": gateway})
+    elif party["stance"] != "hold":
+        orders.append({"unit_id": party["id"], "stance": "hold", "destination": None})
+    goal = observation["objective"]
+    ring = [p for p in [goal] + grid.neighbors(goal) if p != gateway]
+    for i, u in enumerate(u for u in live if u["id"] != party["id"]):
+        target = ring[(i + 1) % len(ring)]
+        if u["pos"] == target:
+            if u["stance"] != "hold":
+                orders.append({"unit_id": u["id"], "stance": "hold", "destination": None})
+        elif u.get("target") != target:
+            orders.append({"unit_id": u["id"], "stance": "move", "destination": target})
+    return standing, orders[:3]
+
+
 # Little Round Top is the default scenario for callers that inject no catalog.
 DEFAULT_SCENARIO = LITTLE_ROUND_TOP
 
@@ -49,6 +116,15 @@ PROMPT_VERSION = DEFAULT_SCENARIO.prompt_version
 
 # Scripted control used for the side that no model plays; recorded in run metadata.
 OPPONENT_POLICY = "scripted-fallback-v1"
+SCRIPTED_POLICIES = (OPPONENT_POLICY, GATE_DEFENDER_POLICY)
+
+
+def scripted_policy(entry, side):
+    """The entry's scripted control for ``side``: the gate-aware defender when
+    the entry has gates and ``side`` defends, else ``scripted-fallback-v1``."""
+    if entry.gates is not None and entry.sides[side].role == "defender":
+        return GATE_DEFENDER_POLICY
+    return OPPONENT_POLICY
 
 # Voice profile id -> prose instruction. Entries name one of these.
 VOICES = VOICE_PROFILES

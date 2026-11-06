@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from .bootstrap import PLAYER_SCENARIOS, build_application, build_headless, build_replay
-from .command_policy import OPPONENT_POLICY
+from .command_policy import GATE_DEFENDER_POLICY, OPPONENT_POLICY, SCRIPTED_POLICIES
 from .config import EFFORTS
 from .contracts import UnknownScenario
 
@@ -55,6 +55,12 @@ def main():
         default=OPPONENT_POLICY,
         help="Scripted control for the opposing side (recorded in run metadata)",
     )
+    headless.add_argument(
+        "--player-policy",
+        choices=list(SCRIPTED_POLICIES),
+        help="Scripted control for a scripted player side (default: the scenario's choice, "
+        f"{GATE_DEFENDER_POLICY} for the defender of a gated scenario)",
+    )
     headless.add_argument("--model", help="OpenRouter model id (default: Settings)")
     headless.add_argument(
         "--effort",
@@ -83,6 +89,7 @@ def main():
                 max_tokens=args.max_tokens,
                 timeout=args.timeout,
                 scenario_id=args.scenario,
+                player_policy=args.player_policy,
             )
         except ValueError as exc:
             parser.error(str(exc))

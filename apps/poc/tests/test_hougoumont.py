@@ -172,5 +172,139 @@ class HougoumontServiceTests(unittest.TestCase):
             app.close()
 
 
+class EngineRun:
+    """A stored game driven by recorded actions through ``RulesSimulation``,
+    so every test below can check its replay."""
+
+    def __init__(self, state):
+        from battle.services.replay import ReplayService
+        from test_services import MemoryRepository
+
+        self.repository, self.sim = MemoryRepository(), RulesSimulation()
+        self.state = state
+        self.game_id = self.repository.create(state)
+        self.replay = ReplayService(self.repository, self.sim)
+
+    def step(self, action):
+        updated = self.sim.apply(self.state, action)
+        self.repository.save(self.game_id, updated, self.state["revision"])
+        self.state = updated
+        return updated
+
+    def advance(self):
+        return self.step({"type": "advance"})
+
+    def unit(self, uid):
+        return next(u for u in self.state["units"] if u["id"] == uid)
+
+    def gate(self):
+        farm = next(f for f in self.state["map_features"] if f["id"] == "hougoumont")
+        return farm["openings"][0]
+
+
+def arranged(**placement):
+    """A Hougoumont start with units placed (and otherwise changed) by id."""
+    s = build_state(ENTRY)
+    for u in s["units"]:
+        u.update(placement.get(u["id"], {}))
+    return s
+
+
+class GateDefenderPolicyTests(unittest.TestCase):
+    def test_gate_defender_keeps_the_gate_party_and_orders_close_on_breach(self):
+        from battle.command_policy import gate_defender_actions
+
+        view = engine.view(build_state(ENTRY), "allied")
+        standing, orders = gate_defender_actions(view)
+        self.assertEqual(standing, [{"unit_id": "A1", "profile_id": "close_on_breach"}])
+        # The gate party already holds the gateway; nobody is sent onto it.
+        self.assertNotIn("A1", [o["unit_id"] for o in orders])
+        self.assertNotIn([11, 9], [o["destination"] for o in orders])
+        view["contacts"] = [{"id": "F1", "pos": [11, 9], "side": "french"}]
+        view["standing_orders"] = [{"unit_id": "A1", "profile_id": "close_on_breach"}]
+        standing, orders = gate_defender_actions(view)
+        self.assertEqual(standing, [])
+        self.assertEqual(orders[0], {"unit_id": "A1", "stance": "close_gate", "destination": None})
+        # Little Round Top has no gate: the policy is the fallback ring.
+        from battle.command_policy import fallback_orders
+        lrt = engine.view(build_state(LITTLE_ROUND_TOP), "union")
+        self.assertEqual(gate_defender_actions(lrt), ([], fallback_orders(lrt, "defender")))
+
+    def test_hougoumont_gate_defender_run_records_policy_and_replays(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "hougoumont.sqlite"
+            result = build_headless(db, scenario_id=ENTRY.id, scenarios=catalog()).run()
+            self.assertEqual(result["replay"]["status"], "identical")
+            self.assertEqual(result["run"]["player_policy"], "scripted-gate-defender-v1")
+            self.assertEqual(result["run"]["opponent"], "scripted-fallback-v1")
+            final = build_replay(db).repository.load(result["game_id"])
+            self.assertEqual(final["run"], result["run"])
+            self.assertEqual([(o["unit_id"], o["profile_id"], o["status"]) for o in final["standing_orders"]],
+                             [("A1", "close_on_breach", "delivered")])
+            self.assertNotIn("A1", [o["unit_id"] for o in final["orders"] if o["side"] == "allied"])
+            with self.assertRaisesRegex(ValueError, "defending side of a gated scenario"):
+                build_headless(Path(tmp) / "lrt.sqlite", player_policy="scripted-gate-defender-v1")
+
+
+class HoldCompoundEngineTests(unittest.TestCase):
+    def test_gate_closes_with_french_inside_and_cuts_them_off(self):
+        # The garrison inside has no cartridges, so the French get in; the
+        # gate party works the gate under its delivered standing order.
+        run = EngineRun(arranged(
+            A1={"pos": [12, 10], "strength": 60, "initial": 60, "ammo": 0},
+            A2={"ammo": 0}, A3={"pos": [11, 3]},
+            F1={"pos": [11, 8], "stance": "move", "target": [11, 10]},
+            F2={"pos": [11, 7], "stance": "move", "target": [10, 10]},
+        ))
+        run.step({"type": "standing", "instruction": {"unit_id": "A1", "profile_id": "close_on_breach"}})
+        entered = None
+        while run.gate()["state"] not in ("closed", "barred") and run.state["turn"] < 12:
+            run.advance()
+            if entered is None and list(run.unit("F1")["pos"]) in COMPOUND:
+                entered = run.state["turn"]
+        self.assertIsNotNone(entered)
+        self.assertEqual(run.gate()["state"], "closed")
+        kinds = [e["kind"] for e in run.state["events"]]
+        self.assertIn("standing_gate_close", kinds)
+        self.assertIn("gate_blocked", kinds)  # F1 stood in the gateway first.
+        cut = next(e for e in run.state["events"] if e["kind"] == "units_cut_off")
+        self.assertEqual(cut["unit_ids"], ["F1"])
+        self.assertEqual(run.unit("F1")["cut_off"]["turn"], run.state["turn"])
+        self.assertIn(list(run.unit("F1")["pos"]), COMPOUND)
+        # The gate party is still effective inside: possession is contested.
+        self.assertEqual(run.unit("A1")["status"], "ready")
+        self.assertEqual(run.state["capture"], 0)
+        self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+
+    def test_capture_counter_resets_after_a_partial_hold(self):
+        run = EngineRun(arranged(A1={"pos": [12, 5]}, A2={"pos": [11, 6]}, A3={"pos": [12, 6]},
+                                 F1={"pos": [11, 10], "ammo": 0}))
+        counts = [run.advance()["capture"] for _ in range(2)]
+        # A2 commands; its own order goes by voice and it marches back in.
+        run.step({"type": "orders", "orders": [{"unit_id": "A2", "stance": "move", "destination": [10, 9]}]})
+        while run.state["capture"] and run.state["status"] == "active":
+            counts.append(run.advance()["capture"])
+        self.assertEqual(run.state["status"], "active")
+        self.assertEqual(counts, [1, 2, 3, 4, 5, 0])
+        self.assertIn(list(run.unit("A2")["pos"]), COMPOUND)
+        self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+
+    def test_mutual_loss_is_a_draw(self):
+        broken = {"status": "lost", "strength": 0}
+        run = EngineRun(arranged(**{uid: broken for uid in ("A1", "A2", "A3", "F1", "F2", "F3")}))
+        run.advance()
+        self.assertEqual((run.state["status"], run.state["winner"], run.state["reason"]),
+                         ("complete", "draw", "Both commands lost combat effectiveness."))
+        self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+
+    def test_defender_without_an_effective_formation_loses(self):
+        run = EngineRun(arranged(A1={"status": "lost", "strength": 0}, A2={"status": "routed"},
+                                 A3={"status": "merged"}))
+        run.advance()
+        self.assertEqual((run.state["status"], run.state["winner"], run.state["reason"]),
+                         ("complete", "french", "Allied formations can no longer hold the farm."))
+        self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+
+
 if __name__ == "__main__":
     unittest.main()

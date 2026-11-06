@@ -74,6 +74,7 @@ def build_headless(
     timeout=None,
     scenario_id=None,
     scenarios=None,
+    player_policy=None,
 ):
     """Why: the headless run composes its player provider here, never in services.
     What: ``scripted`` uses ``DisabledProvider``; ``openrouter`` builds the
@@ -130,4 +131,5 @@ def build_headless(
         player_mode=player_provider,
         opponent=opponent or OPPONENT_POLICY,
         scenario_id=scenario_id,
+        player_policy=player_policy,
     )

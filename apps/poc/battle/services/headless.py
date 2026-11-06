@@ -1,6 +1,9 @@
 """Full local simulation use case, sharing the same ports as interactive play."""
 
-from ..command_policy import OPPONENT_POLICY, fallback_orders
+from ..command_policy import (
+    GATE_DEFENDER_POLICY, OPPONENT_POLICY, SCRIPTED_POLICIES, fallback_orders,
+    gate_defender_actions, scripted_policy,
+)
 from ..contracts import BattleRepository, Commander, ScenarioCatalog, Simulation
 from .replay import ReplayService
 
@@ -15,6 +18,11 @@ class HeadlessRunner:
     scenario entry; ``player_side`` None is the entry's player side. A
     scripted run of that side keeps the direct-orders path, so Little Round
     Top's default run is unchanged.
+    ``player_policy`` picks the scripted control of that direct-orders path
+    (None: the entry's choice, ``scripted-gate-defender-v1`` for the defender
+    of a gated entry, else ``scripted-fallback-v1``). A run under the gate
+    policy records it as ``player_policy`` in run metadata and its summary;
+    other runs keep their metadata and output unchanged.
     ``scenario_id`` selects the catalog entry (None: the catalog default);
     an unknown id raises ``UnknownScenario`` before anything is stored.
     Test: `test_model_player_run_records_side_decisions_and_replays`,
@@ -34,6 +42,7 @@ class HeadlessRunner:
         player_mode="scripted",
         opponent=OPPONENT_POLICY,
         scenario_id=None,
+        player_policy=None,
     ):
         self.scenario = scenarios.resolve(scenario_id)
         sides = tuple(self.scenario.sides)
@@ -56,6 +65,7 @@ class HeadlessRunner:
         self.opponent_side = next(s for s in sides if s != player_side)
         self.player_mode = player_mode
         self.opponent = opponent
+        self.player_policy = self._policy(player_policy)
 
     @property
     def baseline(self):
@@ -63,8 +73,29 @@ class HeadlessRunner:
         # orders without decision records, as the Union always did.
         return self.player_mode == "scripted" and self.player_side == self.scenario.player
 
+    def _policy(self, requested):
+        if not self.baseline:
+            if requested not in (None, OPPONENT_POLICY):
+                raise ValueError(
+                    f"Player policy {requested!r} needs a scripted run of the scenario's player side"
+                )
+            return None
+        default = scripted_policy(self.scenario, self.player_side)
+        if requested is None:
+            return default
+        if requested not in SCRIPTED_POLICIES:
+            raise ValueError(f"Unknown player policy {requested!r}")
+        if requested == GATE_DEFENDER_POLICY and default != GATE_DEFENDER_POLICY:
+            raise ValueError(f"{GATE_DEFENDER_POLICY} needs the defending side of a gated scenario")
+        return requested
+
+    @property
+    def gate_policy(self):
+        return self.player_policy == GATE_DEFENDER_POLICY
+
     def metadata(self, state):
         model_run = self.player_mode == "openrouter"
+        extra = {"player_policy": self.player_policy} if self.gate_policy else {}
         return {
             "rules": state.get("rules"),
             "scenario": state.get("scenario"),
@@ -78,6 +109,7 @@ class HeadlessRunner:
             "response_format": self.commander.response_format if model_run else None,
             "opponent_side": self.opponent_side,
             "opponent": self.opponent,
+            **extra,
         }
 
     def run(self):
@@ -94,8 +126,7 @@ class HeadlessRunner:
         while state["status"] == "active":
             opponent_decision = None
             if state["turn"] % 3 == 0:
-                action = self._player_action(state)
-                if action:
+                for action in self._player_actions(state):
                     commit(action)
                 opponent_decision = self.commander.decide(
                     state, side=self.opponent_side, mode="scripted"
@@ -109,20 +140,26 @@ class HeadlessRunner:
             "strength": {u["id"]: u["strength"] for u in state["units"]},
             "replay": self.replay.verify(game_id),
         }
-        if not self.baseline:
+        if self.gate_policy or not self.baseline:
             summary["run"] = state["run"]
+        if not self.baseline:
             summary["player_decisions"] = self._decision_counts(state)
         return summary
 
-    def _player_action(self, state):
-        if self.baseline:
-            role = self.scenario.sides[self.player_side].role
-            orders = fallback_orders(self.simulation.view(state, self.player_side), role)
-            return {"type": "orders", "orders": orders} if orders else None
-        decision = self.commander.decide(
-            state, side=self.player_side, mode=self.player_mode
-        )
-        return {"type": "decision", "decision": decision}
+    def _player_actions(self, state):
+        if not self.baseline:
+            decision = self.commander.decide(
+                state, side=self.player_side, mode=self.player_mode
+            )
+            return [{"type": "decision", "decision": decision}]
+        view = self.simulation.view(state, self.player_side)
+        standing = []
+        if self.gate_policy:
+            standing, orders = gate_defender_actions(view)
+        else:
+            orders = fallback_orders(view, self.scenario.sides[self.player_side].role)
+        actions = [{"type": "standing", "instruction": i} for i in standing]
+        return actions + ([{"type": "orders", "orders": orders}] if orders else [])
 
     def _decision_counts(self, state):
         mine = [d for d in state["decisions"] if d.get("side") == self.player_side]
