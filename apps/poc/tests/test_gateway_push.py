@@ -148,10 +148,12 @@ class HougoumontPushTests(unittest.TestCase):
             result = build_headless(db, scenario_id=HOUGOUMONT.id, scenarios=catalog()).run()
             final = build_replay(db).repository.load(result["game_id"])
         self.assertEqual(result["replay"]["status"], "identical")
-        # Both gate-aware controls (docs/research/44): the French halt under fire from
-        # the walls before the outside hex, so nobody pushes; the garrison is shot away.
+        # Both gate-aware controls. poc-12 (docs/research/45): Legros's party presses on
+        # under fire and breaks at turn 3 short of the gate, so nobody pushes; the
+        # garrison is shot away from outside the walls (poc-11: turn 58).
         self.assertEqual(result["run"]["opponent"], "scripted-gate-attacker-v1")
-        self.assertEqual((final["rules"], final["winner"], final["turn"]), ("poc-12", "french", 58))
+        self.assertEqual((final["rules"], final["winner"], final["turn"]), ("poc-12", "french", 40))
+        self.assertEqual([e["turn"] for e in events(final, "unit_routed") if e["unit_id"] == "F1"], [3])
         self.assertEqual(final["reason"], "Allied formations can no longer hold the farm.")
         self.assertEqual((events(final, "gateway_push"), final["push_effort"]), ([], {}))
         farm = next(f for f in final["map_features"] if f["id"] == "hougoumont")

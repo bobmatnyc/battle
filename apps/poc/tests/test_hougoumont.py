@@ -202,9 +202,10 @@ class EngineRun:
         return farm["openings"][0]
 
 
-def arranged(**placement):
-    """A Hougoumont start with units placed (and otherwise changed) by id."""
-    s = build_state(ENTRY)
+def arranged(rules=None, **placement):
+    """A Hougoumont start in ``rules`` (default the entry's edition) with units
+    placed (and otherwise changed) by id."""
+    s = build_state(ENTRY, rules)
     for u in s["units"]:
         u.update(placement.get(u["id"], {}))
     return s
@@ -267,10 +268,10 @@ class GateDefenderPolicyTests(unittest.TestCase):
                              {("scripted", "scripted-gate-defender-v1")})
             self.assertEqual((allied[0]["turn"], allied[0]["standing"]),
                              (0, [{"unit_id": "A1", "profile_id": "close_on_breach"}]))
-            # Issued once, through courier or voice delivery like a player's.
+            # Issued once per unit, through courier or voice delivery like a player's.
             self.assertEqual([(o["unit_id"], o["profile_id"], o["sent_turn"], o["status"])
                               for o in final["standing_orders"]],
-                             [("A1", "close_on_breach", 0, "delivered")])
+                             [("A1", "close_on_breach", 0, "delivered"), ("A2", "close_on_breach", 9, "delivered")])
             self.assertEqual(result["replay"]["status"], "identical")
             # A fresh replay service has no provider and re-runs no policy.
             self.assertEqual(build_replay(db).verify(result["game_id"])["status"], "identical")
@@ -323,8 +324,10 @@ class GateAttackerPolicyTests(unittest.TestCase):
         self.assertEqual(run.unit("F1")["pos"], OUTSIDE)
         self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
         # A1 holds the gateway. F1, already on the outside hex, pushes only once the
-        # policy's order to enter has been delivered by normal transport.
-        run = EngineRun(arranged(A1={"ammo": 0, "strength": 80, "initial": 80}, A2={"ammo": 0}, A3={"pos": [20, 2]},
+        # policy's order to enter has been delivered by normal transport. poc-11:
+        # in poc-12 A1 and A2 no longer stall over one hex, so A1 leaves the
+        # gateway for cover before any push (docs/research/45).
+        run = EngineRun(arranged("poc-11", A1={"ammo": 0, "strength": 80, "initial": 80}, A2={"ammo": 0}, A3={"pos": [20, 2]},
                                  F1={"pos": OUTSIDE, "strength": 60, "initial": 60}))
         commander = CommanderService(run.sim, DisabledProvider(), scenarios=catalog())
         while run.state["turn"] < 15 and not any(e["kind"] == "gateway_carried" for e in run.state["events"]):
@@ -409,8 +412,11 @@ class GateAttackerPolicyTests(unittest.TestCase):
 class HoldCompoundEngineTests(unittest.TestCase):
     def test_gate_closes_with_french_inside_and_cuts_them_off(self):
         # The garrison inside has no cartridges, so the French get in; the
-        # gate party works the gate under its delivered standing order.
+        # gate party works the gate under its delivered standing order. poc-11:
+        # in poc-12 F1 wins the gateway hex F2 also wants and stands in it, so
+        # the gate stays blocked (docs/research/45).
         run = EngineRun(arranged(
+            "poc-11",
             A1={"pos": [12, 10], "strength": 60, "initial": 60, "ammo": 0},
             A2={"ammo": 0}, A3={"pos": [11, 3]},
             F1={"pos": [11, 8], "stance": "move", "target": [11, 10]},
@@ -445,7 +451,8 @@ class HoldCompoundEngineTests(unittest.TestCase):
         while run.state["capture"] and run.state["status"] == "active":
             counts.append(run.advance()["capture"])
         self.assertEqual(run.state["status"], "active")
-        self.assertEqual(counts, [1, 2, 3, 4, 5, 0])
+        # poc-12: A2's move into the walls presses on under fire (docs/research/45).
+        self.assertEqual(counts, [1, 2, 3, 4, 0])
         self.assertIn(list(run.unit("A2")["pos"]), COMPOUND)
         self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
 

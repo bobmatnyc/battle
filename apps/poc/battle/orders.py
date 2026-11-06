@@ -1,7 +1,7 @@
 """Common mission templates. All rates are authored, uncalibrated POC rules."""
 from copy import deepcopy
 from . import grid,features,gates
-from . import tactics_v8 as tactics
+from . import tactics_v8 as tactics,tactics_v9
 from .engine_v2 import InvalidOrder
 
 VERSION='common-orders-v3'
@@ -100,7 +100,8 @@ def complete(s,u,reason):
     u.update(target=None,stance='hold')
 
 def decide(s,u,contacts):
-    decision=tactics.decide(s,u,contacts)
+    # poc-12: assaults on a gated compound press on within 5 hexes (tactics_v9).
+    decision=(tactics_v9 if s.get('rules')=='poc-12' else tactics).decide(s,u,contacts)
     decision['policy']=VERSION
     stance=u['stance']
     if u['status']=='routed':return decision
