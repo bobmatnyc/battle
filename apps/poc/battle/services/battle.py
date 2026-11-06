@@ -50,8 +50,11 @@ class BattleService:
     def _advance(self, state):
         if state["status"] != "active":
             raise ValueError("Battle complete. Start a new battle.")
+        # The computer commands the stored opponent of the player's side.
         decision = (
-            self.commander.decide(state, mode=self.mode)
+            self.commander.decide(
+                state, self.simulation.computer_side(state), mode=self.mode
+            )
             if state["turn"] % 3 == 0
             else None
         )

@@ -16,6 +16,7 @@ New games use `poc-9`. Saved `poc-1` to `poc-8` games keep their editions and re
 |---|---|---|
 | Side ids | `union`, `confederate` in the engine, runtime, headless runner, CLI and browser | From the entry; stored as `sides`, a list of `{id, name, role}` in entry order |
 | Player side | Union, hard-coded in `runtime.apply` and the battle service | Entry `player_side` (default: first side); stored as `player_side` |
+| Computer side | Confederate, the default side of `CommanderService.decide` | The one stored side other than `player_side` (`Simulation.computer_side`); `decide` takes `side` explicitly, and a poc-9 decision must name its side |
 | Roles | Union defends, Confederate attacks | Each `SideEntry.role`, `defender` or `attacker` |
 | Victory | One block in `engine.advance` | `battle/victory.py`: the entry names a kind in `victory.KINDS`; its parameters are stored as `victory` |
 | Outcome reasons | Literal Union and summit text | Built from side names, `objective_name`, `hold_turns` and turn length. Little Round Top's text is unchanged |

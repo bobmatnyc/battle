@@ -13,6 +13,7 @@ class RulesSimulation:
     observation = staticmethod(command_policy.observation_for)
     validate_orders = staticmethod(command_policy.validated)
     player_side = staticmethod(engine.player_side)
+    computer_side = staticmethod(engine.computer_side)
     role = staticmethod(engine.role)
 
 

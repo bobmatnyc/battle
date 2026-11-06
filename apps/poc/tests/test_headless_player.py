@@ -300,7 +300,7 @@ class DecisionSideTests(unittest.TestCase):
 
     def test_decision_without_side_replays_as_confederate(self):
         # Shape of every decision recorded before decisions named their side.
-        state = scenario.create()
+        state = scenario.create("poc-8")  # Side-less decisions exist only before poc-9.
         legacy = {
             "source": "scripted",
             "orders": [{"unit_id": "C1", "stance": "move", "destination": [6, 19]}],

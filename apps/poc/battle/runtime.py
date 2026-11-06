@@ -60,10 +60,16 @@ def record_decision(s,decision):
     What: appends the decision, emits ``commander_decision`` and issues its
     orders for ``decision['side']``. Decisions recorded before sides were named
     carry no ``side`` and keep their original Confederate effect, so old saves
-    replay unchanged. Test: `test_decision_orders_are_issued_for_their_side`,
-    `test_decision_without_side_replays_as_confederate`.
+    replay unchanged; that default applies only to snapshots without stored
+    ``sides`` (poc-8 and older), and a poc-9 decision must name its side.
+    Test: `test_decision_orders_are_issued_for_their_side`,
+    `test_decision_without_side_replays_as_confederate`,
+    `test_poc9_decision_without_side_is_refused`.
     """
-    side=decision.get('side','confederate')
+    if 'sides' in s:
+        if 'side' not in decision:raise ValueError('A poc-9 decision must name its side.')
+        side=decision['side']
+    else:side=decision.get('side','confederate')
     if side not in engine.sides(s):raise ValueError('Unknown decision side.')
     s['decisions'].append(deepcopy(decision))
     engine.emit(s,'commander_decision',source=decision['source'],decision_index=len(s['decisions'])-1)

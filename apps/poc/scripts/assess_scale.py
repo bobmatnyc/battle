@@ -32,7 +32,7 @@ def tactical_probe(plan):
             if orders:
                 sent += len(orders)
                 state = runtime.apply(state, dict(type='orders', orders=orders))
-            decision = commander.decide(state, mode='scripted')
+            decision = commander.decide(state, engine.computer_side(state), mode='scripted')
         state = runtime.apply(state, dict(type='advance', decision=decision))
     return dict(plan=plan, winner=state['winner'], reason=state['reason'],
                 elapsed_seconds=state['turn'] * state['seconds_per_turn'], union_orders=sent,

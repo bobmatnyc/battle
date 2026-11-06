@@ -150,6 +150,67 @@ class SideTests(unittest.TestCase):
         self.assertIn("keep the knoll", reply["text"])
 
 
+class LiveServiceSideTests(unittest.TestCase):
+    """The clock-driven service commands every side except the player's."""
+
+    def step_once(self, entry):
+        from battle import analysis
+        from battle.presentation import present_view
+        from battle.services.battle import BattleService
+        from battle.services.queries import BattleQueries
+        from battle.services.replay import ReplayService
+        from test_services import ManualClock, MemoryRepository
+
+        catalog = ScenarioRegistry([LITTLE_ROUND_TOP, entry])
+        repository = MemoryRepository()
+        sim = RulesSimulation()
+        app = BattleService(
+            repository, sim, CommanderService(sim, DisabledProvider(), scenarios=catalog), catalog,
+            BattleQueries(repository, sim, ReplayService(repository, sim),
+                          assess=analysis.assess, present=present_view),
+            ManualClock, scenario_id=entry.id,
+        )
+        try:
+            self.assertTrue(app.clock_step())
+            state = repository.load(app.game_id)
+            self.assertEqual(app.queries.replay_service.verify(app.game_id)["status"], "identical")
+            return state
+        finally:
+            app.close()
+
+    def assertComputerCommands(self, state, computer, player):
+        self.assertEqual({d["side"] for d in state["decisions"]}, {computer})
+        sides = {o["side"] for o in state["orders"]}
+        self.assertIn(computer, sides)
+        self.assertNotIn(player, sides)
+
+    def test_clock_step_gives_renamed_opponent_the_computer_orders(self):
+        state = self.step_once(BLUE_GREY_DUEL)
+        self.assertComputerCommands(state, computer="grey", player="blue")
+
+    def test_clock_step_commands_union_when_the_player_is_confederate(self):
+        entry = dataclasses.replace(
+            DUEL, id="test-duel-confederate-player",
+            labels={"poc-9": "test-duel-confederate-player-v1"}, player_side="confederate",
+        )
+        state = self.step_once(entry)
+        self.assertEqual(state["player_side"], "confederate")
+        self.assertComputerCommands(state, computer="union", player="confederate")
+
+    def test_poc8_game_still_commands_the_confederates(self):
+        sim = RulesSimulation()
+        self.assertEqual(sim.computer_side(scenario.create("poc-8")), "confederate")
+        self.assertEqual(sim.computer_side(scenario.create()), "confederate")
+
+    def test_poc9_decision_without_side_is_refused(self):
+        sim = RulesSimulation()
+        decision = {"source": "scripted", "orders": []}
+        with self.assertRaisesRegex(ValueError, "must name its side"):
+            sim.apply(scenario.create(), {"type": "decision", "decision": decision})
+        legacy = sim.apply(scenario.create("poc-8"), {"type": "decision", "decision": decision})
+        self.assertEqual(legacy["decisions"][-1], decision)
+
+
 class VictoryKindTests(unittest.TestCase):
     def test_victory_kinds_refuse_unknown_kinds_and_bad_roles(self):
         first, second = DUEL.sides

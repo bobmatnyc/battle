@@ -139,7 +139,7 @@ class CommanderService:
                 return self.scenarios.resolve()
             return DEFAULT_SCENARIO
 
-    def decide(self, state, side="confederate", mode="openrouter"):
+    def decide(self, state, side, mode="openrouter"):
         """Why: a model may command one side; every outcome must be auditable.
         What: returns a decision record for ``side``. In ``openrouter`` mode it
         asks the provider with that side's prompt and authorized observation,

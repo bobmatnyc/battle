@@ -40,8 +40,10 @@ def _commander():
     return CommanderService(RulesSimulation(), LegacyRequestProvider())
 
 
-def decide(s, side="confederate", mode="openrouter"):
-    return _commander().decide(s, side, mode)
+def decide(s, side=None, mode="openrouter"):
+    # side None: the computer side of the snapshot (Confederate before poc-9).
+    from .engine import computer_side
+    return _commander().decide(s, side or computer_side(s), mode)
 
 
 def chat(s, text, mode="openrouter"):

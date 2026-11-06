@@ -440,7 +440,7 @@ class AdapterTests(unittest.TestCase):
             opener=lambda request, timeout: Response(),
         )
         commander = CommanderService(RulesSimulation(), provider)
-        decision = commander.decide(LittleRoundTopCatalog().create())
+        decision = commander.decide(LittleRoundTopCatalog().create(), "confederate")
         self.assertTrue(decision["fallback"])
         self.assertEqual(decision["source"], "scripted")
         # The adapter's safe reason: a null content reply cut off at max_tokens.

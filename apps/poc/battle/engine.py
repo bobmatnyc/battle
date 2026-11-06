@@ -30,6 +30,17 @@ def player_side(s):
     """The side the interactive player commands: the snapshot's from poc-9, else Union."""
     return s.get('player_side','union')
 
+def computer_side(s):
+    """Why: the clock-driven computer must command the side the player does not.
+    What: the one side id other than ``player_side(s)``: Confederate before
+    poc-9, the stored opponent from poc-9. Raises ValueError unless exactly
+    one such side exists.
+    Test: `test_clock_step_gives_renamed_opponent_the_computer_orders`,
+    `test_poc8_game_still_commands_the_confederates`."""
+    others=[side for side in sides(s) if side!=player_side(s)]
+    if len(others)!=1:raise ValueError('The computer commands exactly one opposing side.')
+    return others[0]
+
 def role(s,side):
     """``defender`` or ``attacker``: the snapshot's own from poc-9, else the poc-8 roles."""
     if 'sides' not in s:return LEGACY_ROLES[side]
