@@ -375,7 +375,9 @@ class SelectionTests(unittest.TestCase):
                 timeout=60,
             )
             self.assertEqual(cli.returncode, 2)
-            self.assertIn("Unknown scenario 'nope'. Known scenarios: little-round-top, hougoumont-north-gate.", cli.stderr)
+            # Headless runs also offer Concord (docs/research/48).
+            self.assertIn("Unknown scenario 'nope'. Known scenarios: little-round-top, hougoumont-north-gate, "
+                          "concord-north-bridge.", cli.stderr)
             self.assertFalse(db.exists())
 
     def test_entry_build_does_not_mutate_entry_data(self):

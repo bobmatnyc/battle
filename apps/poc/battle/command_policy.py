@@ -1,6 +1,6 @@
 """Pure commander observations, validated order contracts and scripted policy."""
 
-from . import engine, grid, orders as order_rules
+from . import concord_policy, engine, grid, orders as order_rules
 from .presentation import VOICE_PROFILES
 from .scenario import LITTLE_ROUND_TOP
 from .scenario_entry import LEGACY_ROLES
@@ -229,27 +229,39 @@ PROMPT_VERSION = DEFAULT_SCENARIO.prompt_version
 
 # Scripted control used for the side that no model plays; recorded in run metadata.
 OPPONENT_POLICY = "scripted-fallback-v1"
-SCRIPTED_POLICIES = (OPPONENT_POLICY, GATE_DEFENDER_POLICY, GATE_ATTACKER_POLICY)
+SCRIPTED_POLICIES = (OPPONENT_POLICY, GATE_DEFENDER_POLICY, GATE_ATTACKER_POLICY,
+                     concord_policy.MILITIA_POLICY, concord_policy.REGULARS_POLICY)
 # Gate-aware controls by role; their decisions record ``policy`` and ``standing``.
 GATE_POLICIES = {"defender": GATE_DEFENDER_POLICY, "attacker": GATE_ATTACKER_POLICY}
+# Controls that fit one side of one kind of scenario, with the side they need.
+# Their decisions, and runs under them, record the policy (docs/research/48).
+NAMED_POLICIES = {
+    GATE_DEFENDER_POLICY: "the defending side of a gated scenario",
+    GATE_ATTACKER_POLICY: "the attacking side of a gated scenario",
+    concord_policy.MILITIA_POLICY: "the provincial side of the Concord scenario",
+    concord_policy.REGULARS_POLICY: "the British side of the Concord scenario",
+}
 
 
 def scripted_policy(entry, side):
     """The entry's scripted control for ``side``, whether the player or the
     computer runs it: the gate-aware control of ``side``'s role when the
-    entry has gates, else ``scripted-fallback-v1``.
-    Test: `test_gate_attacker_selection_and_refusal`."""
+    entry has gates, else ``scripted-fallback-v1``. An entry that names its
+    own controls (``scripted``, Concord) uses those.
+    Test: `test_gate_attacker_selection_and_refusal`,
+    `test_policies_are_registered_and_chosen_for_their_sides`."""
+    if entry.scripted:
+        return entry.scripted.get(side, OPPONENT_POLICY)
     if entry.gates is not None:
         return GATE_POLICIES.get(entry.sides[side].role, OPPONENT_POLICY)
     return OPPONENT_POLICY
 
 
 def gate_policy_refusal(requested, default):
-    """The refusal text when gate control ``requested`` does not fit the side
-    whose entry default is ``default``, else None."""
-    sides = {GATE_DEFENDER_POLICY: "defending", GATE_ATTACKER_POLICY: "attacking"}
-    if requested in sides and default != requested:
-        return f"{requested} needs the {sides[requested]} side of a gated scenario"
+    """The refusal text when named control ``requested`` (a gate or Concord
+    control) does not fit the side whose entry default is ``default``, else None."""
+    if requested in NAMED_POLICIES and default != requested:
+        return f"{requested} needs {NAMED_POLICIES[requested]}"
     return None
 
 
@@ -260,6 +272,10 @@ def scripted_actions(policy, observation, role):
         return gate_defender_actions(observation)
     if policy == GATE_ATTACKER_POLICY:
         return gate_attacker_actions(observation)
+    if policy == concord_policy.MILITIA_POLICY:
+        return concord_policy.militia_actions(observation)
+    if policy == concord_policy.REGULARS_POLICY:
+        return concord_policy.regulars_actions(observation)
     return [], fallback_orders(observation, role)
 
 # Voice profile id -> prose instruction. Entries name one of these.

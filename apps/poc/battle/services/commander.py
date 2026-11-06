@@ -5,7 +5,7 @@ import time
 from copy import deepcopy
 from ..contracts import DecisionProvider, ProviderFailure, ScenarioCatalog, Simulation
 from ..command_policy import (
-    DEFAULT_SCENARIO, GATE_POLICIES, scripted_actions, system_prompt,
+    DEFAULT_SCENARIO, NAMED_POLICIES, scripted_actions, system_prompt,
 )
 from ..presentation import scripted_text
 
@@ -251,8 +251,8 @@ class CommanderService:
             "model": None,
             "voice_profile": self.display_scenario(state).voice_profile,
         }
-        if policy in GATE_POLICIES.values():
-            # Only the gate controls add fields, so other records keep their shape;
+        if policy in NAMED_POLICIES:
+            # Only the gate and Concord controls add fields, so other records keep their shape;
             # replay issues the stored instructions without re-running the policy.
             record.update(policy=policy, standing=standing)
         return record

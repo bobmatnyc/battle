@@ -237,6 +237,9 @@ class ScenarioEntry:
     fire: FireEntry | None = None  # poc-13; None means FireEntry().
     command: CommandEntry | None = None  # poc-13B succession; None: none.
     weapons: Mapping[str, WeaponEntry] | None = None  # poc-13B; None: rifle baseline.
+    # Side id -> scripted control id (command_policy.SCRIPTED_POLICIES) for an
+    # entry with its own controls (Concord); None: the gate or fallback rule.
+    scripted: Mapping[str, str] | None = None
     desk: DeskBrief | None = None
     # Field name -> "sourced: ...", "reconstruction: ..." or "authored: ...".
     # Documentation only: never stored in a snapshot or shown in a prompt.
@@ -302,6 +305,7 @@ def validate(entry):
     problems.extend(scenario_checks.fire_problems(entry, entry.fire or FireEntry()))
     problems.extend(scenario_command.command_problems(entry))  # poc-13B
     problems.extend(scenario_command.weapon_problems(entry))
+    problems.extend(_scripted_problems(entry))
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
     if entry.voice_profile not in VOICE_PROFILES:
@@ -315,6 +319,15 @@ def validate(entry):
     if problems:
         raise ValueError(f"Scenario {entry.id!r} cannot run: " + "; ".join(problems))
     return entry
+
+
+def _scripted_problems(entry):
+    """An entry's own scripted controls name its sides and known controls."""
+    from .command_policy import SCRIPTED_POLICIES
+
+    return [f"scripted control for {side!r} must be a scenario side and one of {SCRIPTED_POLICIES}"
+            for side, policy in (entry.scripted or {}).items()
+            if side not in entry.sides or policy not in SCRIPTED_POLICIES]
 
 
 def _side_problems(entry):

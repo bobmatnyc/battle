@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from .bootstrap import PLAYER_SCENARIOS, build_application, build_headless, build_replay
+from .bootstrap import HEADLESS_SCENARIOS, PLAYER_SCENARIOS, build_application, build_headless, build_replay
 from .command_policy import GATE_ATTACKER_POLICY, GATE_DEFENDER_POLICY, SCRIPTED_POLICIES
 from .config import EFFORTS
 from .contracts import UnknownScenario
@@ -32,7 +32,8 @@ def main():
         "--scenario",
         metavar="ID",
         help=f"Scenario for new games and headless runs (default: {PLAYER_SCENARIOS[0].id}; "
-        f"known: {', '.join(e.id for e in PLAYER_SCENARIOS)})",
+        f"known: {', '.join(e.id for e in PLAYER_SCENARIOS)}; headless runs also "
+        f"{', '.join(e.id for e in HEADLESS_SCENARIOS if e not in PLAYER_SCENARIOS)})",
     )
     headless = parser.add_argument_group(
         "headless player run", "Used with --headless; defaults reproduce the scripted run"

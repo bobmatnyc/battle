@@ -9,6 +9,7 @@ from .clock import SimulationClock
 from .config import Settings
 from .presentation import present_view
 from .scenario import LITTLE_ROUND_TOP
+from .scenario_concord import CONCORD_NORTH_BRIDGE
 from .scenario_hougoumont import HOUGOUMONT_NORTH_GATE
 from .services.battle import BattleService
 from .services.commander import CommanderService
@@ -18,11 +19,19 @@ from .storage import Store
 
 # Player-facing scenarios; the first is the default. Test fixtures stay out.
 PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE)
+# Headless runs also offer Concord, whose river the command desk cannot draw
+# yet (docs/research/43, row 8; docs/research/48).
+HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE,)
 
 
 def build_scenarios():
     """The player-facing scenario catalog, validated against the current rules."""
     return ScenarioRegistry(PLAYER_SCENARIOS)
+
+
+def build_headless_scenarios():
+    """The headless catalog: the player scenarios plus Concord, validated."""
+    return ScenarioRegistry(HEADLESS_SCENARIOS)
 
 
 def build_application(db, *, offline=False, settings=None, scenario_id=None):
@@ -83,7 +92,7 @@ def build_headless(
     ``provider`` is injected (tests use a fake). Overrides left as None keep the
     ``Settings`` value. The defaults reproduce the scripted baseline run.
     ``scenario_id`` picks the scenario from ``scenarios`` (default: the
-    player-facing catalog); an unknown id raises ``UnknownScenario`` before
+    headless catalog, the player scenarios plus Concord); an unknown id raises ``UnknownScenario`` before
     any credential is read or database opened. ``player_side`` None is the
     scenario's player side; a side the scenario lacks raises ValueError.
     Test: `test_build_headless_composes_openrouter_overrides`,
@@ -93,7 +102,7 @@ def build_headless(
     from .adapters.openrouter import DisabledProvider
     from .services.headless import HeadlessRunner
 
-    scenarios = scenarios if scenarios is not None else build_scenarios()
+    scenarios = scenarios if scenarios is not None else build_headless_scenarios()
     entry = scenarios.resolve(scenario_id)
     if player_side is not None and player_side not in entry.sides:
         # Checked before any credential is read or database opened.

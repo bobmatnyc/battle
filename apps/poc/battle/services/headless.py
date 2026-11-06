@@ -1,7 +1,7 @@
 """Full local simulation use case, sharing the same ports as interactive play."""
 
 from ..command_policy import (
-    GATE_POLICIES, OPPONENT_POLICY, SCRIPTED_POLICIES, gate_policy_refusal,
+    NAMED_POLICIES, OPPONENT_POLICY, SCRIPTED_POLICIES, gate_policy_refusal,
     scripted_actions, scripted_policy,
 )
 from ..contracts import BattleRepository, Commander, ScenarioCatalog, Simulation
@@ -109,7 +109,8 @@ class HeadlessRunner:
 
     @property
     def gate_policy(self):
-        return self.player_policy in GATE_POLICIES.values()
+        # A named control (gate or Concord) is recorded in run metadata.
+        return self.player_policy in NAMED_POLICIES
 
     def metadata(self, state):
         model_run = self.player_mode == "openrouter"
