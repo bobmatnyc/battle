@@ -10,6 +10,8 @@ wall. Movement and couriers cross an opening only while it is ``open``,
 Labour, barring and forcing values come from the scenario entry's authored
 ``gates`` and are stored in the snapshot as ``gate_rules``. They are POC
 sensitivity parameters; no source gives them. Design: docs/research/41.
+poc-11 adds ``push``, attackers carrying a gateway held by the enemy, with
+authored ``push_rules`` (docs/research/44).
 """
 from . import grid
 
@@ -244,6 +246,80 @@ def _force(s, rules):
                         effort=o['force_effort'], required=rules['force_labour'])
             if o['force_effort'] >= rules['force_labour']:
                 _transition(s, f, o, 'forced', pushers[0], applied, pushers=[p['id'] for p in pushers])
+
+
+def push(s):
+    """Why: one defender standing in an open gateway would otherwise keep every
+    attacker out, because units cannot share a hex (docs/research/44).
+    What: once per poc-11 interval, after fire and gate labour. Units on the
+    outside hex of a passable opening, whose ordered destination lies in the
+    compound, push on an enemy holding the gateway hex: each adds
+    ``min(strength, push_cap)`` to the opening's effort in ``push_effort``. An
+    interval with no pusher resets the effort. At ``push_labour`` the holder
+    is displaced to the nearest free compound hex (by distance, then hex), or
+    overrun to strength 0 when none is free, and the lead pusher steps into
+    the gateway. Both report by normal transport. A no-op without
+    ``push_rules``, which only poc-11 snapshots carry.
+    Test: `test_push_effort_accumulates_against_a_held_gateway`,
+    `test_holder_is_displaced_inside_at_the_threshold`,
+    `test_holder_is_overrun_when_no_inside_hex_is_free`,
+    `test_push_resets_when_the_pushers_are_drawn_off`."""
+    rules = s.get('push_rules')
+    if not rules:return
+    from . import engine
+    for f in gated(s):
+        for o in f['openings']:
+            k = f['id'] + '/' + o['id']
+            holder = next((u for u in s['units'] if u['strength'] > 0 and u['pos'] == o['inside']), None)
+            pushers = [] if not holder or o['state'] not in PASSABLE else [
+                u for u in sorted(s['units'], key=lambda x: x['id'])
+                if u['pos'] == o['outside'] and u['strength'] > 0 and u['status'] not in REFUSING
+                and u['side'] != holder['side'] and u.get('target') is not None and list(u['target']) in f['compound']]
+            before = s['push_effort'].get(k, 0)
+            if not pushers:
+                if before:
+                    s['push_effort'][k] = 0
+                    engine.emit(s, 'gateway_push_interrupted', feature_id=f['id'], opening_id=o['id'], effort=before)
+                continue
+            labour = sum(min(p['strength'], rules['push_cap']) for p in pushers)
+            effort = min(rules['push_labour'], before + labour)
+            s['push_effort'][k] = effort
+            engine.emit(s, 'gateway_push', feature_id=f['id'], opening_id=o['id'], holder_id=holder['id'],
+                        pushers=[p['id'] for p in pushers], labor=effort - before, effort=effort,
+                        required=rules['push_labour'],
+                        under_fire=any(s['turn'] - p.get('last_attacked_turn', -99) <= 1 for p in pushers))
+            if effort >= rules['push_labour']:
+                s['push_effort'][k] = 0
+                _carry(s, f, o, holder, pushers[0])
+
+
+def _carry(s, f, o, holder, lead):
+    from . import engine, orders
+    taken = {grid.key(u['pos']) for u in s['units'] if u['strength'] > 0}
+    free = sorted((p for p in f['compound'] if grid.key(p) not in taken),
+                  key=lambda p: (grid.distance(o['inside'], p), p))
+    if free:
+        holder['pos'] = list(free[0])
+        outcome, losses = 'displaced', 0
+    else:
+        losses = holder['strength']
+        holder.update(strength=0, status='lost')
+        outcome = 'overrun'
+        engine.emit(s, 'casualties', unit_id=holder['id'], count=losses, remaining=0)
+    origin = lead['pos']
+    lead['pos'] = list(o['inside'])
+    lead['fatigue'] = min(100, lead['fatigue'] + 3)
+    engine.emit(s, 'gateway_carried', feature_id=f['id'], opening_id=o['id'], unit_id=lead['id'],
+                holder_id=holder['id'], outcome=outcome, holder_pos=list(holder['pos']), losses=losses)
+    engine.emit(s, 'unit_moved', unit_id=lead['id'], origin=origin, destination=lead['pos'],
+                decision_seq=lead.get('local_decision_seq'))
+    if lead['pos'] == lead['target'] and lead['stance'] not in ('resupply', 'recon'):
+        orders.complete(s, lead, 'Assigned position reached.')
+    # Physical reports only: headquarters learns of the push when they arrive.
+    engine.enqueue(s, lead['side'], f'{lead["id"]} to headquarters: we have pushed through the {o["name"].lower()} '
+                   'and stand in the gateway.', kind='reaction', sender=lead['id'])
+    engine.enqueue(s, holder['side'], f'{holder["id"]} to headquarters: the enemy has pushed through the '
+                   f'{o["name"].lower()}; we are forced back inside the walls.', kind='reaction', sender=holder['id'])
 
 
 def _supply(s):

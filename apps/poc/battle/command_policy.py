@@ -241,7 +241,7 @@ def observation_for(s, side):
         "max_orders": 3,
         "one_order_per_unit": True,
     }
-    if s.get("rules") in ("poc-8", "poc-9", "poc-10"):
+    if s.get("rules") in ("poc-8", "poc-9", "poc-10", "poc-11"):
         mark_order_acceptance(s, side, observation)
     return observation
 

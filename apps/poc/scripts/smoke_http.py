@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory() as tmp:
         assert [s['id'] for s in listing['scenarios']]==['little-round-top','hougoumont-north-gate']
         assert len(request('/api/map')['cells'])==504
         assert request('/api/map')['setting']['location']=='Little Round Top · Gettysburg, Pennsylvania'
-        assert state['rules']=='poc-10' and state['side']=='union'
+        assert state['rules']=='poc-11' and state['side']=='union'
         assert state['contacts']==[] and len(state['units'])==3
         assert all(u['side']=='union' for u in state['units'])
         assert state['command']['unit_id']=='U2' and state['command']['pos']==[13,15]

@@ -12,7 +12,7 @@ def compatible(a,b):
 
 def validate(s,side,request):
     from . import engine
-    if s.get('rules') not in ('poc-8','poc-9','poc-10'):raise ValueError('Use Reset to start a battle with split/combine rules.')
+    if s.get('rules') not in ('poc-8','poc-9','poc-10','poc-11'):raise ValueError('Use Reset to start a battle with split/combine rules.')
     if not isinstance(request,dict):raise ValueError('Expected a formation instruction.')
     kind=request.get('kind');allowed={'kind','unit_id','count','destination'} if kind=='split' else {'kind','unit_id','partner_id'}
     if kind not in ('split','combine') or set(request)!=allowed:raise ValueError('Choose split or combine with its required fields.')

@@ -43,7 +43,7 @@ def catalog(s):
     if s.get('rules')=='poc-5':
         from .orders_v5 import catalog as previous_catalog
         return previous_catalog(s)
-    entries=TEMPLATES if s.get('rules') in ('poc-8','poc-9','poc-10') else TEMPLATES[:2]
+    entries=TEMPLATES if s.get('rules') in ('poc-8','poc-9','poc-10','poc-11') else TEMPLATES[:2]
     version=VERSION
     if gates.present(s):entries,version=entries+[gates.TEMPLATE],GATE_VERSION
     return [dict(deepcopy(t),message_key='order.template.'+t['id'],version=version) for t in entries]
