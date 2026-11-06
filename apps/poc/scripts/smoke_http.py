@@ -31,7 +31,12 @@ with tempfile.TemporaryDirectory() as tmp:
             try:state=request('/api/state');break
             except urllib.error.URLError:time.sleep(.05)
         else:raise RuntimeError('Server did not start')
-        assert b'Little Round Top' in request('/')
+        assert b'id="mission-text"' in request('/')  # The page is a shell; scenario text arrives with the state.
+        assert state['voice_profile']=='civil-war-en-v1' and state['scenario_brief']['id']=='little-round-top'
+        assert state['scenario_brief']['mission']['title']=='Defend the summit'
+        listing=request('/api/scenarios')
+        assert listing['default']=='little-round-top'
+        assert [s['id'] for s in listing['scenarios']]==['little-round-top','hougoumont-north-gate']
         assert len(request('/api/map')['cells'])==504
         assert request('/api/map')['setting']['location']=='Little Round Top · Gettysburg, Pennsylvania'
         assert state['rules']=='poc-10' and state['side']=='union'
@@ -139,6 +144,20 @@ with tempfile.TemporaryDirectory() as tmp:
         assert state['standing_orders'][0]['status']=='delivered'
         assert request('/api/replay?revision=0')['analysis']['turn']==0
         print('Standing orders HTTP passed: read-only prebattle analysis, God knowledge boundary, authority, delivery and replay assessment.')
+        state=request('/api/new',{'game_id':state['game_id'],'revision':state['revision'],'scenario':'hougoumont-north-gate'})
+        brief=state['scenario_brief']
+        assert state['voice_profile']=='napoleonic-en-v1' and brief['voice_profile']=='napoleonic-en-v1'
+        assert state['side']=='allied' and (brief['side']['name'],brief['opponent']['name'])==('Allied','French')
+        assert brief['mission']['title']=='Hold the farm' and 'north gate' in brief['mission']['text']
+        assert brief['objective']['label']=='COMPOUND OBJECTIVE' and brief['outcomes']['win']=='Hougoumont holds.'
+        assert request('/api/map')['setting']['location']=='Hougoumont · Waterloo, Belgium'
+        for view in (state,request('/api/state?view=god'),request('/api/replay?revision=0')):
+            assert view['scenario_brief']==brief
+            assert 'pass men through' not in json.dumps(view['scenario_brief']),'Opponent mission leaked into the brief'
+        assert 'pass men through' not in json.dumps(state)
+        state=request('/api/new',{'game_id':state['game_id'],'revision':state['revision']})
+        assert state['scenario_brief']['id']=='little-round-top' and state['voice_profile']=='civil-war-en-v1'
+        print('Scenario text HTTP passed: catalog list, Hougoumont brief and voice, player-only mission, map and replay carry it.')
     finally:
         proc.terminate()
         try:proc.wait(timeout=5)

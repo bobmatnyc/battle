@@ -56,10 +56,52 @@ PATTERNS = [
 ]
 
 
-def present_view(observation):
+def scenario_brief(entry, side):
+    """Why: the command desk must show the current scenario's own text, and only
+    the viewing side's mission.
+    What: the display brief of ``entry`` for the player of ``side``: title, side
+    names, that side's mission and outcome headlines, the objective's map text,
+    the voice id. The opponent's mission is never included. Authored
+    ``SideBrief``/``DeskBrief`` text is used when the entry has it; otherwise
+    the text is derived from the entry's required fields.
+    Test: `test_brief_carries_only_the_viewing_sides_mission`,
+    `test_brief_is_derived_for_an_entry_without_authored_text`.
+    """
+    spec = entry.sides[side]
+    foe = next(s for s in entry.sides if s != side)
+    name = entry.victory.objective_name
+    side_brief, desk = spec.brief, entry.desk
+    ring = entry.victory.kind == 'hold-objective'
+    return {
+        'id': entry.id,
+        'title': entry.title,
+        'voice_profile': entry.voice_profile,
+        'campaign': desk.campaign if desk else entry.location.upper(),
+        'conditions': desk.conditions if desk else entry.weather.get('season', '').upper(),
+        'side': {'id': side, 'name': spec.name},
+        'opponent': {'id': foe, 'name': entry.sides[foe].name},
+        'kicker': side_brief.kicker if side_brief else entry.title.upper(),
+        'tagline': side_brief.tagline if side_brief else entry.prompt_setting,
+        'subhead': side_brief.subhead if side_brief else
+                   f'You command the {spec.name}. The computer commands the {entry.sides[foe].name}.',
+        'mission': {'title': side_brief.mission_title if side_brief else 'Your mission',
+                    'text': side_brief.mission_text if side_brief else spec.mission},
+        'objective': {'place': desk.place if desk else name.capitalize(),
+                      'label': desk.objective_label if desk else f'{name.upper()} OBJECTIVE',
+                      'key': desk.objective_key if desk else name.upper(),
+                      'ring': ring},
+        'outcomes': {'win': side_brief.win if side_brief else 'Victory.',
+                     'loss': side_brief.loss if side_brief else 'Defeat.',
+                     'draw': desk.draw if desk else 'The battle ends in a draw.'},
+    }
+
+
+def present_view(observation, entry=None):
+    """Voice id comes from the battle's scenario ``entry``; None (a saved game
+    whose label no catalog knows) keeps the original 1863 voice."""
     result = deepcopy(observation)
     result['display_locale'] = 'en'
-    result['voice_profile'] = VOICE_PROFILE
+    result['voice_profile'] = entry.voice_profile if entry else VOICE_PROFILE
     for dispatch in result.get('dispatches', []):
         dispatch['display_text'] = dispatch['text'].replace(': dig_in order dispatched', ': dig in order dispatched')
         for pattern, key_pattern in PATTERNS:

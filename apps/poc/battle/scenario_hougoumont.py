@@ -9,8 +9,8 @@ entry's ``provenance`` and in docs/research/42-hougoumont-scenario.md.
 """
 from .grid import COLS, METRES_PER_HEX, ROWS, key, neighbors
 from .scenario_entry import (
-    GATE_ORDER_CATALOG, RULES_VERSION, GateEntry, MapEntry, ScenarioEntry,
-    SideEntry, SupplyEntry, UnitEntry, VictoryEntry,
+    GATE_ORDER_CATALOG, RULES_VERSION, DeskBrief, GateEntry, MapEntry, ScenarioEntry,
+    SideBrief, SideEntry, SupplyEntry, UnitEntry, VictoryEntry,
 )
 
 # Authored layout, not surveyed. North is row 0, toward the Allied ridge;
@@ -117,7 +117,17 @@ HOUGOUMONT_NORTH_GATE = ScenarioEntry(
             name='Allied', role='defender', command_unit='A2', headquarters=(11, 10),
             mission=ALLIED_MISSION,
             charge='hold the farm, keeping the north gate open for supply until it must be shut',
-            supply=SupplyEntry('Allied cartridge reserve on the ridge', (12, 2), 2400, SMOOTHBORE)),
+            supply=SupplyEntry('Allied cartridge reserve on the ridge', (12, 2), 2400, SMOOTHBORE),
+            brief=SideBrief(
+                kicker='THE NORTH GATE', tagline='Hold the farm.',
+                subhead='You command the Allied garrison. The computer commands the French assault.',
+                mission_title='Hold the farm',
+                mission_text=('Keep an effective formation inside the walls of Hougoumont until **11:50**. '
+                              'Keep the north gate open for supply and friendly traffic, and close it if '
+                              'the French break in. If French troops hold the inside of the walls for '
+                              '180 seconds with no effective Allied formation inside, the battle ends at '
+                              'once in their favor, even before 11:50.'),
+                win='Hougoumont holds.', loss='The farm is lost.')),
         'french': SideEntry(
             name='French', role='attacker', command_unit='F2', headquarters=(7, 16),
             mission=FRENCH_MISSION,
@@ -145,6 +155,9 @@ HOUGOUMONT_NORTH_GATE = ScenarioEntry(
     order_catalog=GATE_ORDER_CATALOG,
     communications='napoleonic-courier-v1',
     voice_profile='napoleonic-en-v1',
+    desk=DeskBrief(campaign='WATERLOO · 18 JUNE 1815', place='Hougoumont farm',
+                   objective_label='COMPOUND OBJECTIVE', objective_key='FARM',
+                   conditions='SUMMER · FIXED POC CONDITION', draw='The battle ends in a draw.'),
     # Sensitivity parameters, not estimates: the gate party of 15 shuts the
     # gate in 3 intervals and bars it in 2 more; two parties of 20 or more
     # force a closed gate in 3.
@@ -170,6 +183,8 @@ HOUGOUMONT_NORTH_GATE = ScenarioEntry(
         'gates': 'authored: sensitivity parameters (doc 37 open question 6); no source gives them',
         'victory': 'authored: courtyard possession for 6 turns, deadline 60 turns',
         'voice_profile': 'authored: minimal 1815 dispatch voice',
+        'desk': 'authored: command-desk text; the 11:50 deadline and 180 seconds follow from '
+                'the 60-turn deadline and the 6-turn hold at 30 seconds a turn',
         'communications': 'authored: 1863 transport rates under an 1815 label',
     },
 )

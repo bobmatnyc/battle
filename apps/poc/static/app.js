@@ -2,7 +2,7 @@ const $=id=>document.getElementById(id);
 const api=BattleApi.create({fetch:(...args)=>fetch(...args)});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const unitIcons=UnitIcons.create({esc});
-let state,mapData,selected=null,destination=null,busy=false,replay=false,liveState,history=[],hexes=true,terrain=false,toastTimer;
+let state,mapData,mapScenario,selected=null,destination=null,busy=false,replay=false,liveState,history=[],hexes=true,terrain=false,toastTimer;
 let godMode=false,godEventLimit=60,unitAction=null;
 const stateUrl=()=>'/api/state'+(godMode?'?view=god':'');
 let replayPlaying=false,replaySpeed=10,replayIndex=0,replayTimer,replayGeneration=0,viewEpoch=0;
@@ -23,6 +23,28 @@ const troopAnalysis=TroopAnalysis.create({element:$,context:()=>({state,liveStat
   dispatch:instruction=>post('/api/standing-orders',{instruction}),toast,esc,clock});
 function toast(text){$('toast').textContent=text;$('toast').classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.add('hidden'),5500);}
 const get=path=>api.get(path);
+const scenarioPicker=ScenarioPicker.create({element:$,esc,load:()=>api.scenarios(),context:()=>({state})});
+const bold=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+const noBriefOutcomes={win:'Victory.',loss:'Defeat.',draw:'The battle ends in a draw.'};
+// Every scenario-specific line on the desk comes from the server's brief for this game.
+function renderBrief(){
+  const b=state.scenario_brief;
+  document.title=b?`battle · ${b.title}`:'battle';
+  $('campaign-line').textContent=b?.campaign||'';$('campaign-title').textContent=b?.title||'';
+  $('brief-kicker').textContent=b?.kicker||'';$('brief-tagline').textContent=b?.tagline||'';$('brief-subhead').textContent=b?.subhead||'';
+  $('conditions').textContent=b?.conditions||'';
+  $('objective-key').textContent=b?.objective.key||'OBJECTIVE';
+  $('mission-title').textContent=b?.mission.title||'Mission';
+  $('mission-text').innerHTML=b?bold(b.mission.text):'No briefing is available for this saved battle.';
+  const ref=$('map-reference');ref.href=mapData.source_url||'';ref.classList.toggle('hidden',!mapData.source_url);
+  scenarioPicker.render();
+}
+// A new game may bring another scenario: fetch its terrain before drawing it.
+async function syncMap(){
+  const id=state.scenario_brief?.id;
+  if(!id||mapScenario===id)return;
+  mapData=await get('/api/map');mapScenario=id;BattleMapView.setCells(mapData.cells);
+}
 async function pauseLive(){
   state=await getPost('/api/clock',{command:'pause',game_id:state.game_id});liveState=state;
   while(state.clock.inflight){renderControls();await new Promise(r=>setTimeout(r,150));state=await get(stateUrl());liveState=state;}
@@ -31,7 +53,7 @@ async function post(path,body={}){
   if(busy||replay||(godMode&&['/api/orders','/api/chat','/api/formations','/api/recommendations','/api/standing-orders'].includes(path)))return;busy=true;viewEpoch++;renderControls();
   try{
     if(state.clock.running||state.clock.inflight)await pauseLive();
-    state=await getPost(path,{...body,revision:state.revision,game_id:state.game_id});liveState=state;render();return state;
+    state=await getPost(path,{...body,revision:state.revision,game_id:state.game_id});liveState=state;await syncMap();render();return state;
   }catch(e){toast(e.message);try{state=await get(stateUrl());liveState=state;render();}catch{}}
   finally{busy=false;renderControls();}
 }
@@ -56,7 +78,7 @@ function renderFeatures(){
   }
   return svg+'</g>';
 }
-function renderMap(){const[ox,oy]=center(state.objective);let shapes=BattleMap.render(mapData.cells,terrain,BattleMapView.active())+`<g>${polygons()}</g><g pointer-events="none" class="summit"><circle cx="${ox}" cy="${oy}" r="53" fill="#fff" fill-opacity=".25" stroke="#b19752" stroke-width="2" stroke-dasharray="5 5"/><circle cx="${ox}" cy="${oy}" r="15" fill="#fff" stroke="#b19752" stroke-width="2"/><path d="M${ox-4},${oy+8}v-17l11,4 -11,4" fill="none" stroke="#94772e" stroke-width="2"/><text x="${ox}" y="${oy-118}" class="place-label">Little Round Top</text><text x="${ox}" y="${oy-97}" class="place-subtitle">SUMMIT OBJECTIVE</text></g>`;
+function renderMap(){const[ox,oy]=center(state.objective);const obj=state.scenario_brief?.objective||{place:'',label:'OBJECTIVE',ring:false};let shapes=BattleMap.render(mapData.cells,terrain,BattleMapView.active())+`<g>${polygons()}</g><g pointer-events="none" class="summit">${obj.ring?`<circle cx="${ox}" cy="${oy}" r="53" fill="#fff" fill-opacity=".25" stroke="#b19752" stroke-width="2" stroke-dasharray="5 5"/>`:''}<circle cx="${ox}" cy="${oy}" r="15" fill="#fff" stroke="#b19752" stroke-width="2"/><path d="M${ox-4},${oy+8}v-17l11,4 -11,4" fill="none" stroke="#94772e" stroke-width="2"/><text x="${ox}" y="${oy-118}" class="place-label">${esc(obj.place)}</text><text x="${ox}" y="${oy-97}" class="place-subtitle">${esc(obj.label)}</text></g>`;
 shapes+=renderFeatures();
 for(const depot of state.supply_sites||[]){const[x,y]=center(depot.pos);shapes+=`<g pointer-events="none"><rect x="${x-12}" y="${y-12}" width="24" height="24" rx="3" fill="#fff5d5" stroke="#8f7134" stroke-width="2"/><path d="M${x-7},${y-7}l14,14m0,-14l-14,14" stroke="#8f7134"/><text x="${x}" y="${y+29}" text-anchor="middle" font-size="11" fill="#634e27">${godMode?esc(depot.side)+' · ':''}AMMUNITION</text></g>`;}
 const selectedUnit=state.units.find(u=>u.id===selected);
@@ -101,7 +123,7 @@ $('order-summary').innerHTML='<span class="eyebrow">MOVEMENT ORDERS</span><stron
 $('map-tip').textContent=unitAction==='split'?'Split: choose an adjacent hex, then send instructions in the unit panel.':godMode?'God Mode · inspect all sides. Return to commander view to give orders.':replay?'Recorded commander view. Orders are disabled.':u?(destination?`${u.id} → ${destination.join(',')} · ${u.id===state.command?.unit_id?'give a local order':'dispatch a runner'}.`:`${u.id} selected. Choose a hex or hold position.`):'Select a blue unit, then choose a destination hex.';
 $('ai-mode').value=state.mode||liveState?.mode||'scripted';$('ai-status').textContent=replay?'Recorded view · live commands paused':state.last_fallback_reason?`Local fallback used (${state.last_fallback_reason}). Battle continues.`:state.last_commander_source?`Last decision: ${state.last_commander_source==='openrouter'?'OpenRouter agent':'scripted commander'} · plans every 90s`:'First command decision arrives when the clock runs.';
 }
-function render(){$('rules-notice').classList.toggle('hidden',state.rules==='poc-10');renderObserver();renderContacts();renderTimeline();renderMap();renderUnits();renderDispatches();renderMessages();renderControls();$('outcome').classList.toggle('hidden',state.status==='active');if(state.status!=='active')$('outcome').innerHTML=`<strong>${state.winner===state.side?'The line holds.':state.winner==='draw'?'The battle ends in a draw.':'The summit is lost.'}</strong><p>${esc(state.reason)}</p><a href="/api/export" target="_blank">Open complete event log & replay audit ↗</a>`;}
+function render(){$('rules-notice').classList.toggle('hidden',state.rules==='poc-10');renderBrief();renderObserver();renderContacts();renderTimeline();renderMap();renderUnits();renderDispatches();renderMessages();renderControls();$('outcome').classList.toggle('hidden',state.status==='active');const outcomes=state.scenario_brief?.outcomes||noBriefOutcomes;if(state.status!=='active')$('outcome').innerHTML=`<strong>${esc(state.winner===state.side?outcomes.win:state.winner==='draw'?outcomes.draw:outcomes.loss)}</strong><p>${esc(state.reason)}</p><a href="/api/export" target="_blank">Open complete event log & replay audit ↗</a>`;}
 function renderObserver(){
   $('god-toggle').classList.toggle('active',godMode);$('god-toggle').setAttribute('aria-checked',godMode);$('god-toggle-state').textContent=godMode?'On':'Off';
   $('god-notice').classList.toggle('hidden',!godMode);$('god-inspector').classList.toggle('hidden',!godMode);
@@ -228,8 +250,9 @@ $('new-game').onclick=async()=>{
   if(busy)return;
   stopReplay();
   if(replay){replay=false;state=liveState;$('replay-bar').classList.add('hidden');}
-  const r=await post('/api/new');
-  if(r){selected=null;destination=null;unitAction=null;history=[];replayIndex=0;godEventLimit=60;render();toast('Battle reset to 16:30. Clock paused; previous battle archived.');}
+  const scenario=scenarioPicker.selected();
+  const r=await post('/api/new',scenario?{scenario}:{});
+  if(r){selected=null;destination=null;unitAction=null;history=[];replayIndex=0;godEventLimit=60;scenarioPicker.reset();render();toast(`Battle reset to ${clock(0)}. Clock paused; previous battle archived.`);}
 };
 $('ai-mode').onchange=()=>post('/api/mode',{mode:$('ai-mode').value});
 $('hex-toggle').onclick=()=>{hexes=!hexes;$('hex-toggle').classList.toggle('active',hexes);$('hex-toggle').setAttribute('aria-pressed',hexes);renderMap();};
@@ -265,9 +288,10 @@ $('replay-slider').oninput=async e=>{stopReplay();await loadReplay(+e.target.val
 $('live-view').onclick=async()=>{stopReplay();viewEpoch++;try{state=await get(stateUrl());liveState=state;replay=false;$('replay-bar').classList.add('hidden');render();}catch(e){toast(e.message);}};
 async function poll(){
   const epoch=viewEpoch;
-  try{if(!busy&&!replay){const fresh=await get(stateUrl());if(!busy&&!replay&&epoch===viewEpoch){const changed=!state||fresh.game_id!==state.game_id||fresh.revision!==state.revision;state=fresh;liveState=state;if(changed)render();else renderControls();}}}
+  try{if(!busy&&!replay){const fresh=await get(stateUrl());if(!busy&&!replay&&epoch===viewEpoch){const changed=!state||fresh.game_id!==state.game_id||fresh.revision!==state.revision;state=fresh;liveState=state;if(changed){await syncMap();render();}else renderControls();}}}
   catch(e){if(!replay)toast('Clock connection interrupted. The server may still be running.');}
   finally{setTimeout(poll,500);}
 }
-(async()=>{try{[state,mapData]=await Promise.all([get(stateUrl()),get('/api/map')]);liveState=state;render();BattleMapView.init(mapData.cells,renderMap);setTimeout(poll,500);}catch(e){toast('Could not connect to the local simulation: '+e.message);}})();
+(async()=>{try{[state,mapData]=await Promise.all([get(stateUrl()),get('/api/map')]);liveState=state;mapScenario=state.scenario_brief?.id;render();BattleMapView.init(mapData.cells,renderMap);setTimeout(poll,500);}catch(e){toast('Could not connect to the local simulation: '+e.message);}
+  try{await scenarioPicker.init();}catch(e){toast('Scenario list unavailable: '+e.message);}})();
 

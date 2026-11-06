@@ -6,8 +6,8 @@ the original function API for every rules edition.
 import math
 from .grid import COLS, ROWS, METRES_PER_HEX, center, key
 from .scenario_entry import (
-    RULES_VERSION, SIDES, MapEntry, ScenarioEntry, SideEntry, SupplyEntry,
-    UnitEntry, VictoryEntry, build_state, unit,
+    RULES_VERSION, SIDES, DeskBrief, MapEntry, ScenarioEntry, SideBrief, SideEntry,
+    SupplyEntry, UnitEntry, VictoryEntry, build_state, unit,
 )
 
 __all__ = ['SIDES', 'RULES_VERSION', 'LITTLE_ROUND_TOP', 'terrain', 'unit', 'create']
@@ -63,7 +63,16 @@ LITTLE_ROUND_TOP = ScenarioEntry(
             name='Union', role='defender', command_unit='U2', headquarters=(14,8),
             mission='You command the Union defenders. Your mission: hold the marked summit objective until turn 60. The summit can be lost before then if the enemy holds it while none of your formations remains effective nearby.',
             charge="hold the marked summit until five o'clock",
-            supply=SupplyEntry('Union ammunition point',(14,8),2400,'rifled muskets')),
+            supply=SupplyEntry('Union ammunition point',(14,8),2400,'rifled muskets'),
+            brief=SideBrief(
+                kicker='THE UNION LEFT FLANK', tagline='Hold the high ground.',
+                subhead='You command the Union. The computer commands the Confederate advance.',
+                mission_title='Defend the summit',
+                mission_text=('Keep an effective formation in the summit hex or the six hexes around it '
+                              '(the dashed ring) until **17:00**. If Confederate troops hold that ground '
+                              'for 90 seconds with no effective Union formation there, the battle ends at '
+                              'once in their favor, even before 17:00.'),
+                win='The line holds.', loss='The summit is lost.')),
         'confederate': SideEntry(
             name='Confederate', role='attacker', command_unit='C2', headquarters=(4,20),
             mission='You command the Confederate attackers. Your mission: occupy the marked summit objective, within one hex of it, for 3 consecutive turns with no effective Union formation nearby, before turn 60.',
@@ -85,6 +94,9 @@ LITTLE_ROUND_TOP = ScenarioEntry(
     order_catalog=('hold','move','rest','retreat','resupply','recon','dig_in'),
     communications='civil-war-courier-v1',
     voice_profile='civil-war-en-v1',
+    desk=DeskBrief(campaign='GETTYSBURG · 2 JULY 1863', place='Little Round Top',
+                   objective_label='SUMMIT OBJECTIVE', objective_key='SUMMIT',
+                   conditions='SUMMER · DRY · CLEAR', draw='The battle ends in a draw.'),
 )
 
 def create(rules=RULES_VERSION):

@@ -2,7 +2,7 @@
 const BattleMapView = (() => {
   const metresPerPixel=50/(Math.sqrt(3)*25.5), radius=6378137;
   let fitZoom=15;
-  let map, ready=false, failed=false, detail=false, resizeObserver, startupTimer;
+  let sceneCells, map, ready=false, failed=false, detail=false, resizeObserver, startupTimer;
   const coordinate=([x,y])=>{
     const east=(x-540)*metresPerPixel,north=(420-y)*metresPerPixel;
     return [east/radius*180/Math.PI,(2*Math.atan(Math.exp(north/radius))-Math.PI/2)*180/Math.PI];
@@ -24,7 +24,13 @@ const BattleMapView = (() => {
     map.setPaintProperty('relief','fill-opacity',detail?['interpolate',['linear'],['get','elevation'],145,0,190,.3]:0);
     map.setPaintProperty('contours','line-opacity',detail?.75:.38);
   }
+  // A new scenario brings new terrain; MapLibre keeps the cells it was built with.
+  function setCells(cells){
+    sceneCells=cells;
+    if(ready)map.getSource('scenario').setData(BattleMap.geojson(cells,coordinate));
+  }
   function init(cells,onChange){
+    sceneCells=cells;
     const badge=document.getElementById('map-renderer'),host=document.getElementById('vector-map'),svg=document.getElementById('map');
     function fallback(){
       if(failed)return;failed=true;ready=false;clearTimeout(startupTimer);
@@ -56,6 +62,7 @@ const BattleMapView = (() => {
       map.on('error',fallback);
       map.on('load',()=>{
         if(failed)return;clearTimeout(startupTimer);ready=true;
+        map.getSource('scenario').setData(BattleMap.geojson(sceneCells,coordinate));
         document.getElementById('map-wrap').classList.add('vector-active');
         map.getCanvasContainer().appendChild(svg);
         fit();map.setMinZoom(map.getZoom()-.5);map.setMaxZoom(map.getZoom()+2.5);
@@ -75,5 +82,5 @@ const BattleMapView = (() => {
     }catch{fallback();}
   }
   function update(elevation){if(detail!==elevation){detail=elevation;applyStyle();}syncOverlay();}
-  return {init,update,coordinate,active:()=>ready};
+  return {init,setCells,update,coordinate,active:()=>ready};
 })();

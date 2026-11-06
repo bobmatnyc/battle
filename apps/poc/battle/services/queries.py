@@ -1,7 +1,8 @@
 """Read models for current state, history and audit, independent of HTTP."""
 
 from collections.abc import Callable
-from ..contracts import AuditUnavailable, BattleRepository, Document, Simulation
+from ..contracts import AuditUnavailable, BattleRepository, Document, Simulation, UnknownScenario
+from ..presentation import scenario_brief
 from .replay import ReplayService
 
 
@@ -13,13 +14,25 @@ class BattleQueries:
         replay: ReplayService,
         *,
         assess: Callable[[Document], Document],
-        present: Callable[[Document], Document],
+        present: Callable[..., Document],
+        scenarios=None,
     ):
         self.repository = repository
         self.simulation = simulation
         self.replay_service = replay
         self.assess = assess
         self.present = present
+        self.scenarios = scenarios
+
+    def _entry(self, state):
+        """The catalog entry owning ``state``'s label; None for no catalog or a
+        label from another catalog (display then keeps the original voice)."""
+        if self.scenarios is None:
+            return None
+        try:
+            return self.scenarios.for_state(state)
+        except UnknownScenario:
+            return None
 
     def project(self, state, *, god=False):
         commander_view = self.simulation.view(state)
@@ -34,9 +47,12 @@ class BattleQueries:
                 for key in ("unit_type", "skill", "weapon_class", "recon_role", "recon_skill"):
                     if key not in report and key in source:
                         report[key] = source[key]
+        entry = self._entry(state)
         result = self.present(
-            self.simulation.god_view(state) if god else commander_view
+            self.simulation.god_view(state) if god else commander_view, entry
         )
+        if entry is not None:
+            result["scenario_brief"] = scenario_brief(entry, commander_view["side"])
         result["analysis"] = self.assess(commander_view)
         return result
 

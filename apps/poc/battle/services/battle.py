@@ -126,6 +126,21 @@ class BattleService:
             scenario_id = None
         return self.scenarios.map(scenario_id)
 
+    def scenario_list(self):
+        """Why: the command desk offers a scenario choice for a new game.
+        What: the catalog's scenarios (id, title, location, date) and the id
+        new games use when a request names none. Read-only; no battle state.
+        Test: `test_scenario_list_names_the_catalog_and_default`.
+        """
+        entries = [self.scenarios.resolve(i) for i in self.scenarios.ids()]
+        return {
+            "default": self.scenario_id,
+            "scenarios": [
+                {"id": e.id, "title": e.title, "location": e.location, "date": e.date}
+                for e in entries
+            ],
+        }
+
     def _ensure_paused(self):
         clock = self.clock.status()
         if clock["running"] or clock["inflight"]:

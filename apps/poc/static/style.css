@@ -54,3 +54,6 @@
 .unit-vitals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:8px 0}
 .unit-vitals span{font-size:9px;color:var(--muted)}.unit-vitals b{display:block;font:600 12px ui-monospace,monospace;color:var(--cream);margin-top:3px}
 .unit-counter:focus-visible .counter-body{stroke:#ffe291;stroke-width:4}
+
+.header-right .scenario-select{width:auto;max-width:210px;margin-left:18px;padding:5px 7px;font:11px sans-serif}
+.header-right .scenario-select+button{margin-left:6px}

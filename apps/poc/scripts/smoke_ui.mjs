@@ -5,17 +5,42 @@ import {spawnSync} from 'node:child_process';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 const root=new URL('../',import.meta.url);
-const generated=spawnSync('python3',['-c','import json; from battle.scenario import create; from battle.engine import view; from battle.analysis import assess; from battle.adapters.rules import LittleRoundTopCatalog; v=view(create()); v["analysis"]=assess(v); print(json.dumps({"view":v,"map":LittleRoundTopCatalog().map()}))'],{cwd:root,encoding:'utf8'});
+// The views carry the same scenario_brief the server adds in BattleQueries.project.
+const fixtureScript=`
+import json
+from battle.analysis import assess
+from battle.bootstrap import build_scenarios
+from battle.engine import view
+from battle.presentation import present_view, scenario_brief
+catalog = build_scenarios()
+def shown(scenario_id):
+    entry = catalog.resolve(scenario_id)
+    v = view(catalog.create(scenario_id))
+    shown_view = dict(v, voice_profile=present_view(v, entry)["voice_profile"])
+    shown_view["scenario_brief"] = scenario_brief(entry, v["side"])
+    shown_view["analysis"] = assess(v)
+    return {"view": shown_view, "map": catalog.map(scenario_id)}
+print(json.dumps({**shown("little-round-top"), "hougoumont": shown("hougoumont-north-gate")}))`;
+const generated=spawnSync('python3',['-c',fixtureScript],{cwd:root,encoding:'utf8'});
 assert.equal(generated.status,0);
 const initial={...JSON.parse(generated.stdout).view,game_id:'test-initial',mode:'scripted',messages:[],clock:{running:false,inflight:false,speed:10,remaining_seconds:30,speeds:[0.5,1,2,5,10,30,60]}};
 const elements=new Map();
 const element=id=>{if(!elements.has(id))elements.set(id,{id,classList:{toggle(){},add(){},remove(){}},addEventListener(){},setAttribute(){},focus(){},showModal(){this.open=true;},close(){this.open=false;},scrollIntoView(){},value:'',innerHTML:'',textContent:''});return elements.get(id);};
 const requests=[];
-const context=vm.createContext({document:{getElementById:element},window:{matchMedia:()=>({matches:false})},console,BattleMapView:{active:()=>false,update(){},init(){}},setTimeout:()=>0,clearTimeout(){},
+const hougoumont=JSON.parse(generated.stdout).hougoumont;
+const hougoumontView={...hougoumont.view,game_id:'test-hougoumont',mode:'scripted',messages:[],clock:initial.clock};
+let served='little-round-top';  // Which scenario the mock server is playing.
+const setCells=[];
+const context=vm.createContext({document:{getElementById:element},window:{matchMedia:()=>({matches:false})},console,BattleMapView:{active:()=>false,update(){},init(){},setCells(cells){setCells.push(cells);}},setTimeout:()=>0,clearTimeout(){},
   confirm(){throw Error('Native dialogs must not be used');},
-  fetch:async(path,options)=>{requests.push({path,options});return {ok:true,json:async()=>path==='/api/map'?{...JSON.parse(generated.stdout).map,cells:[]}:path==='/api/new'?{...initial,game_id:'test-fresh'}:initial};}});
+  fetch:async(path,options)=>{
+    requests.push({path,options});
+    if(path==='/api/new'&&options?.body)served=JSON.parse(options.body).scenario==='hougoumont-north-gate'?'hougoumont-north-gate':'little-round-top';
+    const hg=served==='hougoumont-north-gate';
+    const catalog={default:'little-round-top',scenarios:[{id:'little-round-top',title:'Little Round Top'},{id:'hougoumont-north-gate',title:'Hougoumont: the north gate'}]};
+    return {ok:true,json:async()=>path==='/api/map'?{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}:path==='/api/scenarios'?catalog:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:initial};}});
 vm.runInContext(readFileSync(new URL('../static/cartography.js',import.meta.url),'utf8'),context);
-for(const file of ['api-client.js','troop-analysis.js','timeline.js','unit-icons.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
+for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
 vm.runInContext(readFileSync(new URL('../static/app.js',import.meta.url),'utf8'),context);
 await new Promise(resolve=>setImmediate(resolve));
 assert.equal(element('clock').textContent,'16:30');
@@ -151,3 +176,66 @@ await element('standing-form').onsubmit({preventDefault(){}});
 assert.equal(requests.filter(r=>r.path==='/api/standing-orders').length,beforeStanding+1);
 await element('analysis-close').onclick();assert.equal(element('analysis-dialog').open,false);
 console.log('Standing orders UI passed: prebattle assessment, per-unit recommendation draft, explicit dispatch and observer guard.');
+
+// Scenario text comes from the game's brief. Little Round Top first: the copy the desk always showed.
+await element('god-toggle').onclick();  // God Mode off again.
+vm.runInContext(`state=liveState=${JSON.stringify(initial)};render()`,context);
+assert.equal(element('mission-title').textContent,'Defend the summit');
+assert.equal(element('mission-text').innerHTML,'Keep an effective formation in the summit hex or the six hexes around it (the dashed ring) until <strong>17:00</strong>. If Confederate troops hold that ground for 90 seconds with no effective Union formation there, the battle ends at once in their favor, even before 17:00.');
+assert.equal(element('brief-kicker').textContent,'THE UNION LEFT FLANK');
+assert.equal(element('brief-tagline').textContent,'Hold the high ground.');
+assert.equal(element('brief-subhead').textContent,'You command the Union. The computer commands the Confederate advance.');
+assert.equal(element('campaign-line').textContent,'GETTYSBURG · 2 JULY 1863');
+assert.equal(element('conditions').textContent,'SUMMER · DRY · CLEAR');
+assert.equal(element('objective-key').textContent,'SUMMIT');
+assert.match(element('map').innerHTML,/r="53"/);  // The summit ring.
+assert.equal(element('map-reference').href,'https://www.loc.gov/item/99447491/');
+assert.equal(vm.runInContext('state.voice_profile',context),'civil-war-en-v1');
+assert.match(element('scenario-select').innerHTML,/value="little-round-top".*value="hougoumont-north-gate"/);
+console.log('Scenario text passed: Little Round Top mission, headings, objective and voice come from the brief unchanged.');
+
+// New-game selection: pick Hougoumont, Reset, and the whole desk follows the new game.
+element('scenario-select').value='hougoumont-north-gate';
+element('scenario-select').onchange();
+const mapRequestsBefore=requests.filter(r=>r.path==='/api/map').length;
+await element('new-game').onclick();
+assert.equal(JSON.parse(requests.filter(r=>r.path==='/api/new').at(-1).options.body).scenario,'hougoumont-north-gate');
+assert.equal(requests.filter(r=>r.path==='/api/map').length,mapRequestsBefore+1);  // Terrain follows the scenario.
+assert.equal(setCells.length,1);
+assert.equal(vm.runInContext('state.game_id',context),'test-hougoumont');
+assert.equal(context.document.title,'battle · Hougoumont: the north gate');
+assert.equal(element('campaign-line').textContent,'WATERLOO · 18 JUNE 1815');
+assert.equal(element('campaign-title').textContent,'Hougoumont: the north gate');
+assert.equal(element('brief-kicker').textContent,'THE NORTH GATE');
+assert.equal(element('brief-subhead').textContent,'You command the Allied garrison. The computer commands the French assault.');
+assert.equal(element('mission-title').textContent,'Hold the farm');
+assert.match(element('mission-text').innerHTML,/inside the walls of Hougoumont until <strong>11:50<\/strong>.*north gate open.*180 seconds/);
+assert.equal(element('clock').textContent,'11:20');
+assert.match(element('battle-date').textContent,/18 June 1815/);
+assert.match(element('battle-location').textContent,/Hougoumont.*Waterloo/);
+assert.equal(element('objective-key').textContent,'FARM');
+assert.equal(element('map-reference').href,'');  // Authored layout: no historical map to link.
+assert.match(element('map').innerHTML,/class="place-label">Hougoumont farm</);
+assert.match(element('map').innerHTML,/COMPOUND OBJECTIVE/);
+assert.doesNotMatch(element('map').innerHTML,/r="53"/);  // A compound is not a ring of hexes.
+assert.match(element('map').innerHTML,/Hougoumont chateau and farm/);  // The building feature is drawn.
+assert.equal(vm.runInContext('state.voice_profile',context),'napoleonic-en-v1');
+assert.match(element('toast').textContent,/Battle reset to 11:20/);
+assert.equal(element('scenario-select').value,'hougoumont-north-gate');
+vm.runInContext("Object.assign(state,{status:'complete',winner:'allied',reason:'The Allied garrison held the farm until the scenario deadline.'});render()",context);
+assert.match(element('outcome').innerHTML,/Hougoumont holds\..*Allied garrison held/);
+vm.runInContext("state.winner='french';render()",context);
+assert.match(element('outcome').innerHTML,/The farm is lost\./);
+vm.runInContext("state.winner='draw';render()",context);
+assert.match(element('outcome').innerHTML,/The battle ends in a draw\./);
+// Only the player's mission reaches the page: nothing of the French mission, no Union or Confederate wording.
+const frenchMission=/assault group west|pass men through/;
+for(const [id,el] of elements){
+  for(const text of [el.innerHTML,el.textContent]){
+    assert.doesNotMatch(String(text),frenchMission,id);
+    // The scenario list names every scenario by design; CSS class names are not text.
+    // The hidden God Mode panels keep the last observer render from the Little Round Top run above.
+    if(id!=='scenario-select'&&!id.startsWith('god-'))assert.doesNotMatch(String(text).replace(/class="[^"]*"/g,''),/Union|Confederate|Little Round Top|summit/i,id);
+  }
+}
+console.log('Hougoumont UI passed: selection by POST /api/new, terrain refresh, mission, side names, objective, outcomes, voice and no opponent mission in the page.');

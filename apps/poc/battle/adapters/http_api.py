@@ -26,6 +26,8 @@ class HttpApi:
         game_id = query.get("game_id", [self.service.game_id])[0]
         if path == "/api/state":
             return self.service.state(god)
+        if path == "/api/scenarios":
+            return self.service.scenario_list()
         if path == "/api/map":
             return self.service.map()
         if path == "/api/history":

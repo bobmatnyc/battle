@@ -54,6 +54,41 @@ class SupplyEntry:
 
 
 @dataclass(frozen=True)
+class SideBrief:
+    """Command-desk text for the player who commands one side (display only).
+
+    Never stored in a snapshot and never put in a prompt. ``mission_text``
+    marks emphasis as ``**bold**``; ``win`` and ``loss`` are the outcome
+    headlines for this side's player.
+    """
+
+    kicker: str
+    tagline: str
+    subhead: str
+    mission_title: str
+    mission_text: str
+    win: str
+    loss: str
+
+
+@dataclass(frozen=True)
+class DeskBrief:
+    """Scenario-wide command-desk text (display only, like ``SideBrief``).
+
+    ``place`` and ``objective_label`` caption the objective on the map,
+    ``objective_key`` is its map-key entry, ``conditions`` the weather line and
+    ``draw`` the outcome headline for a draw.
+    """
+
+    campaign: str
+    place: str
+    objective_label: str
+    objective_key: str
+    conditions: str
+    draw: str
+
+
+@dataclass(frozen=True)
 class SideEntry:
     """One side: its mission is the only objective text its own prompt shows.
 
@@ -71,6 +106,7 @@ class SideEntry:
     command_unit: str
     headquarters: tuple[int, int]
     supply: SupplyEntry | None = None
+    brief: SideBrief | None = None
 
 
 @dataclass(frozen=True)
@@ -164,6 +200,7 @@ class ScenarioEntry:
     tools_per_unit: int = 20
     player_side: str | None = None
     gates: GateEntry | None = None
+    desk: DeskBrief | None = None
     # Field name -> "sourced: ...", "reconstruction: ..." or "authored: ...".
     # Documentation only: never stored in a snapshot or shown in a prompt.
     provenance: Mapping[str, str] = field(default_factory=dict)

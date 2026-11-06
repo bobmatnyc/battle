@@ -9,6 +9,7 @@ const BattleApi = {
     }
     return Object.freeze({
       get: path => request(path),
+      scenarios: () => request('/api/scenarios'),
       post: (path, body) => request(path, {
         method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
       }),

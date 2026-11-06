@@ -1,6 +1,6 @@
 # 42 — Hougoumont north gate: the catalog entry (`poc-10`)
 
-**Date:** 2026-11-05. **Requirement:** add the Hougoumont north-gate scenario ([37 §2](37-first-five-selection-register.md#2-napoleonic--hougoumont)) as a player-facing catalog entry on `poc-10`, using the gate mechanism of [41](41-poc10-gates.md), with a courtyard-possession victory kind and a minimal Napoleonic voice and command profile. No browser work: the mission panel, summit marker, outcome headline and side labels in `static/` remain Little Round Top copy.
+**Date:** 2026-11-05. **Requirement:** add the Hougoumont north-gate scenario ([37 §2](37-first-five-selection-register.md#2-napoleonic--hougoumont)) as a player-facing catalog entry on `poc-10`, using the gate mechanism of [41](41-poc10-gates.md), with a courtyard-possession victory kind and a minimal Napoleonic voice and command profile. The browser followed in the command-desk text section below.
 
 ## What changed (implemented)
 
@@ -50,7 +50,7 @@ Units cut off inside count as inside. Possession means uncontested possession: a
 
 ## Voice and command profile (minimal)
 
-The schema required one value each for `voice_profile` and `communications`, and allowed only the 1863 ones. The Napoleonic voice copies the 1863 instruction with the period set to 1815, the player addressed as Colonel, and "companies" and "cartridges" added to the vocabulary. The communications profile changes only the label in the commander's observation. **Deferred:** period transport rates (gallopers, aides-de-camp), the scripted staff text, which still says "General", the display label in `present_view`, which still reports the 1863 voice, and all browser copy.
+The schema required one value each for `voice_profile` and `communications`, and allowed only the 1863 ones. The Napoleonic voice copies the 1863 instruction with the period set to 1815, the player addressed as Colonel, and "companies" and "cartridges" added to the vocabulary. The communications profile changes only the label in the commander's observation. **Deferred:** period transport rates (gallopers, aides-de-camp), the scripted staff text, which still says "General" and the browser's remaining Little Round Top copy (see the command-desk text section: the mission panel, headings, side names, objective marker, outcome headlines and the `present_view` voice are done).
 
 ## Scripted-vs-scripted run
 
@@ -70,6 +70,14 @@ The fallback control moved the gate party off the gateway and never closed the g
 **Outcome.** With the gate-aware defender, the scripted run ends at turn 28: `allied`, "The attacking formations have broken." Replay is `identical` (32 revisions). Final strengths: A1 15, A2 28 (routed), A3 57, F1 6, F2 65, F3 19, all French routed. A1 received `close_on_breach` at turn 1 and held the gateway. No French unit entered the compound, so no breach was observed, no close order was sent and the gate stayed open; the capture counter never left 0. Legros's party routed at turn 4, as before. Keeping A1 in the gateway blocks it, because units cannot stack. This tests the control; it is not a historical comparison.
 
 **Engine-driven tests** (`HoldCompoundEngineTests`, through `RulesSimulation` and a stored game, each checking replay): French troops enter, the gate party shuts the gate under its delivered standing order after a `gate_blocked` interval, and F1 is `cut_off` inside with the capture counter at 0 while the gate party stands; a capture count of 1 to 5 reset to 0 when the Allied commander marches back in; a draw when both sides have no effective formation; a French win when the Allied side has none. The arrangements (an unarmed garrison, a relief one hex from the gate) are test set-ups, not scenario changes.
+
+## Command-desk text from the scenario
+
+The desk no longer carries Little Round Top copy. `ScenarioEntry.desk` (`DeskBrief`) and `SideEntry.brief` (`SideBrief`) hold the display text: campaign line, weather line, map place and objective caption, map-key entry, draw headline, and per side the heading, mission title and text, and win and loss headlines. None of it is stored in a snapshot or shown in a prompt, so saves, replay and the map hash are unchanged. An entry without them gets text derived from its required fields (the prompt mission, `Victory.`, `Defeat.`). `presentation.scenario_brief(entry, side)` builds the brief for the viewing side only: the opponent's mission is never in it. `BattleQueries.project` resolves the entry from the stored state's label and adds `scenario_brief` to every state, God view and replay; it also passes the entry to `present_view`, so `voice_profile` is the scenario's (`napoleonic-en-v1` here). A label no catalog knows keeps the 1863 voice and has no brief; the desk then says no briefing is available.
+
+`GET /api/scenarios` lists the catalog (`id`, `title`, `location`, `date`, and the default). The desk's scenario picker feeds `POST /api/new` with `scenario`; Reset starts the picked scenario, or the one being played. After a new game with another scenario the desk fetches `/api/map` again and calls `BattleMapView.setCells`. The objective marker draws the dashed ring only for a hold-objective victory; Hougoumont shows the label alone, since possession of the compound is not a ring of hexes. Checks: `ScenarioBriefTests`, `smoke_ui.mjs` (Little Round Top copy unchanged, then a Hougoumont switch) and `smoke_http.py`. Two existing checks changed mechanically: `smoke_http.py` looks for the mission element in the page instead of the words "Little Round Top", and `test_mission_text_states_early_summit_loss_before_deadline` reads the mission from the served brief instead of `index.html`.
+
+**Still deferred.** Drawing the compound outline, the wall and the gate (with its open, closed or barred state): the renderer draws a building as one box and label at its hex and knows nothing of `compound` or `openings`, so this is renderer work. The gate state reaches the player only through dispatches. Also: a French player's brief (the entry fixes the player as Allied; the French side has derived text only), period transport rates and scripted staff text ("General"), the product-intent panel copy under the map, and weather wording for the 1815 day (the line says `FIXED POC CONDITION`).
 
 ## Not modelled
 

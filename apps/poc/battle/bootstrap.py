@@ -41,7 +41,8 @@ def build_application(db, *, offline=False, settings=None, scenario_id=None):
     )
     replay = ReplayService(repository, simulation)
     queries = BattleQueries(
-        repository, simulation, replay, assess=analysis.assess, present=present_view
+        repository, simulation, replay, assess=analysis.assess, present=present_view,
+        scenarios=scenarios,
     )
     return BattleService(
         repository,
