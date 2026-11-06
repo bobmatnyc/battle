@@ -1,0 +1,203 @@
+"""Concord North Bridge geometry sensitivity (docs/research/49).
+
+Why: doc 48 gap 11 found that the authored radius-1 ring around the bridge
+favours the provincials. These tests pin the baseline run so the variants
+cannot move it, and check that every sensitivity variant builds, runs and
+replays. No test asserts a winner.
+"""
+
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from battle import command_policy, concord_policy, engine, grid
+from battle.adapters.rules import ScenarioRegistry
+from battle.bootstrap import PLAYER_SCENARIOS, build_headless, build_headless_scenarios, build_replay
+from battle.concord_sensitivity import (
+    BASELINE_GEOMETRY, POLICIES, SENSITIVITY, SENSITIVITY_GEOMETRY, geometry_entry, rebind, ring_banks,
+)
+from battle.scenario_command import WEAPONS_1775
+from battle.scenario_concord import CONCORD_NORTH_BRIDGE as ENTRY, FEATURES, VARIANTS
+from battle.scenario_entry import PROVENANCE, build_state, dry_run, validate
+
+POC = Path(__file__).resolve().parent.parent
+# Taken at d6f1748, before any sensitivity variant existed: sha256 of the
+# sort-keyed JSON of the headless run summary without ``game_id`` and the
+# saved final state of the baseline ``concord-north-bridge`` run.
+BASELINE_RUN_SHA256 = "8755f91fab16f90beae38aa4e77aa4bba07b4ffdcc779f09aa693822bd148b79"
+# The same commit: sha256 of ``scripts/concord_timeline.py`` stdout with the
+# ``game_id`` value replaced by an ellipsis.
+BASELINE_TIMELINE_SHA256 = "b4c03cfb5a9c4ebd9d4be9d0578d226b0d40d36361eaa23c89725044e3d3bda1"
+GAME_ID = re.compile(r"'game_id': '[0-9a-f]+'")
+
+
+def run(entry, tmp, name):
+    """Run ``entry`` headless in its own database; the summary and saved state."""
+    db = Path(tmp) / name
+    scenarios = None if entry is ENTRY else ScenarioRegistry([entry])
+    result = build_headless(db, scenario_id=entry.id, scenarios=scenarios).run()
+    return result, build_replay(db).repository.load(result["game_id"]), db
+
+
+def masked_timeline(seed):
+    """``concord_timeline.py`` stdout under ``PYTHONHASHSEED=seed``, game_id masked."""
+    env = {**os.environ, "PYTHONHASHSEED": str(seed)}
+    out = subprocess.run([sys.executable, str(POC / "scripts" / "concord_timeline.py")], cwd=POC, env=env,
+                         check=True, capture_output=True, text=True).stdout
+    return GAME_ID.sub("'game_id': '…'", out)
+
+
+class BaselinePinTests(unittest.TestCase):
+    def test_baseline_run_keeps_its_pinned_digest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result, final, _ = run(ENTRY, tmp, "baseline.sqlite")
+        summary = {k: v for k, v in result.items() if k != "game_id"}
+        digest = hashlib.sha256(json.dumps({"result": summary, "final": final}, sort_keys=True).encode())
+        self.assertEqual(digest.hexdigest(), BASELINE_RUN_SHA256)
+
+    def test_baseline_timeline_is_the_same_under_two_hash_seeds(self):
+        # One process has one hash seed, so a replay inside it cannot show
+        # an order that depends on set or dict hashing; two processes can.
+        first, second = masked_timeline(1), masked_timeline(2)
+        self.assertEqual(first, second)
+        self.assertEqual(hashlib.sha256(first.encode()).hexdigest(), BASELINE_TIMELINE_SHA256)
+
+
+class SensitivityEntryTests(unittest.TestCase):
+    def test_baseline_geometry_rebuilds_the_baseline_entry(self):
+        # The geometry builder is the baseline's own layout when given its
+        # constants, so a variant differs only where its geometry differs.
+        rebuilt = geometry_entry("baseline-check", BASELINE_GEOMETRY)
+        self.assertEqual(rebuilt.map.terrain(), ENTRY.map.terrain())
+        self.assertEqual(rebuilt.map.features, FEATURES)
+        self.assertEqual(rebuilt.units, ENTRY.units)
+        self.assertEqual(rebuilt.victory, ENTRY.victory)
+        self.assertEqual(rebuilt.sides, ENTRY.sides)
+        self.assertEqual(ring_banks(BASELINE_GEOMETRY), {"west": 3, "east": 1, "water": 2})
+
+    def test_variants_are_labelled_sensitivity_and_state_what_they_keep_and_change(self):
+        self.assertEqual(set(SENSITIVITY), {"sensitivity-odd-row-bridge", "sensitivity-balanced-ring",
+                                            "sensitivity-balanced-ring-full"})
+        self.assertFalse(set(SENSITIVITY) & set(VARIANTS))
+        for name, variant in SENSITIVITY.items():
+            with self.subTest(name):
+                self.assertEqual(variant.entry.variant, name)
+                self.assertTrue(variant.question.startswith("sensitivity:"))
+                self.assertTrue(variant.reading.startswith("sensitivity:"))
+                self.assertIn("keeps", variant.source)
+                self.assertIn("changes", variant.reading)
+                note = variant.entry.provenance["sensitivity"]
+                self.assertTrue(note.startswith("authored: sensitivity:"))
+                self.assertNotIn("reconstruction:", note)
+                self.assertTrue(all(str(v).startswith(PROVENANCE) for v in variant.entry.provenance.values()))
+                self.assertNotEqual(variant.entry.labels, ENTRY.labels)
+
+    def test_each_variant_validates_dry_runs_and_keeps_one_musket_range(self):
+        for name, variant in SENSITIVITY.items():
+            with self.subTest(name):
+                entry = variant.entry
+                dry_run(validate(entry))
+                self.assertIs(entry.weapons, WEAPONS_1775)
+                self.assertEqual(len({w.range_hexes for w in entry.weapons.values()}), 1)
+                self.assertEqual({u.overrides["weapon_class"] for u in entry.units}, set(entry.weapons))
+                # Same forces, strengths and sides as the baseline.
+                self.assertEqual([(u.id, u.overrides) for u in entry.units],
+                                 [(u.id, u.overrides) for u in ENTRY.units])
+
+    def test_variants_are_headless_only(self):
+        headless = build_headless_scenarios()
+        for name, variant in SENSITIVITY.items():
+            with self.subTest(name):
+                self.assertNotIn(variant.entry, PLAYER_SCENARIOS)
+                with self.assertRaises(Exception):
+                    headless.resolve(variant.entry.id)
+
+    def test_ring_geometry_of_each_variant(self):
+        expected = {"sensitivity-odd-row-bridge": {"west": 1, "east": 3, "water": 2},
+                    "sensitivity-balanced-ring": {"west": 2, "east": 2, "water": 2},
+                    "sensitivity-balanced-ring-full": {"west": 2, "east": 2, "water": 2}}
+        for name, variant in SENSITIVITY.items():
+            with self.subTest(name):
+                g = SENSITIVITY_GEOMETRY[name]
+                self.assertEqual(ring_banks(g), expected[name])
+                s = build_state(variant.entry)
+                self.assertEqual(s["objective"], list(g.bridge))
+                bridge = s["cells"][grid.key(list(g.bridge))]
+                self.assertEqual(bridge["crossing"], "bridge")
+                # The river cuts the map: with the bridge impassable no route crosses.
+                cells = {**s["cells"], grid.key(list(g.bridge)): {**bridge, "crossing": None}}
+                self.assertEqual(grid.path(cells, list(g.west_end), list(g.east_end)), [])
+                self.assertIn(list(g.bridge), grid.path(s["cells"], [7, 4], [16, 4]))
+                # Every approach hex and start hex lies on its own bank.
+                for uid, pos in g.approach.items():
+                    self.assertLess(pos[0], g.river[pos[1]], uid)
+                for uid, pos in g.british.items():
+                    self.assertGreater(pos[0], g.river[pos[1]], uid)
+
+
+class SensitivityPolicyTests(unittest.TestCase):
+    def test_rebound_policies_run_the_baseline_code(self):
+        for policy, fn in POLICIES.items():
+            with self.subTest(policy):
+                base = (concord_policy.militia_actions if policy.startswith(concord_policy.MILITIA_POLICY)
+                        else concord_policy.regulars_actions)
+                self.assertIs(fn.__code__, base.__code__)
+                self.assertIn(policy, command_policy.SCRIPTED_POLICIES)
+                self.assertIn(policy, command_policy.NAMED_POLICIES)
+        # Bound to the baseline constants, the copy gives the baseline's orders.
+        militia = rebind(concord_policy.militia_actions, BASELINE_GEOMETRY)
+        regulars = rebind(concord_policy.regulars_actions, BASELINE_GEOMETRY)
+        s = build_state(ENTRY)
+        for side, fn, base in (("provincial", militia, concord_policy.militia_actions),
+                               ("british", regulars, concord_policy.regulars_actions)):
+            view = engine.view(s, side)
+            self.assertEqual(fn(view), base(view))
+
+    def test_each_variant_names_its_rebound_policies(self):
+        for name, variant in SENSITIVITY.items():
+            with self.subTest(name):
+                entry = variant.entry
+                self.assertEqual(command_policy.scripted_policy(entry, "provincial"),
+                                 f"{concord_policy.MILITIA_POLICY}@{name}")
+                self.assertEqual(command_policy.scripted_policy(entry, "british"),
+                                 f"{concord_policy.REGULARS_POLICY}@{name}")
+                view = engine.view(build_state(entry), "provincial")
+                orders = command_policy.scripted_actions(entry.scripted["provincial"], view, "attacker")[1]
+                self.assertEqual([o["destination"] for o in orders],
+                                 [list(SENSITIVITY_GEOMETRY[name].approach[u]) for u in ("P1", "P2", "P3")])
+
+
+class SensitivityRunTests(unittest.TestCase):
+    def assert_runs_and_replays(self, name):
+        entry = SENSITIVITY[name].entry
+        with tempfile.TemporaryDirectory() as tmp:
+            first, final, db = run(entry, tmp, "a.sqlite")
+            second, again, _ = run(entry, tmp, "b.sqlite")
+            self.assertEqual(first["replay"]["status"], "identical")
+            self.assertEqual(build_replay(db).verify(first["game_id"])["status"], "identical")
+        self.assertEqual(final["status"], "complete")
+        self.assertEqual(first["run"]["scenario_id"], entry.id)
+        self.assertEqual((first["run"]["player_policy"], first["run"]["opponent"]),
+                         (entry.scripted["provincial"], entry.scripted["british"]))
+        strip = lambda r: {k: v for k, v in r.items() if k != "game_id"}
+        self.assertEqual(strip(first), strip(second))
+        self.assertEqual(json.dumps(final["events"], sort_keys=True), json.dumps(again["events"], sort_keys=True))
+
+    def test_odd_row_bridge_runs_and_replays_identically(self):
+        self.assert_runs_and_replays("sensitivity-odd-row-bridge")
+
+    def test_balanced_ring_runs_and_replays_identically(self):
+        self.assert_runs_and_replays("sensitivity-balanced-ring")
+
+    def test_balanced_ring_full_runs_and_replays_identically(self):
+        self.assert_runs_and_replays("sensitivity-balanced-ring-full")
+
+
+if __name__ == "__main__":
+    unittest.main()

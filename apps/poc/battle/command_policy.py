@@ -1,6 +1,6 @@
 """Pure commander observations, validated order contracts and scripted policy."""
 
-from . import concord_policy, engine, grid, orders as order_rules
+from . import concord_policy, concord_sensitivity, engine, grid, orders as order_rules
 from .presentation import VOICE_PROFILES
 from .scenario import LITTLE_ROUND_TOP
 from .scenario_entry import LEGACY_ROLES
@@ -230,7 +230,8 @@ PROMPT_VERSION = DEFAULT_SCENARIO.prompt_version
 # Scripted control used for the side that no model plays; recorded in run metadata.
 OPPONENT_POLICY = "scripted-fallback-v1"
 SCRIPTED_POLICIES = (OPPONENT_POLICY, GATE_DEFENDER_POLICY, GATE_ATTACKER_POLICY,
-                     concord_policy.MILITIA_POLICY, concord_policy.REGULARS_POLICY)
+                     concord_policy.MILITIA_POLICY, concord_policy.REGULARS_POLICY,
+                     *concord_sensitivity.POLICIES)  # docs/research/49: rebound to variant hexes
 # Gate-aware controls by role; their decisions record ``policy`` and ``standing``.
 GATE_POLICIES = {"defender": GATE_DEFENDER_POLICY, "attacker": GATE_ATTACKER_POLICY}
 # Controls that fit one side of one kind of scenario, with the side they need.
@@ -240,6 +241,7 @@ NAMED_POLICIES = {
     GATE_ATTACKER_POLICY: "the attacking side of a gated scenario",
     concord_policy.MILITIA_POLICY: "the provincial side of the Concord scenario",
     concord_policy.REGULARS_POLICY: "the British side of the Concord scenario",
+    **concord_sensitivity.NEEDS,
 }
 
 
@@ -276,6 +278,8 @@ def scripted_actions(policy, observation, role):
         return concord_policy.militia_actions(observation)
     if policy == concord_policy.REGULARS_POLICY:
         return concord_policy.regulars_actions(observation)
+    if policy in concord_sensitivity.POLICIES:
+        return concord_sensitivity.POLICIES[policy](observation)
     return [], fallback_orders(observation, role)
 
 # Voice profile id -> prose instruction. Entries name one of these.

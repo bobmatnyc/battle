@@ -4,7 +4,8 @@ Why: docs/research/48 quotes the simulated sequence, objectives and losses;
 this prints them from a fresh run so the numbers can be checked.
 What: runs ``concord-north-bridge`` (or ``--scenario``) headless in a new
 temporary database (``--variant NAME``: that doc 43 variant from
-``scenario_concord.VARIANTS`` instead), prints the run summary, then one line per key event
+``scenario_concord.VARIANTS``, or that doc 49 variant from
+``concord_sensitivity.SENSITIVITY``, instead), prints the run summary, then one line per key event
 (orders, fire, casualties, officers, routs, local withdrawals, the end).
 The engine draws no random number, so every run prints the same lines.
 Usage, from apps/poc: ``python3 scripts/concord_timeline.py``.
@@ -19,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from battle.adapters.rules import ScenarioRegistry  # noqa: E402
 from battle.bootstrap import build_headless, build_replay  # noqa: E402
+from battle.concord_sensitivity import SENSITIVITY  # noqa: E402
 from battle.scenario_concord import VARIANTS  # noqa: E402
 
 KEY = ("order_sent", "order_delivered", "order_refused", "fire_posture_set", "volley", "casualties",
@@ -34,11 +36,11 @@ def line(e):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", default="concord-north-bridge")
-    parser.add_argument("--variant", choices=sorted(VARIANTS))
+    parser.add_argument("--variant", choices=sorted({**VARIANTS, **SENSITIVITY}))
     args = parser.parse_args()
     scenarios, scenario_id = None, args.scenario
     if args.variant:
-        entry = VARIANTS[args.variant].entry
+        entry = {**VARIANTS, **SENSITIVITY}[args.variant].entry
         scenarios, scenario_id = ScenarioRegistry([entry]), entry.id
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "concord.sqlite"
