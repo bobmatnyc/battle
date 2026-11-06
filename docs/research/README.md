@@ -121,3 +121,5 @@ Historical calibration is much less complete than the game-system survey. One in
 [37 — First five selections and source register](37-first-five-selection-register.md) names the five company-scale comparisons, holds Gergovia as the sixth, lists Cannae separately, proposes a Hougoumont gate state and Hill 223 reconstruction variants, and records order and outcome sources per case.
 
 [38 — Scenario catalog](38-scenario-catalog.md) defines the scenario-entry format, how the catalog resolves new and saved games, the `poc-8` limits an entry must respect, and what each planned battle still needs beyond data.
+
+[40 — Batch A: model baseline on Little Round Top](40-batch-a-lrt-model-baseline.md) records 14 live model runs and 2 scripted controls on `poc-8`, with per-run outcomes, casualties, tokens, latency and cost, a comparability statement, stated limits and a local artifact manifest. Data: [`summary.json`](../../apps/poc/experiments/batch-a/summary.json).
