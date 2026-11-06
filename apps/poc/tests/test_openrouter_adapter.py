@@ -6,11 +6,16 @@ Every test injects an opener stub; no test makes a network call.
 import io
 import json
 import tempfile
+import time
 import unittest
 import urllib.error
 from pathlib import Path
 
-from battle.adapters.openrouter import OpenRouterProvider, ProviderUnavailable
+from battle.adapters.openrouter import (
+    OpenRouterProvider,
+    ProviderUnavailable,
+    single_json_object,
+)
 from battle.adapters.rules import LittleRoundTopCatalog, RulesSimulation
 from battle.bootstrap import build_headless
 from battle.command_policy import fallback_orders
@@ -54,13 +59,14 @@ def orders_from(request):
     return fallback_orders(payload["observation"])
 
 
-def answer(message_for):
+def answer(message_for, finish_reason="stop"):
     """Opener stub whose reply message is built from the request's own observation."""
     requests = []
 
     def opener(request, timeout):
         requests.append((json.loads(request.data), timeout))
-        return Response(json.dumps(body_with(message_for(orders_from(request)))).encode())
+        message = message_for(orders_from(request))
+        return Response(json.dumps(body_with(message, finish_reason)).encode())
 
     opener.requests = requests
     return opener
@@ -165,6 +171,91 @@ class StructuredResponseParsingTests(unittest.TestCase):
         self.assertFalse(order["additionalProperties"])
 
 
+class ExtractionBoundaryTests(unittest.TestCase):
+    """Replies whose order object is a fragment, truncated or oversized fall back."""
+
+    def assert_provider_fallback(self, decision, reason):
+        self.assertTrue(decision["fallback"])
+        self.assertEqual(decision["source"], "scripted")
+        self.assertEqual(decision["fallback_stage"], "provider_error")
+        self.assertEqual(decision["fallback_reason"], reason)
+        self.assertIsNone(decision["proposed_orders"])
+        self.assertEqual(decision["reply_format"], "none")
+        self.assertEqual(decision["usage"], USAGE)
+
+    def test_object_inside_truncated_wrapper_falls_back(self):
+        # The outer object never closes; the inner order object is a fragment.
+        def message(orders):
+            return {"content": 'ok {"reply": ' + dispatch(orders)}
+
+        self.assert_provider_fallback(decide(answer(message)), "JSONDecodeError")
+
+    def test_orders_array_in_prose_falls_back(self):
+        def message(orders):
+            return {"content": "Orders: [" + dispatch(orders) + "]"}
+
+        self.assert_provider_fallback(decide(answer(message)), "JSONDecodeError")
+
+    def test_failed_region_before_object_is_ambiguous(self):
+        # A draft that fails to decode is a rival candidate; neither is chosen.
+        def message(orders):
+            return {"content": 'Draft {"text": "x", "orders": [,]} Final ' + dispatch(orders)}
+
+        self.assert_provider_fallback(decide(answer(message)), "AmbiguousJSON")
+
+    def test_footnote_bracket_in_prose_does_not_block_extraction(self):
+        def message(orders):
+            return {"content": "Per the report [1], orders follow. " + dispatch(orders)}
+
+        decision = decide(answer(message))
+        self.assertFalse(decision["fallback"])
+        self.assertEqual(decision["reply_format"], "extracted")
+
+    def test_length_finish_with_complete_object_falls_back(self):
+        opener = answer(lambda orders: {"content": dispatch(orders)}, finish_reason="length")
+        decision = decide(opener)
+        self.assert_provider_fallback(decision, "ReplyTruncated")
+        self.assertEqual(decision["finish_reason"], "length")
+
+    def test_megabyte_degenerate_reply_fails_fast(self):
+        content = "x{" * (512 * 1024)  # 1 MiB of unclosed openers.
+        provider = OpenRouterProvider(
+            Settings(api_key=SECRET, model="m"),
+            opener=lambda request, timeout: Response(
+                json.dumps(body_with({"content": content})).encode()
+            ),
+        )
+        started = time.perf_counter()
+        with self.assertRaises(ProviderUnavailable) as caught:
+            provider.request("i", {})
+        self.assertLess(time.perf_counter() - started, 1.0)
+        self.assertEqual(str(caught.exception), "ReplyTooLarge")
+        self.assertEqual(caught.exception.metadata["usage"], USAGE)
+
+    def test_degenerate_reply_under_cap_stays_fast(self):
+        for content in ("x{" * 32700, '{"a":[' * 10900, "{]" * 32700):
+            started = time.perf_counter()
+            with self.assertRaises(ValueError):
+                single_json_object(content)
+            self.assertLess(time.perf_counter() - started, 0.25, content[:8])
+
+    def test_reply_format_records_json_extracted_and_tool_call(self):
+        def tool_call(orders):
+            return {
+                "content": None,
+                "tool_calls": [{"function": {"name": "f", "arguments": dispatch(orders)}}],
+            }
+
+        cases = {
+            "json": lambda orders: {"content": dispatch(orders)},
+            "extracted": lambda orders: {"content": "Orders: " + dispatch(orders)},
+            "tool_call": tool_call,
+            "none": lambda orders: {"content": "No orders, General."},
+        }
+        for expected, message in cases.items():
+            self.assertEqual(decide(answer(message))["reply_format"], expected)
+
+
 class ProviderFailureReasonTests(unittest.TestCase):
     def test_timeout_records_timeout_error(self):
         decision = decide(raising(TimeoutError("read timed out after 18 s")))
@@ -189,6 +280,13 @@ class ProviderFailureReasonTests(unittest.TestCase):
             failure_kind(ProviderFailure("Bearer " + SECRET)), "ProviderFailure"
         )
         self.assertEqual(failure_kind(ValueError("HTTP 500")), "ValueError")
+
+    def test_unknown_reason_name_is_not_recorded(self):
+        # An identifier-shaped reason outside the adapter's names may be content.
+        self.assertEqual(failure_kind(ProviderFailure("sk_live_abc123")), "ProviderFailure")
+        self.assertEqual(failure_kind(ProviderUnavailable("HTTP 5034")), "ProviderUnavailable")
+        for reason in ("ReplyTooLarge", "ReplyTruncated", "AmbiguousJSON", "TimeoutError"):
+            self.assertEqual(failure_kind(ProviderUnavailable(reason)), reason)
 
 
 class EffortDefaultTests(unittest.TestCase):

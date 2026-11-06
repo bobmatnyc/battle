@@ -7,20 +7,52 @@ from ..contracts import DecisionProvider, ProviderFailure, Simulation
 from ..command_policy import PROMPT_VERSION, fallback_orders, system_prompt
 from ..presentation import VOICE_PROFILE
 
-# Shapes a ProviderFailure reason may take: "HTTP 429" or an exception type name.
-SAFE_REASON = re.compile(r"HTTP \d{3}|[A-Za-z_][A-Za-z0-9_]{0,63}")
+# Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
+# the exception names the provider adapter reports. Anything else is replaced
+# by the exception type, so free text from a provider never reaches a record.
+HTTP_REASON = re.compile(r"HTTP \d{3}")
+KNOWN_REASONS = frozenset(
+    {
+        # Transport.
+        "TimeoutError",
+        "URLError",
+        "OSError",
+        "ConnectionError",
+        "ConnectionResetError",
+        "ConnectionRefusedError",
+        "RemoteDisconnected",
+        "IncompleteRead",
+        "SSLError",
+        # Body and reply decoding.
+        "JSONDecodeError",
+        "UnicodeDecodeError",
+        "AmbiguousJSON",
+        "NoContent",
+        "ReplyTooLarge",
+        "ReplyTruncated",
+        "KeyError",
+        "IndexError",
+        "TypeError",
+        "ValueError",
+        "AttributeError",
+    }
+)
 
 
 def failure_kind(exc):
     """Why: a fallback must say why the provider failed (HTTP 429, TimeoutError,
     JSONDecodeError) without leaking response content or credentials.
-    What: a ProviderFailure's own reason when it is an HTTP code or a type name;
-    otherwise, and for every other exception, the exception type name only.
+    What: a ProviderFailure's own reason when it is ``HTTP <3 digits>`` or a
+    name in KNOWN_REASONS; otherwise, and for every other exception, the
+    exception type name only.
     Test: `test_unsafe_provider_failure_text_keeps_type_only`,
+    `test_unknown_reason_name_is_not_recorded`,
     `test_http_429_records_http_code_without_body`.
     """
-    if isinstance(exc, ProviderFailure) and SAFE_REASON.fullmatch(str(exc)):
-        return str(exc)
+    if isinstance(exc, ProviderFailure):
+        reason = str(exc)
+        if HTTP_REASON.fullmatch(reason) or reason in KNOWN_REASONS:
+            return reason
     return type(exc).__name__
 
 
@@ -38,6 +70,8 @@ def record_response(telemetry, metadata):
         usage=metadata.get("usage") or {},
         response_id=metadata.get("response_id"),
         finish_reason=metadata.get("finish_reason"),
+        # json, extracted or tool_call; null when a provider does not report it.
+        reply_format=metadata.get("reply_format"),
     )
 
 
@@ -66,6 +100,11 @@ class CommanderService:
     def effort(self):
         return getattr(self.provider, "effort", None)
 
+    @property
+    def response_format(self):
+        # Optional on providers; test doubles may omit it.
+        return getattr(self.provider, "response_format", None)
+
     def decide(self, state, side="confederate", mode="openrouter"):
         """Why: a model may command one side; every outcome must be auditable.
         What: returns a decision record for ``side``. In ``openrouter`` mode it
@@ -73,10 +112,13 @@ class CommanderService:
         validates the proposal, and on any failure falls back to scripted orders
         with ``fallback`` set, the reason, and the rejected proposal kept.
         Response metadata (model, usage, response_id, finish_reason) is kept
-        whenever the provider decoded a body, including on fallback.
+        whenever the provider decoded a body, including on fallback;
+        ``reply_format`` is the provider's (json, extracted, tool_call), or
+        ``none`` when the provider failed.
         Test: `test_invalid_proposal_falls_back_flagged_with_rejected_orders`,
         `test_provider_timeout_falls_back_without_partial_state`,
-        `test_truncated_reasoning_response_keeps_paid_telemetry`.
+        `test_truncated_reasoning_response_keeps_paid_telemetry`,
+        `test_reply_format_records_json_extracted_and_tool_call`.
         """
         observation = self.simulation.observation(state, side)
         observation.pop("dispatches", None)
@@ -101,12 +143,14 @@ class CommanderService:
             # A decoded response that failed to parse was still paid for.
             if isinstance(exc, ProviderFailure):
                 record_response(telemetry, exc.metadata)
+            telemetry["reply_format"] = "none"  # No order object was parsed.
             return self._fallback(
                 state, side, observation, telemetry, "provider_error", failure_kind(exc)
             )
         telemetry["latency_ms"] = self._elapsed(started)
         record_response(telemetry, metadata)
         if not isinstance(result, dict):
+            telemetry["reply_format"] = "none"
             return self._fallback(
                 state, side, observation, telemetry, "invalid_response", "TypeError"
             )
@@ -161,6 +205,7 @@ class CommanderService:
             "usage": {},
             "response_id": None,
             "finish_reason": None,
+            "reply_format": "none",
             "proposed_orders": None,
             "validation": None,  # None: the provider produced nothing to validate.
             "rejected_proposal": None,
