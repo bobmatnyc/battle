@@ -4,7 +4,9 @@ import re
 import time
 from copy import deepcopy
 from ..contracts import DecisionProvider, ProviderFailure, ScenarioCatalog, Simulation
-from ..command_policy import DEFAULT_SCENARIO, fallback_orders, system_prompt
+from ..command_policy import (
+    DEFAULT_SCENARIO, GATE_DEFENDER_POLICY, scripted_actions, system_prompt,
+)
 
 # Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
 # the exception names the provider adapter reports. Anything else is replaced
@@ -138,7 +140,7 @@ class CommanderService:
                 return self.scenarios.resolve()
             return DEFAULT_SCENARIO
 
-    def decide(self, state, side, mode="openrouter"):
+    def decide(self, state, side, mode="openrouter", policy=None):
         """Why: a model may command one side; every outcome must be auditable.
         What: returns a decision record for ``side``. In ``openrouter`` mode it
         asks the provider with that side's prompt and authorized observation,
@@ -147,8 +149,13 @@ class CommanderService:
         Response metadata (model, usage, response_id, finish_reason) is kept
         whenever the provider decoded a body, including on fallback;
         ``reply_format`` is the provider's (json, extracted, tool_call), or
-        ``none`` when the provider failed.
-        Test: `test_invalid_proposal_falls_back_flagged_with_rejected_orders`,
+        ``none`` when the provider failed. In any other mode the scripted
+        control ``policy`` decides (None: ``scripted-fallback-v1``); a
+        ``scripted-gate-defender-v1`` decision also carries the ``standing``
+        instructions it issues and its ``policy``. A model's fallback stays
+        the plain fallback control.
+        Test: `test_model_french_run_gives_the_computer_allies_the_gate_defender`,
+        `test_computer_gate_defender_orders_close_gate_on_a_delivered_breach`, `test_invalid_proposal_falls_back_flagged_with_rejected_orders`,
         `test_provider_timeout_falls_back_without_partial_state`,
         `test_truncated_reasoning_response_keeps_paid_telemetry`,
         `test_reply_format_records_json_extracted_and_tool_call`.
@@ -156,7 +163,7 @@ class CommanderService:
         observation = self.simulation.observation(state, side)
         observation.pop("dispatches", None)
         if mode != "openrouter":
-            return self._scripted(state, side, observation)
+            return self._scripted(state, side, observation, policy)
         scenario = self.scenario(state)
         telemetry = {
             "requested_model": self.provider.model,
@@ -216,14 +223,15 @@ class CommanderService:
     def _elapsed(self, started):
         return round((self.timer() - started) * 1000, 1)
 
-    def _scripted(self, state, side, observation):
+    def _scripted(self, state, side, observation, policy=None):
         # The scripted control, chosen explicitly; not a fallback.
-        return {
+        standing, orders = scripted_actions(
+            policy, observation, self.simulation.role(state, side)
+        )
+        record = {
             "source": "scripted",
             "side": side,
-            "orders": self.simulation.validate_orders(
-                state, side, fallback_orders(observation, self.simulation.role(state, side))
-            ),
+            "orders": self.simulation.validate_orders(state, side, orders),
             "text": "General, we shall proceed according to our standing orders.",
             "observation": observation,
             "turn": state["turn"],
@@ -232,6 +240,11 @@ class CommanderService:
             "model": None,
             "voice_profile": self.display_scenario(state).voice_profile,
         }
+        if policy == GATE_DEFENDER_POLICY:
+            # Only this control adds fields, so other records keep their shape;
+            # replay issues the stored instructions without re-running the policy.
+            record.update(policy=policy, standing=standing)
+        return record
 
     def _fallback(self, state, side, observation, telemetry, stage, reason):
         record = {

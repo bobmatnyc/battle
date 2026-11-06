@@ -120,11 +120,20 @@ SCRIPTED_POLICIES = (OPPONENT_POLICY, GATE_DEFENDER_POLICY)
 
 
 def scripted_policy(entry, side):
-    """The entry's scripted control for ``side``: the gate-aware defender when
-    the entry has gates and ``side`` defends, else ``scripted-fallback-v1``."""
+    """The entry's scripted control for ``side``, whether the player or the
+    computer runs it: the gate-aware defender when the entry has gates and
+    ``side`` defends, else ``scripted-fallback-v1``."""
     if entry.gates is not None and entry.sides[side].role == "defender":
         return GATE_DEFENDER_POLICY
     return OPPONENT_POLICY
+
+
+def scripted_actions(policy, observation, role):
+    """``(standing, orders)`` of scripted control ``policy`` for a side in
+    ``role``; only the gate-aware defender issues standing instructions."""
+    if policy == GATE_DEFENDER_POLICY:
+        return gate_defender_actions(observation)
+    return [], fallback_orders(observation, role)
 
 # Voice profile id -> prose instruction. Entries name one of these.
 VOICES = VOICE_PROFILES

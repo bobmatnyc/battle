@@ -1,8 +1,8 @@
 """Full local simulation use case, sharing the same ports as interactive play."""
 
 from ..command_policy import (
-    GATE_DEFENDER_POLICY, OPPONENT_POLICY, SCRIPTED_POLICIES, fallback_orders,
-    gate_defender_actions, scripted_policy,
+    GATE_DEFENDER_POLICY, OPPONENT_POLICY, SCRIPTED_POLICIES, scripted_actions,
+    scripted_policy,
 )
 from ..contracts import BattleRepository, Commander, ScenarioCatalog, Simulation
 from .replay import ReplayService
@@ -23,6 +23,9 @@ class HeadlessRunner:
     of a gated entry, else ``scripted-fallback-v1``). A run under the gate
     policy records it as ``player_policy`` in run metadata and its summary;
     other runs keep their metadata and output unchanged.
+    ``opponent`` picks the computer side's control by the same rule (None:
+    the entry's choice); its decisions carry a gate defender's standing
+    instructions, and run metadata records it as ``opponent``.
     ``scenario_id`` selects the catalog entry (None: the catalog default);
     an unknown id raises ``UnknownScenario`` before anything is stored.
     Test: `test_model_player_run_records_side_decisions_and_replays`,
@@ -40,7 +43,7 @@ class HeadlessRunner:
         *,
         player_side=None,
         player_mode="scripted",
-        opponent=OPPONENT_POLICY,
+        opponent=None,
         scenario_id=None,
         player_policy=None,
     ):
@@ -53,8 +56,6 @@ class HeadlessRunner:
             )
         if player_mode not in PLAYER_MODES:
             raise ValueError(f"Unknown player provider {player_mode!r}")
-        if opponent != OPPONENT_POLICY:
-            raise ValueError(f"Unknown opponent control {opponent!r}")
         self.repository = repository
         self.simulation = simulation
         self.commander = commander
@@ -64,7 +65,7 @@ class HeadlessRunner:
         # Two-sided scenarios only: the victory kind refuses any other count.
         self.opponent_side = next(s for s in sides if s != player_side)
         self.player_mode = player_mode
-        self.opponent = opponent
+        self.opponent = self._opponent(opponent)
         self.player_policy = self._policy(player_policy)
 
     @property
@@ -72,6 +73,17 @@ class HeadlessRunner:
         # Scripted-vs-scripted run: the interactive player's side issues direct
         # orders without decision records, as the Union always did.
         return self.player_mode == "scripted" and self.player_side == self.scenario.player
+
+    def _opponent(self, requested):
+        # The computer side's control, by the same rule as the player's.
+        default = scripted_policy(self.scenario, self.opponent_side)
+        if requested is None:
+            return default
+        if requested not in SCRIPTED_POLICIES:
+            raise ValueError(f"Unknown opponent control {requested!r}")
+        if requested == GATE_DEFENDER_POLICY and default != GATE_DEFENDER_POLICY:
+            raise ValueError(f"{GATE_DEFENDER_POLICY} needs the defending side of a gated scenario")
+        return requested
 
     def _policy(self, requested):
         if not self.baseline:
@@ -129,7 +141,7 @@ class HeadlessRunner:
                 for action in self._player_actions(state):
                     commit(action)
                 opponent_decision = self.commander.decide(
-                    state, side=self.opponent_side, mode="scripted"
+                    state, side=self.opponent_side, mode="scripted", policy=self.opponent
                 )
             commit({"type": "advance", "decision": opponent_decision})
         summary = {
@@ -153,11 +165,9 @@ class HeadlessRunner:
             )
             return [{"type": "decision", "decision": decision}]
         view = self.simulation.view(state, self.player_side)
-        standing = []
-        if self.gate_policy:
-            standing, orders = gate_defender_actions(view)
-        else:
-            orders = fallback_orders(view, self.scenario.sides[self.player_side].role)
+        standing, orders = scripted_actions(
+            self.player_policy, view, self.scenario.sides[self.player_side].role
+        )
         actions = [{"type": "standing", "instruction": i} for i in standing]
         return actions + ([{"type": "orders", "orders": orders}] if orders else [])
 

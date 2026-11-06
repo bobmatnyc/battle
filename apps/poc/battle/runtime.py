@@ -62,7 +62,11 @@ def record_decision(s,decision):
     carry no ``side`` and keep their original Confederate effect, so old saves
     replay unchanged; that default applies only to snapshots without stored
     ``sides`` (poc-8 and older), and a poc-9 decision must name its side.
+    A decision with a ``standing`` list (the computer-run gate defender)
+    issues those instructions first, through ``standing.issue`` as a player's
+    are; a decision without the field is applied exactly as before.
     Test: `test_decision_orders_are_issued_for_their_side`,
+    `test_model_french_run_gives_the_computer_allies_the_gate_defender`,
     `test_decision_without_side_replays_as_confederate`,
     `test_poc9_decision_without_side_is_refused`.
     """
@@ -73,6 +77,8 @@ def record_decision(s,decision):
     if side not in engine.sides(s):raise ValueError('Unknown decision side.')
     s['decisions'].append(deepcopy(decision))
     engine.emit(s,'commander_decision',source=decision['source'],decision_index=len(s['decisions'])-1)
+    for instruction in decision.get('standing',()):
+        standing.issue(s,side,instruction)
     for order in decision['orders']:
         engine.issue(s,side,order,decision['source'])
 

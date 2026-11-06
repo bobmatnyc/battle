@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from .bootstrap import PLAYER_SCENARIOS, build_application, build_headless, build_replay
-from .command_policy import GATE_DEFENDER_POLICY, OPPONENT_POLICY, SCRIPTED_POLICIES
+from .command_policy import GATE_DEFENDER_POLICY, SCRIPTED_POLICIES
 from .config import EFFORTS
 from .contracts import UnknownScenario
 
@@ -51,9 +51,10 @@ def main():
     )
     headless.add_argument(
         "--opponent",
-        choices=[OPPONENT_POLICY],
-        default=OPPONENT_POLICY,
-        help="Scripted control for the opposing side (recorded in run metadata)",
+        choices=list(SCRIPTED_POLICIES),
+        default=None,
+        help="Scripted control for the opposing side (default: the scenario's choice; "
+        "recorded in run metadata)",
     )
     headless.add_argument(
         "--player-policy",

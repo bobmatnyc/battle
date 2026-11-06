@@ -90,7 +90,6 @@ def build_headless(
     `test_build_headless_refuses_unknown_scenario`.
     """
     from .adapters.openrouter import DisabledProvider
-    from .command_policy import OPPONENT_POLICY
     from .services.headless import HeadlessRunner
 
     scenarios = scenarios if scenarios is not None else build_scenarios()
@@ -129,7 +128,7 @@ def build_headless(
         ReplayService(repository, simulation),
         player_side=player_side,
         player_mode=player_provider,
-        opponent=opponent or OPPONENT_POLICY,
+        opponent=opponent,
         scenario_id=scenario_id,
         player_policy=player_policy,
     )

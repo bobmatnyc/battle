@@ -110,7 +110,8 @@ class Commander(Protocol):
     @property
     def response_format(self) -> str | None: ...
     def decide(
-        self, state: Document, side: str, mode: str = "openrouter"
+        self, state: Document, side: str, mode: str = "openrouter",
+        policy: str | None = None,
     ) -> Document: ...
     def chat(
         self, state: Document, text: str, mode: str = "openrouter"

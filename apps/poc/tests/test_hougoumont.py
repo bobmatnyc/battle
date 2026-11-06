@@ -245,6 +245,53 @@ class GateDefenderPolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "defending side of a gated scenario"):
                 build_headless(Path(tmp) / "lrt.sqlite", player_policy="scripted-gate-defender-v1")
 
+    def test_model_french_run_gives_the_computer_allies_the_gate_defender(self):
+        from battle.command_policy import fallback_orders
+        from test_headless_player import FakeProvider
+
+        provider = FakeProvider(lambda p: fallback_orders(p["observation"], "attacker"))
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "french.sqlite"
+            runner = build_headless(db, scenario_id=ENTRY.id, scenarios=catalog(),
+                                    player_side="french", player_provider="openrouter",
+                                    provider=provider)
+            result = runner.run()
+            self.assertTrue(provider.calls)
+            self.assertEqual(result["run"]["opponent"], "scripted-gate-defender-v1")
+            final = build_replay(db).repository.load(result["game_id"])
+            allied = [d for d in final["decisions"] if d["side"] == "allied"]
+            self.assertTrue(allied)
+            self.assertEqual({(d["source"], d["policy"]) for d in allied},
+                             {("scripted", "scripted-gate-defender-v1")})
+            self.assertEqual((allied[0]["turn"], allied[0]["standing"]),
+                             (0, [{"unit_id": "A1", "profile_id": "close_on_breach"}]))
+            # Issued once, through courier or voice delivery like a player's.
+            self.assertEqual([(o["unit_id"], o["profile_id"], o["sent_turn"], o["status"])
+                              for o in final["standing_orders"]],
+                             [("A1", "close_on_breach", 0, "delivered")])
+            self.assertEqual(result["replay"]["status"], "identical")
+            # A fresh replay service has no provider and re-runs no policy.
+            self.assertEqual(build_replay(db).verify(result["game_id"])["status"], "identical")
+
+    def test_computer_gate_defender_orders_close_gate_on_a_delivered_breach(self):
+        run = EngineRun(arranged(F1={"pos": [10, 10]}))  # Inside the compound.
+        run.advance()
+        self.assertIn([10, 10], [c["pos"] for c in engine.view(run.state, "allied")["contacts"]])
+        commander = CommanderService(run.sim, DisabledProvider(), scenarios=catalog())
+        decision = commander.decide(run.state, "allied", mode="scripted",
+                                    policy="scripted-gate-defender-v1")
+        self.assertEqual(decision["orders"][0],
+                         {"unit_id": "A1", "stance": "close_gate", "destination": None})
+        run.step({"type": "advance", "decision": decision})
+        recorded = run.state["decisions"][-1]
+        self.assertEqual((recorded["policy"], recorded["standing"]),
+                         ("scripted-gate-defender-v1",
+                          [{"unit_id": "A1", "profile_id": "close_on_breach"}]))
+        self.assertIn(("A1", "close_gate", "delivered"),
+                      [(o["unit_id"], o["stance"], o["status"]) for o in run.state["orders"]
+                       if o["side"] == "allied"])
+        self.assertEqual(run.replay.verify(run.game_id)["status"], "identical")
+
 
 class HoldCompoundEngineTests(unittest.TestCase):
     def test_gate_closes_with_french_inside_and_cuts_them_off(self):
