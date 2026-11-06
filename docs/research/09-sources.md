@@ -371,3 +371,19 @@ Access date for every entry: **2026-11-06 (UTC)**. Used in [37 — first five se
 **Gareth Glover Collection — "Private Matthew Clay at Quatre-Bras and Waterloo".** [Page](https://garethglovercollection.com/?p=130). Read the publication details (Bedford, 1853; Ken Trotman reprint 2006, ISBN 1905074255) and Glover's argument that two break-ins were merged in later retellings. Clay's text itself was not read.
 
 **Re-read 2026-11-06 (already cited in [34](34-six-era-command-tests.md)):** Age of Revolution *Closing the Gates*, NAM *Battle of Waterloo*, NPS *April 19, 1775*, NPS Oates report, Paradata *Pegasus Bridge*. **Not retrievable or not read 2026-11-06:** the *Army History* "Field study of Hill 223" item cited in [34](34-six-era-command-tests.md) (HTTP 403 at history.army.mil and at a ky.ng.mil mirror; no readable copy found; kept in 34 and the fixture marked dead and unverified). The second item, "The other sixteen", was replaced in 34 and the fixture by the S41 Project MUSE listing (HTTP 200, 2026-11-06 UTC); no Spring 2026 *Army History* article under that title was found; the Clements Library Gage manuscript (HTTP 403); Mastriano's 2007 report (unreadable PDF) and later book; York's official Medal of Honor citation; Beamish vol. 2 (Baring); Clay 1853; Siborne, *Waterloo Letters* (1891). [37](37-first-five-selection-register.md) relies on none of these.
+
+## Concord North Bridge spec — 2026-11-06
+
+Access date for every entry: **2026-11-06 (UTC)**. Used in [43 — Concord North Bridge scenario build spec](43-concord-scenario-spec.md). Read through a summarising fetch, so quoted phrases may be paraphrased.
+
+### S47
+
+**Minute Man National Historical Park — *The events of April 19*.** [Page](https://www.nps.gov/mima/learn/historyculture/april-19-1775.htm), updated 2025-05-17. Read the North Bridge timeline (07:30, 09:00, 09:30, 11:00), Laurie's three companies of about 96 men, about 400 militia, Barrett's and Buttrick's orders, the three first shots and the unordered British fire, and the casualties at the bridge. Does not say which bank each force held, and does not confirm the plank removal.
+
+### S48
+
+**National Park Service — *Captain Isaac Davis*.** [Page](https://www.nps.gov/people/captain-isaac-davis.htm), updated 2023-01-17. Read the company size (about 40), the company's place in front of the column with Buttrick and Robinson, and Davis's death at the bridge with Private Abner Hosmer. Names no successor to Davis.
+
+### S49
+
+**American Battlefield Trust — *Old North Bridge*.** [Page](https://www.battlefields.org/learn/articles/old-north-bridge), published 2023-03-04, updated 2024-04-19. Read the force figures (two British companies guarding the bridge, about 90 men; close to 400 militia). Differs from S47 on the number of companies. Names neither bank, nor who fired first.
