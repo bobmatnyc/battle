@@ -138,12 +138,55 @@ def geometry_entry(name, g, note=None):
     )
 
 
+# concord_policy constants that are not hexes and stay as the baseline has them.
+NON_GEOMETRY = ("FRESH", "CLEAR_RADIUS")
+
+
+def _names(code):
+    """Global names ``code`` and its nested code objects (comprehensions,
+    generator expressions, lambdas) read."""
+    names = set(code.co_names)
+    for const in code.co_consts:
+        if isinstance(const, types.CodeType):
+            names |= _names(const)
+    return names
+
+
+def _unbound(fn, hexes):
+    """Upper-case constants ``fn`` reads that ``rebind`` would leave on the
+    baseline: any outside ``hexes`` and ``NON_GEOMETRY``, and any but
+    ``NON_GEOMETRY`` in a module function it calls by name, since such a
+    helper keeps its own module's globals."""
+    scope, own = fn.__globals__, _names(fn.__code__)
+    found = {n for n in own if n.isupper()} - set(hexes) - set(NON_GEOMETRY)
+    seen, todo = {fn.__code__}, [scope[n] for n in own if isinstance(scope.get(n), types.FunctionType)]
+    while todo:
+        helper = todo.pop()
+        if helper.__code__ in seen:
+            continue
+        seen.add(helper.__code__)
+        names = _names(helper.__code__)
+        found |= {n for n in names if n.isupper()} - set(NON_GEOMETRY)
+        todo.extend(scope[n] for n in names if isinstance(scope.get(n), types.FunctionType))
+    return sorted(found)
+
+
 def rebind(fn, g):
-    """``fn`` (a ``concord_policy`` function) with its module's geometry
-    constants replaced by ``g``'s. The code object is shared, so the
-    order logic cannot drift from the baseline policy."""
+    """Why: a variant's policies must run on its own hexes, never silently on
+    the baseline's.
+    What: ``fn`` (a ``concord_policy`` function) with its module's geometry
+    constants replaced by ``g``'s. The code object is shared, so the order
+    logic cannot drift from the baseline policy. Raises ValueError when an
+    upper-case constant ``fn`` reads would stay on the baseline (``_unbound``).
+    Test: `test_rebound_policies_run_the_baseline_code`,
+    `test_rebind_refuses_a_constant_it_does_not_replace`.
+    """
     hexes = {"APPROACH": g.approach, "BRIDGE": g.bridge, "EAST_END": g.east_end, "TOWN": g.town}
-    return types.FunctionType(fn.__code__, {**vars(concord_policy), **hexes}, fn.__name__,
+    unbound = _unbound(fn, hexes)
+    if unbound:
+        raise ValueError(f"{fn.__name__} reads {', '.join(unbound)}, which rebind does not replace; "
+                         "add it to the geometry or to NON_GEOMETRY")
+    return types.FunctionType(fn.__code__, {**fn.__globals__, **hexes}, fn.__name__,
                               fn.__defaults__, fn.__closure__)
 
 

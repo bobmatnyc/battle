@@ -171,6 +171,35 @@ class SensitivityPolicyTests(unittest.TestCase):
                 orders = command_policy.scripted_actions(entry.scripted["provincial"], view, "attacker")[1]
                 self.assertEqual([o["destination"] for o in orders],
                                  [list(SENSITIVITY_GEOMETRY[name].approach[u]) for u in ("P1", "P2", "P3")])
+                # Every geometry constant the copies read is this variant's.
+                g = SENSITIVITY_GEOMETRY[name]
+                for side in ("provincial", "british"):
+                    bound = POLICIES[entry.scripted[side]].__globals__
+                    self.assertEqual((bound["APPROACH"], bound["BRIDGE"], bound["EAST_END"], bound["TOWN"]),
+                                     (g.approach, g.bridge, g.east_end, g.town))
+        self.assertEqual(POLICIES[f"{concord_policy.REGULARS_POLICY}@sensitivity-odd-row-bridge"]
+                         .__globals__["TOWN"], (22, 11))
+
+    def test_rebind_refuses_a_constant_it_does_not_replace(self):
+        # A later concord_policy constant (say WEST_END) would otherwise run on
+        # the baseline hexes in every variant without a word.
+        scope = {**vars(concord_policy), "WEST_END": (11, 10)}
+        for source in ("def probe(o):\n    return WEST_END\n",
+                       "def probe(o):\n    return [p for p in o if p == WEST_END]\n",
+                       "def probe(o):\n    return any(p == WEST_END for p in o)\n"):
+            with self.subTest(source):
+                exec(source, scope)
+                with self.assertRaisesRegex(ValueError, "WEST_END"):
+                    rebind(scope["probe"], BASELINE_GEOMETRY)
+        # A helper called by name runs on its own module's globals, so a
+        # constant it reads cannot be rebound either.
+        for constant in ("WEST_END", "APPROACH"):
+            with self.subTest(helper_reads=constant):
+                exec(f"def _helper(o):\n    return {constant}\n\ndef probe(o):\n    return _helper(o)\n", scope)
+                with self.assertRaisesRegex(ValueError, constant):
+                    rebind(scope["probe"], BASELINE_GEOMETRY)
+        # The real policies bind: every constant they read is a hex or NON_GEOMETRY.
+        self.assertEqual(len(POLICIES), 2 * len(SENSITIVITY))
 
 
 class SensitivityRunTests(unittest.TestCase):
