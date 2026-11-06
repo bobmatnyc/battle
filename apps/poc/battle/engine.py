@@ -18,6 +18,19 @@ def message(s, side, text, observed=None, kind='dispatch'):
 def find_unit(s,uid):
     return next((u for u in s['units'] if u['id']==uid),None)
 
+REFUSING_STATUSES=('routed','lost','merged')
+
+def report_refusal(s,side,unit_id):
+    """Why: commanders must see which units will refuse orders before choosing.
+    What: the poc-8 reason headquarters' own knowledge bars orders to unit_id,
+    or None: 'not_reported' without a delivered report, else 'reported_<status>'
+    for a reported routed/lost/merged formation. Reads only delivered reports.
+    Test: `test_observation_marks_reported_routed_unit_unable_to_accept_orders`."""
+    report=s['friendly_reports'][side].get(unit_id,{})
+    if not report:return 'not_reported'
+    if report.get('status') in REFUSING_STATUSES:return 'reported_'+report['status']
+    return None
+
 def validate_order(s,side,order):
     if s.get('rules')!='poc-8':
         from .engine_v7 import validate_order as legacy_validate
@@ -30,10 +43,9 @@ def validate_order(s,side,order):
     if not u or u['side'] != side:
         raise InvalidOrder('That unit is outside your command.')
     # Use delivered friendly knowledge, avoiding a hidden-state rejection oracle.
-    report=s['friendly_reports'][side].get(u['id'],{})
-    if not report:raise InvalidOrder('That formation has not reported to headquarters.')
-    if report.get('status') in ('routed','lost','merged'):
-        raise InvalidOrder('That unit is reported unable to accept orders.')
+    refusal=report_refusal(s,side,u['id'])
+    if refusal=='not_reported':raise InvalidOrder('That formation has not reported to headquarters.')
+    if refusal:raise InvalidOrder('That unit is reported unable to accept orders.')
     order_rules.validate(s,side,order)
     return u
 
