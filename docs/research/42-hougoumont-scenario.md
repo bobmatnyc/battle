@@ -1,0 +1,65 @@
+# 42 — Hougoumont north gate: the catalog entry (`poc-10`)
+
+**Date:** 2026-11-05. **Requirement:** add the Hougoumont north-gate scenario ([37 §2](37-first-five-selection-register.md#2-napoleonic--hougoumont)) as a player-facing catalog entry on `poc-10`, using the gate mechanism of [41](41-poc10-gates.md), with a courtyard-possession victory kind and a minimal Napoleonic voice and command profile. No browser work: the mission panel, summit marker, outcome headline and side labels in `static/` remain Little Round Top copy.
+
+## What changed (implemented)
+
+- `apps/poc/battle/scenario_hougoumont.py`: the entry `HOUGOUMONT_NORTH_GATE` (id `hougoumont-north-gate`, label `hougoumont-north-gate-v1`), registered second in `bootstrap.PLAYER_SCENARIOS`. Little Round Top stays the default.
+- `apps/poc/battle/victory.py`: the kind `hold-compound`.
+- `apps/poc/battle/presentation.py`: voice profile `napoleonic-en-v1`; `VOICE_PROFILES` maps each id to its instruction. `command_policy.VOICES` is that map.
+- `apps/poc/battle/comms.py`: profile `napoleonic-courier-v1`, which reuses the 1863 transport rates under the label `1815 · voice / foot runner`. `comms.location` reports the profile the side's commander was built with.
+- `apps/poc/battle/scenario_entry.py`: validation accepts any known voice and communications profile. A new optional field `provenance` (field name → note) must start each note with `sourced:`, `reconstruction:` or `authored:`. It is never stored in a snapshot or shown in a prompt.
+- `apps/poc/battle/services/commander.py`: decision and chat records name the battle's own voice profile rather than the 1863 constant. Little Round Top records are unchanged.
+
+## Edition decision
+
+No new edition. `poc-10` has not been released beyond this repository. `hold-compound` is reachable only by an entry whose objective lies in a gated compound, and gates exist only in `poc-10` snapshots. Every existing snapshot names `hold-objective`, whose code is unchanged. The communications change returns the same profile for every existing save, because each stores `civil-war-courier-v1`. Evidence: the pinned `cb7faa0` digests in `tests/test_gates.py` still match, and the scripted Little Round Top headless final state on this branch has the same SHA-256 as at `5195aa1` (`042ef7d0…`, game id blanked).
+
+## Provenance per field
+
+Sources: S44 Wellington's dispatch; S45 Age of Revolution object pages (Wellington's fire note, the gate lock); S46 Glover on Clay; *Closing the Gates* and NAM as re-read in [37](37-first-five-selection-register.md). The same notes are in the entry's `provenance` field.
+
+| Field | Value | Basis |
+|---|---|---|
+| Location | Hougoumont · Waterloo, Belgium | **Sourced** (S44) |
+| Date | 1815-06-18 | **Sourced** (S44) |
+| Start time | 11:20 local | **Reconstruction.** Ten minutes before the closing at about 11:30 on *Closing the Gates* (secondary, cites no primary source). S44 dates the first attacks from about ten. The time is uncertain, and Glover (S46) argues that two break-ins were merged. |
+| Weather | Fixed POC condition | **Authored.** No source read gives it. |
+| Sides | `allied` "Allied", defender; `french` "French", attacker | **Sourced.** A Guards garrison (S44, S45) against a French party (S45, NAM). |
+| Player side | `allied` | **Authored.** The gate decision is the garrison's. |
+| Allied mission | Hold the walled farm to turn 60; keep the north gate open for supply; close it on a breach | **Reconstruction.** "Keep the supply entrance open, close on a breach" is the REC entry in the 37 register. Holding the farm follows S44 (held all day) and the fire note in S45 (hold the walls). No recorded order concerns the gate. |
+| French mission | Pass men through the north gate before it shuts; hold the inside of the walls for 6 turns | **Reconstruction.** Inferred from the outcome pages. No French order was found. |
+| Map | Compound of 7 hexes (château and courtyards), north gate open, walled garden east, orchard east of that, wood south, three lanes | **Authored, not surveyed.** No plan or survey was read. That the north gate was open for friendly traffic is **sourced** (*Closing the Gates*, NAM). |
+| Unit names | Gate party · 2nd Coldstream Guards; Coldstream companies · farm courtyard; Guards companies · château court; Legros's party; Assault group · follow-on companies; Skirmishers · wood edge | **Sourced** where named: 2nd Battalion Coldstream Guards and Sous-Lieutenant Legros (S45), Byng's Guards detachment (S44). The split into these detachments is **authored**. |
+| Unit strengths | Allied 15, 60, 60; French 30, 80, 40 | **Authored**, with one exception. Legros's party is 30, set from the "about 30" who got in on *Closing the Gates* (secondary, uncited). This is a count of the men who entered, not a sourced party size. |
+| Skill, morale, cartridges, tools | POC detachment defaults; 40 cartridges a man; smoothbore muskets | **Authored.** |
+| Gate labour | close 45, bar 30, force 120, work cap 20 | **Authored sensitivity parameters** ([37 open question 6](37-first-five-selection-register.md#6-open-questions-for-the-user)); stored with `basis: "authored POC sensitivity parameter; not a historical estimate"`. The gate party of 15 shuts the gate in 3 intervals and bars it in 2 more. Two parties of 20 or more force a closed gate in 3. |
+| Victory | `hold-compound`, 6 turns, deadline 60 turns (30 minutes) | **Authored.** |
+| Voice and command profile | `napoleonic-en-v1`; `napoleonic-courier-v1` | **Authored.** Minimal, see below. |
+
+## The `hold-compound` victory kind
+
+Through the `victory.py` interface ([39](39-scenario-sides-and-victory-kinds.md#victory-kind-interface)):
+
+- `problems(entry)`: needs exactly two sides, one defender and one attacker, a positive integer `hold_turns`, an `objective_name`, and an objective hex inside a building compound that declares openings. Otherwise the catalog refuses the entry.
+- `setup(entry)`: stores `feature_id`, the compound's hexes, `hold_turns` and `objective_name` in the snapshot, so replay needs no catalog.
+- `score(s)`: the capture counter rises in each interval in which the attacker has an effective formation (not routed, lost or merged, strength above 0) inside the compound and the defender has none. Any other interval resets it. The attacker wins at `hold_turns`. The defender wins at the deadline. Either side wins when the other has no effective formation anywhere. Both broken is a draw.
+- **Fail closed.** A snapshot with missing or invalid `feature_id`, `compound`, `hold_turns` or `objective_name` raises `ValueError`; no winner is awarded.
+
+Units cut off inside count as inside. Possession means uncontested possession: a single effective defender inside stops the count.
+
+## Voice and command profile (minimal)
+
+The schema required one value each for `voice_profile` and `communications`, and allowed only the 1863 ones. The Napoleonic voice copies the 1863 instruction with the period set to 1815, the player addressed as Colonel, and "companies" and "cartridges" added to the vocabulary. The communications profile changes only the label in the commander's observation. **Deferred:** period transport rates (gallopers, aides-de-camp), the scripted staff text, which still says "General", the display label in `present_view`, which still reports the 1863 voice, and all browser copy.
+
+## Scripted-vs-scripted run
+
+`build_headless` with `--scenario hougoumont-north-gate` and both sides scripted ends at turn 60 with `allied`, "The Allied garrison held the farm until the scenario deadline." Replay is `identical` (62 revisions). The final strengths are A1 15, A2 38 (routed), A3 0 (lost), F1 7 (routed), F2 68 and F3 31. No French unit entered the compound. The gate stayed open, because the scripted control issues no *Close the gate* order. Legros's party routed at turn 4 under fire from the walls. The follow-on companies stayed between the lane and the wood edge, reacting locally to fire. This tests the plumbing. It is not a historical comparison.
+
+## Not modelled
+
+The garden wall is cover only (cover 30), not a wall: movement and sight cross it. There is no south gate or other entrance. There is no fire in the château, no push-back at the gate ([41](41-poc10-gates.md#choices-made-where-the-spec-was-open)) and no second break-in variant (S46).
+
+## Tests
+
+`apps/poc/tests/test_hougoumont.py`: registration with the dry run; the authored map, compound, open gate and lanes; provenance labels, missions as reconstruction, and a refused unlabelled note; mission isolation in each side's prompt and the 1815 voice; the 1815 command label and refusal of unknown profiles; `hold-compound` registration refusals, fail-closed scoring on six kinds of missing or invalid data, uncontested possession and the deadline; the gate fixture under `hold-compound`; a scripted headless run that replays `identical`; and a `BattleService` `clock_step` with the Allied player, in which only the French receive computer orders and the decision records `napoleonic-en-v1`.

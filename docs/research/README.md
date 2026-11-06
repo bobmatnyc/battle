@@ -127,3 +127,5 @@ Historical calibration is much less complete than the game-system survey. One in
 [40 — Batch A: model baseline on Little Round Top](40-batch-a-lrt-model-baseline.md) records 14 live model runs and 2 scripted controls on `poc-8`, with per-run outcomes, casualties, tokens, latency and cost, a comparability statement, stated limits and a local artifact manifest. Data: [`summary.json`](../../apps/poc/experiments/batch-a/summary.json).
 
 [41 — Building gates](41-poc10-gates.md) records the `poc-10` edition: openings on building edges with gate states, the *Close the gate* order and a close-on-breach standing order, authored labour as sensitivity parameters, units cut off inside, and `poc-9` frozen for replay.
+
+[42 — Hougoumont north gate](42-hougoumont-scenario.md) adds the Hougoumont catalog entry on `poc-10`: an authored map of the walled farm and its north gate, reconstructed missions, authored gate labour, the `hold-compound` victory kind, a minimal 1815 voice and command profile, and the basis of every field.

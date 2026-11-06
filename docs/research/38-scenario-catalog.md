@@ -59,8 +59,8 @@ The catalog refuses, at construction, any entry the `poc-9` engine cannot run. `
 | `map` grid | 24 × 21 hexes, 50 m | `grid.COLS`, `grid.ROWS`, `grid.valid` |
 | `seconds_per_turn` | 30 | Delay text in `engine.issue` |
 | `order_catalog` | The full `poc-8` catalog | `orders.TEMPLATES`, `orders.validate` |
-| `communications` | `civil-war-courier-v1` | `comms.PROFILE` |
-| `voice_profile` | `civil-war-en-v1` | `presentation.VOICE_INSTRUCTION` |
+| `communications` | `civil-war-courier-v1`; from `poc-10` also `napoleonic-courier-v1` (same rates, [42](42-hougoumont-scenario.md)) | `comms.PROFILES` |
+| `voice_profile` | `civil-war-en-v1`; from `poc-10` also `napoleonic-en-v1` ([42](42-hougoumont-scenario.md)) | `presentation.VOICE_PROFILES` |
 
 Other `poc-9` limits that validation does not check: every unit is present at turn 0 (no arrival schedule); line of sight is fixed at 7 hexes with no darkness; `weapon_class` is a label used for resupply and identification, with one fire model for all; split and combine use 12 and 80 troops; the browser's mission panel, summit marker and outcome headline are Little Round Top copy; contact reports within an interval are ordered by side id.
 
