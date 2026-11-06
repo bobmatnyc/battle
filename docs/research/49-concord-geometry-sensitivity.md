@@ -113,7 +113,7 @@ The historical event checks are the five rows of [48 §6](48-concord-historical-
 
 The provincial result depends on the authored ring geometry. It holds when the approach puts two or more provincial companies within 2 hexes of the British bridge-end company, and fails when it puts one. The record (S47) does not fix those hexes.
 
-**For the next step.** The fire-release check ([48 §7 gap 1](48-concord-historical-orders-run.md#7-gaps-and-divergences)) cannot be judged on the baseline alone, because a geometry change with no source behind it flips the baseline's outcome. The variants in `SENSITIVITY` are held-out cases for that check: it should report the baseline and each variant, not only the run that matches the record.
+**For the next step.** The fire-release check ([48 §7 gap 1](48-concord-historical-orders-run.md#7-gaps-and-divergences)) cannot be judged on the baseline alone, because a geometry change with no source behind it flips the baseline's outcome. The variants in `SENSITIVITY` are sensitivity controls for that check: it should report the baseline and each variant, not only the run that matches the record. No case in this set is untouched validation.
 
 ## 7. Tests
 
