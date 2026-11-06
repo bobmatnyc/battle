@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from battle import engine, grid, runtime, scenario
+from battle import engine, formations, gates, grid, runtime, scenario
 from battle.adapters.rules import ScenarioRegistry
 from battle.bootstrap import build_headless, build_replay
 from battle.scenario import LITTLE_ROUND_TOP
@@ -196,6 +196,66 @@ class GateObservationTests(unittest.TestCase):
         s = advance_until(s, lambda s: known_state(s, "grey") != "open")
         self.assertIn(known_state(s, "grey"), ("closed", "barred"))
         self.assertGreater(s["turn"], seen)
+
+
+def shut_unseen(s):
+    """Closes the true gate without any report reaching either headquarters."""
+    gate(s)["state"] = "closed"
+    gates.walls(s)
+    return s
+
+
+def order_seen_by_grey(s):
+    s = grey_orders(s, move("G2", (11, 10)))
+    order = next(o for o in engine.view(s, "grey")["orders"] if o["unit_id"] == "G2")
+    return order["arrival_turn"], s["dispatches"]["grey"][-1]["text"]
+
+
+class GateKnowledgeTests(unittest.TestCase):
+    """Headquarters' estimates and checks use the gate state it knows, not the truth."""
+
+    def test_delivery_estimate_ignores_a_gate_shut_without_a_report(self):
+        # G2 is in the farm; grey believes the gate is open.
+        positions = {"G2": FARM, "B1": (9, 10)}
+        known_open = order_seen_by_grey(battle(positions=positions))
+        secretly_shut = order_seen_by_grey(shut_unseen(battle(positions=positions)))
+        self.assertEqual(secretly_shut, known_open)
+        self.assertIn("Expected delivery in", known_open[1])
+
+    def test_delivery_estimate_is_unknown_without_a_known_route(self):
+        s = battle(state="closed", positions={"G2": FARM})  # Briefed shut: no known way in.
+        arrival, text = order_seen_by_grey(s)
+        self.assertIsNone(arrival)
+        self.assertIn("Expected delivery time unknown", text)
+
+    def test_split_across_a_wall_is_rejected(self):
+        s = battle()  # B1 in the back room 9,10; 9,9 lies beyond the wall.
+        with self.assertRaisesRegex(ValueError, "wall"):
+            runtime.apply(s, {"type": "formation", "instruction": {
+                "kind": "split", "unit_id": "B1", "count": 12, "destination": [9, 9]}})
+
+    def test_combine_across_a_wall_is_rejected(self):
+        s = battle(positions={"G1": (10, 9), "G2": FARM})  # Adjacent, but 10,9 is outside the walls.
+        with self.assertRaisesRegex(ValueError, "wall"):
+            formations.validate(s, "grey", {"kind": "combine", "unit_id": "G1", "partner_id": "G2"})
+
+    def test_split_through_a_gate_shut_before_regrouping_is_refused(self):
+        s = battle(positions={"B1": GATEWAY, "G2": (20, 18)})
+        s = runtime.apply(s, {"type": "formation", "instruction": {
+            "kind": "split", "unit_id": "B1", "count": 12, "destination": GATE_OUTSIDE}})
+        s = advance(shut_unseen(s), 4)
+        self.assertEqual(s["formation_ops"][0]["status"], "refused")
+        self.assertEqual([u["id"] for u in s["units"]], ["B1", "G1", "G2"])
+
+
+class GateApproachTests(unittest.TestCase):
+    def test_attackers_march_to_a_closed_gate_and_force_it(self):
+        # G2 starts two hexes from the gate's outside hex, ordered into the farm.
+        s = battle(state="closed", positions={"G1": (14, 9), "G2": (14, 10)}, armed=("G2",))
+        self.assertEqual(grid.distance(unit(s, "G2")["pos"], GATE_OUTSIDE), 2)
+        s = advance_until(grey_orders(s, move("G2", FARM)), lambda s: gate(s)["state"] != "closed", limit=12)
+        self.assertEqual(transitions(s), [("closed", "forced")])
+        self.assertEqual(gate(s)["force_effort"], 80)
 
 
 class GateEditionTests(unittest.TestCase):

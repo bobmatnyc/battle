@@ -85,16 +85,21 @@ def issue(s,side,order,source='human'):
     version=max([o['version'] for o in s['orders'] if o['unit_id']==u['id']]+[u['order_version']])+1
     known=s['friendly_reports'][side][u['id']]['pos']
     method='voice' if u['id']==commander['id'] else 'courier'
-    packet=comms.envelope(s,commander['pos'],u['id'],known,method)
-    delay=packet['expected_turn']-s['turn']
+    # poc-10: estimate over the gate states headquarters knows, never the true ones.
+    packet=comms.envelope(s,commander['pos'],u['id'],known,method,cells=gates.known_cells(s,side))
     oid=f'O{len(s["orders"])+1}'
     packet['id']=oid
     item={'id':oid,'side':side,**deepcopy(order),'source':source,'version':version,
-          'sent_turn':s['turn'],'arrival_turn':s['turn']+delay,'status':'en_route','transport':packet}
+          'sent_turn':s['turn'],'arrival_turn':packet['expected_turn'],'status':'en_route','transport':packet}
     s['orders'].append(item)
     emit(s,'order_sent',order_id=oid,side=side,unit_id=u['id'],destination=order.get('destination'),version=version,arrival_turn=item['arrival_turn'],transport=deepcopy(packet))
-    message(s,side,f'{u["id"]}: {order["stance"]} order dispatched by {"voice" if method=="voice" else "runner"}. Expected delivery in {delay*30} seconds.',kind='order')
+    message(s,side,f'{u["id"]}: {order["stance"]} order dispatched by {"voice" if method=="voice" else "runner"}. {estimate(s,item["arrival_turn"])}',kind='order')
     return item
+
+def estimate(s,arrival_turn):
+    """Headquarters' delivery estimate in words; unknown without a known route."""
+    if arrival_turn is None:return 'Expected delivery time unknown; no known route.'
+    return f'Expected delivery in {(arrival_turn-s["turn"])*30} seconds.'
 
 def summary(u):
     result={k:deepcopy(u[k]) for k in ('id','side','name','pos','initial','strength','ammo','morale','suppression','fatigue','status','target','stance','order_version')}
@@ -233,6 +238,10 @@ def advance(s):
         if move_target is not None and u['pos']!=move_target:
             u['move_credit']=min(400,u['move_credit']+max(45,115-u['fatigue']//3-u['suppression']//2))
             route=grid.path(s['cells'],u['pos'],move_target,blocked=occupied)
+            gateway=None if route else gates.approach(s,u['pos'],move_target)
+            if gateway and u['pos']!=gateway:
+                # poc-10: a shut compound is approached at its gate, which is then forced.
+                route=grid.path(s['cells'],u['pos'],gateway,blocked=occupied)
             if route:
                 nxt=route[0]; cost=grid.cost(s['cells'],u['pos'],nxt)
                 if u['move_credit']>=cost:

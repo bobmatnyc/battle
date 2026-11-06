@@ -62,6 +62,10 @@ def walls(s):
     features = gated(s)
     if not features:return
     for c in s['cells'].values():c.pop('walls', None)
+    _draw(s['cells'], features)
+
+
+def _draw(cells, features):
     for f in features:
         inside = {grid.key(p) for p in f['compound']}
         gaps = {(grid.key(o['inside']), grid.key(o['outside'])) for o in f['openings'] if o['state'] in PASSABLE}
@@ -69,8 +73,35 @@ def walls(s):
             for n in grid.neighbors(p):
                 if grid.key(n) in inside or (grid.key(p), grid.key(n)) in gaps:continue
                 for a, b in ((p, n), (n, p)):
-                    c = s['cells'][grid.key(a)]
+                    c = cells[grid.key(a)]
                     if b not in c.setdefault('walls', []):c['walls'].append(list(b))
+
+
+def known_cells(s, side):
+    """Why: headquarters must not learn a gate's state from its own estimates.
+    What: a copy of the cells whose ``walls`` come from the gate states
+    ``side`` knows (briefed or reported), not the true ones. None in a battle
+    without gates, where the live cells carry no hidden walls.
+    Test: `test_delivery_estimate_ignores_a_gate_shut_without_a_report`."""
+    if not present(s):return None
+    cells = {k: {f: v for f, v in c.items() if f != 'walls'} for k, c in s['cells'].items()}
+    _draw(cells, [f for f in s['feature_reports'][side].values() if f.get('openings')])
+    return cells
+
+
+def across_wall(cells, a, b):
+    """True when ``cells`` show a wall or shut gate on the edge from ``a`` to ``b``."""
+    return list(b) in cells[grid.key(a)].get('walls', ())
+
+
+def approach(s, pos, target):
+    """Why: troops ordered into a shut compound must march to its gate to force it.
+    What: for a ``target`` inside a gated compound that ``pos`` lies outside,
+    the outside hex of the nearest opening (by distance, then id); else None.
+    Test: `test_attackers_march_to_a_closed_gate_and_force_it`."""
+    f = compound_of(s, target)
+    if not f or list(pos) in f['compound']:return None
+    return min(f['openings'], key=lambda o: (grid.distance(pos, o['outside']), o['id']))['outside']
 
 
 def sealed(f):

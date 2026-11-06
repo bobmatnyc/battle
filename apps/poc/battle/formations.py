@@ -1,6 +1,6 @@
 """Bounded aggregate reorganization; authored POC rules, no individual roster."""
 from copy import deepcopy
-from . import grid,comms
+from . import grid,comms,gates
 
 MIN_STRENGTH=12
 MAX_STRENGTH=80
@@ -23,16 +23,19 @@ def validate(s,side,request):
         engine.validate_order(s,side,{'unit_id':uid,'stance':'hold','destination':None})
         if uid not in units:raise ValueError('That formation has not reported to headquarters.')
     a=units[ids[0]]
+    cells=gates.known_cells(s,side)  # poc-10: walls as headquarters knows them; None without gates.
     if kind=='split':
         n=request['count'];p=request['destination']
         if type(n) is not int or n<MIN_STRENGTH or a['strength']-n<MIN_STRENGTH:
             raise ValueError('Each resulting formation needs at least 12 reported troops.')
         if not grid.valid(p) or grid.distance(a['pos'],p)!=1:raise ValueError('Select an adjacent hex for the detached formation.')
+        if cells and gates.across_wall(cells,a['pos'],p):raise ValueError('A wall or shut gate separates that hex from the formation.')
         if any(u['pos']==p and u['status'] not in ('lost','merged') for u in known['units']):raise ValueError('That hex is reported occupied by a friendly formation.')
     else:
         b=units[ids[1]]
         if not compatible(a,b):raise ValueError('Combine requires matching troops, weapons, proficiency and reconnaissance roles.')
         if grid.distance(a['pos'],b['pos'])!=1:raise ValueError('Move the formations into adjacent hexes before combining.')
+        if cells and gates.across_wall(cells,a['pos'],b['pos']):raise ValueError('A wall or shut gate separates the formations.')
         if a['strength']+b['strength']>MAX_STRENGTH:raise ValueError('Combined strength may not exceed 80 troops.')
         if b['id']==known['command']['unit_id']:raise ValueError('Select the headquarters unit as the surviving formation.')
     return ids
@@ -100,7 +103,7 @@ def progress(s):
         a=units[0]
         if op['kind']=='split':
             n=op['count'];p=op['destination']
-            if a['strength']-n<MIN_STRENGTH or grid.distance(a['pos'],p)!=1:
+            if a['strength']-n<MIN_STRENGTH or grid.distance(a['pos'],p)!=1 or gates.across_wall(s['cells'],a['pos'],p):
                 finish(s,op,'refused','Strength or position changed before the split.',units);continue
             if any(u['strength']>0 and u['pos']==p for u in s['units']):
                 finish(s,op,'refused','The detachment could not occupy the assigned hex.',units);continue
@@ -121,7 +124,8 @@ def progress(s):
             finish(s,op,'completed',f'{n} troops detached as {uid}; ammunition apportioned.',[a,child])
         else:
             b=units[1]
-            if grid.distance(a['pos'],b['pos'])!=1 or not compatible(a,b) or a['strength']+b['strength']>MAX_STRENGTH:
+            if (grid.distance(a['pos'],b['pos'])!=1 or gates.across_wall(s['cells'],a['pos'],b['pos'])
+                    or not compatible(a,b) or a['strength']+b['strength']>MAX_STRENGTH):
                 finish(s,op,'refused','Position, strength or compatibility changed before assembly.',units);continue
             before=[deepcopy(a),deepcopy(b)]
             for field in ('strength','initial','ammo','loss_credit','tools'):a[field]+=b[field]

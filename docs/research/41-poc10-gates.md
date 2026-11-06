@@ -21,9 +21,12 @@ New games use `poc-10`. Saved `poc-1` to `poc-9` games keep their editions and r
 | Standing order | `close_on_breach` (`standing-orders-v2`, offered only in battles with a gate). Thresholds as *Hold ground firmly*. Delivered like any standing order. When an enemy unit is inside the compound and an opening can still be closed, the unit takes a local `close_gate` mission and reports it, with no courier from headquarters. |
 | Labour | Per interval a party adds `min(strength, work_cap)`. `close_labour` takes the opening from `closing` to `closed`; a further `bar_labour` takes it to `barred`, which completes the mission. |
 | Contact | Closing continues under fire; the party holds at its work. When the labour is done but an enemy unit stands in the gateway hex, the mission is `blocked` and a `gate_blocked` event names the units; it completes in the first interval the gateway is clear. |
+| Approach | A unit outside a compound whose destination lies inside it, and which finds no route in, marches to the outside hex of the nearest opening (by distance, then id). There it forces the gate as below, or waits at a `barred` one. |
 | Forcing | Units on the outside hex of a `closed` gate whose ordered destination lies in the compound add `min(strength, work_cap)` each per interval. At `force_labour` the gate becomes `forced`. A `barred` gate cannot be forced. |
 | Cut off | When a gate shuts and the compound has no passable opening, units of other sides than the closer's inside it are marked `cut_off`. They stay inside, cannot move or send couriers out, and a resupply mission to a depot outside fails locally. Their report of being cut off is a normal courier report, so it cannot leave the walls. A `forced` gate clears the mark. |
 | Knowledge | Gate buildings are briefed in their initial state. A change is reported like fieldworks: a unit within three hexes with sight of the building reports it by voice or courier. Headquarters sees the change only on delivery, or at once when its own command detachment observes it. God Mode shows the current state. |
+| Estimates | Headquarters plans the delivery estimate of an order or standing order over the walls of the gate states it knows, never the true ones. When it knows no route, the estimate is unknown: `arrival_turn` is null and the dispatch reads "Expected delivery time unknown". The courier itself still meets the true walls. |
+| Split and combine | Headquarters may not split a detachment onto a hex, or combine two formations, across a wall or a gate it knows to be shut. At regrouping the true walls apply: an operation across a wall or shut gate is refused. |
 | Events | `gate_state` (feature, opening, before, after, unit, order version, labour, effort, pushers, units inside and on the outside hex), `gate_work`, `gate_blocked`, `standing_gate_close`, `units_cut_off`, `units_reconnected`. |
 
 ## Authored values
@@ -42,8 +45,8 @@ The scenario entry carries `gates: GateEntry(close_labour, bar_labour, force_lab
 
 ## Not done
 
-No historical Hougoumont entry, courtyard-possession victory kind, browser drawing of walls and gate state, or Napoleonic voice and command profile. Split and combine can still place a new unit across a wall.
+No historical Hougoumont entry, courtyard-possession victory kind, browser drawing of walls and gate state, or Napoleonic voice and command profile.
 
 ## Tests
 
-`tests/test_gates.py`, on `tests/scenario_fixtures.gate_entry` (test-only, not in the player catalog): one test per transition (open→closing, closing→closed, closed→barred, closed→forced, forced→closing, and barred not forced), gateway contact under fire, cut-off with failed resupply and an undeliverable report and order, the standing order firing on a breach, delayed knowledge, entry validation, a headless run that replays `identical`, and the two `cb7faa0` digests.
+`tests/test_gates.py`, on `tests/scenario_fixtures.gate_entry` (test-only, not in the player catalog): one test per transition (open→closing, closing→closed, closed→barred, closed→forced, forced→closing, and barred not forced), gateway contact under fire, cut-off with failed resupply and an undeliverable report and order, the standing order firing on a breach, delayed knowledge, entry validation, delivery estimates that ignore an unreported shut gate and are unknown without a known route, split and combine across a wall, an attacker marching two hexes to a closed gate and forcing it, a headless run that replays `identical`, and the two `cb7faa0` digests.

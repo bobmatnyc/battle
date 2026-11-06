@@ -49,7 +49,7 @@ def issue(s,side,instruction):
     u=engine.validate_order(s,side,{'unit_id':instruction['unit_id'],'stance':'hold','destination':None})
     commander=comms.command_unit(s,side)
     packet=comms.envelope(s,commander['pos'],u['id'],s['friendly_reports'][side][u['id']]['pos'],
-                          'voice' if commander['id']==u['id'] else 'courier')
+                          'voice' if commander['id']==u['id'] else 'courier',cells=gates.known_cells(s,side))
     version=max([o['version'] for o in s['standing_orders'] if o['unit_id']==u['id']]+[u['standing_version']])+1
     oid=f'SO{len(s["standing_orders"])+1}';packet['id']=oid
     item={'id':oid,'side':side,**deepcopy(instruction),'version':version,'sent_turn':s['turn'],
