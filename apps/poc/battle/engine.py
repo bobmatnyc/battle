@@ -160,6 +160,36 @@ def deliver_reports(s):
         emit(s,'report_received',report_id=report['transport']['id'],side=side,report_kind=report['kind'],observed_turn=report['observed_turn'])
     s['reports']=pending
 
+def contest(s,moves,occupied):
+    """Why: two units wanting the same free hex both waited every interval, so
+    neither ever moved (docs/research/45).
+    What: the proposals of ``moves`` (unit, hex, cost) that may proceed. A move
+    into an ``occupied`` hex is refused. Of several units wanting one free hex,
+    the one refused most often since it last moved (``contest_wait``) enters,
+    lowest id on a tie; each other contender's ``contest_wait`` rises by one.
+    The caller clears ``contest_wait`` when a unit moves, so a contender waits
+    at most one interval per rival before it has priority. Emits
+    ``movement_blocked`` for every refusal, with ``reason`` ``contested``.
+    Test: `test_priority_rotates_and_never_starves_a_unit`,
+    `test_two_units_contending_for_one_hex_both_move`,
+    `test_three_way_contention_lets_every_unit_through`."""
+    wanted={}
+    for m in moves:wanted.setdefault(grid.key(m[1]),[]).append(m[0])
+    # Winners are fixed before any wait changes, so the order of moves cannot matter.
+    winners={k:min(rivals,key=lambda r:(-r.get('contest_wait',0),r['id']))['id'] for k,rivals in wanted.items()}
+    allowed=[]
+    for u,p,cost in moves:
+        k=grid.key(p)
+        if k in occupied:
+            emit(s,'movement_blocked',unit_id=u['id'],destination=p);continue
+        if winners[k]!=u['id']:
+            u['contest_wait']=u.get('contest_wait',0)+1
+            emit(s,'movement_blocked',unit_id=u['id'],destination=p,reason='contested',
+                 winner_id=winners[k],contest_wait=u['contest_wait'])
+            continue
+        allowed.append((u,p,cost))
+    return allowed
+
 def advance(s):
     """Mutates only supplied state; all fire uses the same pre-damage snapshot."""
     if s.get('rules')=='poc-1':
@@ -255,11 +285,10 @@ def advance(s):
         elif u['stance'] not in ('rest','dig_in') and u['local_action'] in ('hold','observe') and s['turn']-u.get('last_attacked_turn',-99)>1:
             u['fatigue']=max(0,u['fatigue']-2)
             if u['status']!='routed': u['morale']=min(90,u['morale']+1)
-    # A conservative occupancy rule: no swaps or stacking; collisions wait.
-    counts={grid.key(p):sum(p==other[1] for other in moves) for _,p,_ in moves}
-    for u,p,cost in moves:
-        if grid.key(p) in occupied or counts[grid.key(p)]>1:
-            emit(s,'movement_blocked',unit_id=u['id'],destination=p); continue
+    # A conservative occupancy rule: no swaps or stacking. poc-12: one of the
+    # units wanting a free hex enters it (contest); the others wait.
+    for u,p,cost in contest(s,moves,occupied):
+        u.pop('contest_wait',None)
         old=u['pos']; u['pos']=p; u['move_credit']-=cost; u['fatigue']=min(100,u['fatigue']+3)
         emit(s,'unit_moved',unit_id=u['id'],origin=old,destination=p,decision_seq=u['local_decision_seq'])
         if p==u['target'] and u['stance'] not in ('resupply','recon'):
