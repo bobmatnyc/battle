@@ -387,3 +387,37 @@ Access date for every entry: **2026-11-06 (UTC)**. Used in [43 — Concord North
 ### S49
 
 **American Battlefield Trust — *Old North Bridge*.** [Page](https://www.battlefields.org/learn/articles/old-north-bridge), published 2023-03-04, updated 2024-04-19. Read the force figures (two British companies guarding the bridge, about 90 men; close to 400 militia). Differs from S47 on the number of companies. Names neither bank, nor who fired first.
+
+## Pegasus Bridge source pass — 2026-11-06
+
+Access date for every entry: **2026-11-06 (UTC)**. Used in [52 — Pegasus Bridge scenario plan](52-pegasus-bridge-scenario-plan.md). S51 and S52 were read as page images at full resolution (no transcription exists on the site), so their wording is the document's own. S50, S53 to S56 were read through a summarising fetch and may be paraphrased; re-read the page before quoting it outward.
+
+### S50
+
+**Airborne Assault Museum (ParaData) — *Pegasus Bridge*.** [Page](https://paradata.org.uk/content/4663998) (content 4663998), cited without an S-id in [34](34-six-era-command-tests.md) and the fixture. Read the summary text and the list of linked items: two post-combat reports (S51, S52), a training map titled "Oslo", an aerial photo of the assault gliders, photos of the Gondrée café and an anti-tank gun, a nominal roll ("List of those who made up the Coup de Main", content 4663861; not read). Museum narrative, secondary. Says five of six gliders landed near the bridges and the canal bridge fell in about 15 minutes.
+
+### S51
+
+**Major R. J. Howard — "'Pegasus' Bridge Coup de Main", 1st report.** Two typed sheets on ParaData: [page 1](https://paradata.org.uk/view/4519192-pegasus-bridge-coup-de-main-report-by-major-howard-page-1) (item 4519192), [page 2](https://paradata.org.uk/view/4519397-pegasus-bridge-coup-de-main-report-by-major-howard-page-2) (item 4519397); collection 377158; museum reference "Archive box 4E2 2/7/13, donated by Lt.Gen. Gray in March 1987". The item description reads "A typed transcript of the first report by Major Howard, written whilst in hospital 1944." **Primary** (the commander's own after-action account; contains his statement of the task and platoon tasks), but a typed transcript with hand corrections, not the original, and not the operation order itself. The page images are served through the site's book viewer (`/book-explorer/json/377158/0/<sheet>/<sheet>`, `hires` field).
+
+### S52
+
+**Major Ian Toler, Glider Pilot Regiment — "Report on Operation Tonga", "Operation TONGA — COUP DE MAIN".** Typed, TOP SECRET, to OC I Wing, The Glider Pilot Regt; signed at RAF Brise Norton, 20 June 1944. ParaData, collection 377229: [sheet 1](https://paradata.org.uk/view/4521570-report-on-operation-tonga-page-1) (4521570), [sheet 2](https://paradata.org.uk/view/4521720-report-on-operation-tonga-page-2) (4521720), sheet 3 (4521537), [sheet 4](https://paradata.org.uk/view/4522099-report-on-operation-tonga-page-4) (4522099). **Primary, pilots' view**: a post-operation report by the commander of "B" Squadron, with a one-paragraph statement of the task (sheet 1, section 2) and a per-glider narrative. It is the Glider Pilot Regiment's report, not the 6th Airborne Division's Tonga order. **Sheet 5 (item 4521463) is an Ordnance Survey plan of Countess Wear Bridge and the Exeter Canal, not a Normandy map: it is misfiled in this collection and unrelated to the operation.** The page listing says "sheet 1 of 5"; ParaData's page 3 (sheet 3) was not in the list on the Pegasus Bridge page (S50).
+
+### S53
+
+**Airborne Assault Museum (ParaData) — *Jim Wallwork's account*.** [Page](https://paradata.org.uk/content/4663334) (content 4663334), cited without an S-id in [34](34-six-era-command-tests.md) and the fixture. Read for training, take-off (5 June, 22:45 as summarised), the first landing "just after midnight" and the Parachute Brigade arriving about 03:00, Lord Lovat about 13:00. The take-off time differs from S51 (23:54); neither is needed for the scenario. A participant's later recollection; secondary for timings.
+
+### S54
+
+**Wikipedia — *Operation Deadstick*.** [Page](https://en.wikipedia.org/wiki/Operation_Deadstick). Secondary and tertiary. Read for the German forces (736th Grenadier Regiment, 716th Infantry Division; Major Hans Schmidt; 50 men; "orders to blow up the two bridges if they were in danger of capture"), the German response by time (01:20, 01:30, 02:00, 03:00, 09:00, afternoon), the British objective wording, the Ham and Jam code words, platoon tasks, the defences (bunkers, pillbox, trenches) and dimensions of bridges and canal. Its bibliography is almost wholly English-language secondary history. The only German-language item is von Keusgen, *Pegasus-Brücke und Batterie Merville*, cited for one point (denial that machine guns stood by the canal bridge). It cites The National Archives WO 171/1239 (7th Parachute Battalion war diary, primary, not read; paid copy). No Schmidt or Luck account is cited. The timings and the 190 ft / 350 ft bridge lengths are the page's, not checked against a primary.
+
+### S55
+
+**Wikipedia — *Hans von Luck*.** [Page](https://en.wikipedia.org/wiki/Hans_von_Luck). Secondary. Read for Luck's 125th Panzer Grenadier Regiment, his request to attack refused by Feuchtinger "citing strict orders not to engage in major operations unless cleared to do so by the high command", the 04:30 and 10:30 divisional orders, and the 17:00 attack toward Bénouville turned back by naval fire. Cites Mitcham (1983, pp. 82–83) and Ambrose's *D-Day*, not Luck's memoir *Panzer Commander*, for 6 June. Does not question Luck's reliability on 6 June.
+
+### S56
+
+**Normandy War Guide — *Pegasus Bridge*.** [Page](https://www.normandywarguide.com/articles/pegasus-bridge). Visitor guide, tertiary, no bibliography. Read for the silent unlit landing, the 10-minute canal-bridge fight, the PIAT counter-attack, the captured anti-tank gun fired at a gunboat, the Café Gondrée "at the foot" of the bridge and the commandos' early-afternoon arrival with the piper.
+
+**Not retrievable or not read 2026-11-06:** Imperial War Museums *Operation Deadstick* page (HTTP 403); Luck, *Panzer Commander* (1989); Ambrose, *Pegasus Bridge* (1985); Mitcham (1983); Keusgen; TNA WO 171/1239 and any 2nd Ox and Bucks, 6th Airlanding Brigade or 716th Infantry Division war diary; Bundesarchiv holdings; the 6th Airborne Division operation order itself.
