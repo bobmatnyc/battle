@@ -25,7 +25,7 @@ class MissionTextTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             app = Application(Path(directory) / 'battle.sqlite', offline=True)
             gid, state = app.gid, app.state()
-            self.assertEqual(state['rules'], 'poc-12')
+            self.assertEqual(state['rules'], 'poc-13')
             app.mutate('/api/orders', dict(game_id=gid, revision=state['revision'], orders=[
                 {'unit_id': 'U1', 'destination': [11, 9], 'stance': 'move'}]))
             while (saved := app.store.load(gid))['status'] == 'active':

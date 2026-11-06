@@ -43,7 +43,7 @@ def catalog(s):
     if s.get('rules')=='poc-5':
         from .orders_v5 import catalog as previous_catalog
         return previous_catalog(s)
-    entries=TEMPLATES if s.get('rules') in ('poc-8','poc-9','poc-10','poc-11','poc-12') else TEMPLATES[:2]
+    entries=TEMPLATES if s.get('rules') in ('poc-8','poc-9','poc-10','poc-11','poc-12','poc-13') else TEMPLATES[:2]
     version=VERSION
     if gates.present(s):entries,version=entries+[gates.TEMPLATE],GATE_VERSION
     return [dict(deepcopy(t),message_key='order.template.'+t['id'],version=version) for t in entries]
@@ -101,7 +101,7 @@ def complete(s,u,reason):
 
 def decide(s,u,contacts):
     # poc-12: assaults on a gated compound press on within 5 hexes (tactics_v9).
-    decision=(tactics_v9 if s.get('rules')=='poc-12' else tactics).decide(s,u,contacts)
+    decision=(tactics_v9 if s.get('rules') in ('poc-12','poc-13') else tactics).decide(s,u,contacts)
     decision['policy']=VERSION
     stance=u['stance']
     if u['status']=='routed':return decision

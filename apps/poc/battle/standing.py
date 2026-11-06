@@ -43,7 +43,7 @@ def recommend(u):
 
 def issue(s,side,instruction):
     from . import engine
-    if s.get('rules') not in ('poc-8','poc-9','poc-10','poc-11','poc-12'):raise ValueError('Reset to enable configurable standing orders in a new battle.')
+    if s.get('rules') not in ('poc-8','poc-9','poc-10','poc-11','poc-12','poc-13'):raise ValueError('Reset to enable configurable standing orders in a new battle.')
     if not isinstance(instruction,dict) or set(instruction)!={'unit_id','profile_id'}:raise ValueError('Choose a unit and standing-order template.')
     if instruction['profile_id'] not in [t['id'] for t in templates(s)]:raise ValueError('Unknown standing-order template.')
     u=engine.validate_order(s,side,{'unit_id':instruction['unit_id'],'stance':'hold','destination':None})

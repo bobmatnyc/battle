@@ -121,8 +121,8 @@ class HeadlessPlayerTests(unittest.TestCase):
             self.assertEqual(
                 state["run"],
                 {
-                    "rules": "poc-12",
-                    "scenario": "little-round-top-v12",
+                    "rules": "poc-13",
+                    "scenario": "little-round-top-v13",
                     "scenario_id": "little-round-top",
                     "variant": None,
                     "prompt_version": PROMPT_VERSION,

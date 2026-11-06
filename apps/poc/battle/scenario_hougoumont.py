@@ -105,7 +105,7 @@ HOUGOUMONT_NORTH_GATE = ScenarioEntry(
     prompt_version='hougoumont-side-v1',
     prompt_setting='Hougoumont, Waterloo, 1815',
     labels={'poc-10': 'hougoumont-north-gate-v1', 'poc-11': 'hougoumont-north-gate-v2',
-            'poc-12': 'hougoumont-north-gate-v3'},
+            'poc-12': 'hougoumont-north-gate-v3', 'poc-13': 'hougoumont-north-gate-v4'},
     location='Hougoumont · Waterloo, Belgium',
     date='1815-06-18',
     start_time='11:20:00',

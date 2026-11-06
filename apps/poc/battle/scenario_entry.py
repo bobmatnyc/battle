@@ -18,8 +18,8 @@ from . import grid
 # Sides and roles of every edition before poc-9, which fixed them in the rules.
 SIDES = ("union", "confederate")
 LEGACY_ROLES = {"union": "defender", "confederate": "attacker"}
-RULES_VERSION = "poc-12"
-EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9", "poc-10", "poc-11", "poc-12")
+RULES_VERSION = "poc-13"
+EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9", "poc-10", "poc-11", "poc-12", "poc-13")
 # poc-9 takes side ids, names, roles, the player side and the victory kind from
 # the entry (stored in the snapshot); these remain fixed by the rules.
 ROLES = ("defender", "attacker")

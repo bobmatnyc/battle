@@ -142,7 +142,7 @@ def at_the_north_gate(rules):
 
 
 class HougoumontPushTests(unittest.TestCase):
-    def test_scripted_hougoumont_run_on_poc12(self):
+    def test_scripted_hougoumont_run_on_poc13(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "hougoumont.sqlite"
             result = build_headless(db, scenario_id=HOUGOUMONT.id, scenarios=catalog()).run()
@@ -153,7 +153,7 @@ class HougoumontPushTests(unittest.TestCase):
         # turn 17 (A1, routed, gives way one step), but A3 holds inside and the garrison
         # holds to the deadline (poc-11: french at turn 58).
         self.assertEqual(result["run"]["opponent"], "scripted-gate-attacker-v1")
-        self.assertEqual((final["rules"], final["winner"], final["turn"]), ("poc-12", "allied", 60))
+        self.assertEqual((final["rules"], final["winner"], final["turn"]), ("poc-13", "allied", 60))
         self.assertEqual([e["turn"] for e in events(final, "unit_routed") if e["unit_id"] == "F1"], [4])
         self.assertEqual(final["reason"], "The Allied garrison held the farm until the scenario deadline.")
         self.assertEqual([(e["turn"], e["unit_id"], e["holder_id"], e["outcome"], e["holder_pos"])

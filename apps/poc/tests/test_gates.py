@@ -276,7 +276,7 @@ class GateEditionTests(unittest.TestCase):
             result = build_headless(db, scenario_id="test-gate", scenarios=catalog).run()
             self.assertEqual(result["replay"]["status"], "identical")
             self.assertEqual(build_replay(db).verify(result["game_id"]), result["replay"])
-            self.assertEqual(build_replay(db).repository.load(result["game_id"])["rules"], "poc-12")
+            self.assertEqual(build_replay(db).repository.load(result["game_id"])["rules"], "poc-13")
 
 
 # Taken at cb7faa0, before poc-10: the scripted poc-9 Little Round Top run

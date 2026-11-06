@@ -118,7 +118,7 @@ EXITS = ([16, 9], [15, 9])
 def corridor(movers, rules="poc-12"):
     """The duel with C1-C3 in the feeders; ``movers`` are ordered out of the pen."""
     entry = dataclasses.replace(
-        DUEL, id="test-corridor", labels={"poc-11": "test-corridor-v1", "poc-12": "test-corridor-v2"},
+        DUEL, id="test-corridor", labels={"poc-11": "test-corridor-v1", "poc-12": "test-corridor-v2", "poc-13": "test-corridor-v3"},
         units=DUEL.units + tuple(UnitEntry(uid, "union", f"Column {uid}", tuple(pos)) for uid, pos in FEEDERS.items()),
         victory=VictoryEntry(kind="hold-objective", objective=(4, 5), deadline_turns=60, objective_name="knoll"))
     s = build_state(dry_run(validate(entry)), rules)
@@ -243,9 +243,9 @@ POC11_OVERRUN_SHA256 = "acb24a0c3d8a7aab4a059b5bf36206fb4a8b1c5fe16271f69ed1ad46
 
 
 class Poc12EditionTests(unittest.TestCase):
-    def test_new_games_use_poc12(self):
+    def test_poc12_games_can_still_be_created(self):
         from battle import scenario
-        self.assertEqual((scenario.create()["rules"], scenario.create()["scenario"]), ("poc-12", "little-round-top-v12"))
+        self.assertEqual((scenario.create("poc-12")["rules"], scenario.create("poc-12")["scenario"]), ("poc-12", "little-round-top-v12"))
 
     def test_poc11_runs_and_saves_keep_their_digests(self):
         import json
