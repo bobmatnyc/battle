@@ -23,6 +23,15 @@ def estimate(enemy, quality, distance):
             'confidence':confidence,'quality':quality,
             'estimate':f'{strength[0]}–{strength[1]} troops · {kind}'}
 
+def sees(s,observer,pos):
+    """Why: at night a unit must not fire at, or report, what it cannot see.
+    What: True when ``pos`` lies within ``observer``'s ``observation_range``
+    (default 7, the ``grid.visible`` cap) and in its line of sight. Only a
+    unit or entry that declares the range (docs/research/53) sees less.
+    Test: `test_target_beyond_the_night_observation_range_is_not_fired_on`."""
+    return (grid.distance(observer['pos'],pos)<=observer.get('observation_range',7)
+            and grid.visible(s['cells'],observer['pos'],pos))
+
 def scan(s):
     """Per-observer evidence. Re-scanning a tick refreshes geometry, not exposure."""
     observers=[u for u in s['units'] if u['strength']>0]
@@ -36,7 +45,7 @@ def scan(s):
         for enemy in sorted(s['units'],key=lambda u:u['id']):
             if enemy['side']==observer['side'] or enemy['strength']<=0: continue
             distance=grid.distance(observer['pos'],enemy['pos'])
-            if distance>observer.get('observation_range',7) or not grid.visible(s['cells'],observer['pos'],enemy['pos']):continue
+            if not sees(s,observer,enemy['pos']):continue
             old=own.get(enemy['id']); gap=s['turn']-old['last_seen'] if old else 99
             exposure=(old['exposure'] if old and gap==0 else
                       min(12,old['exposure']+1) if old and gap==1 else 1)

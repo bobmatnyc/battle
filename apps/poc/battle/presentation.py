@@ -44,9 +44,24 @@ Never invent a messenger, sighting or event merely for atmosphere. These voice
 instructions apply only to prose, never to JSON keys, IDs or legal order values.
 The current demo's output locale is English; localization is a product requirement.'''
 
+# docs/research/53: the 1944 British voice. The address is the company
+# commander's rank, Major (S51 is "the first report by Major Howard"); the
+# register is authored and quotes no historical message.
+WWII_VOICE_PROFILE = 'wwii-1944-en-v1'
+WWII_VOICE_INSTRUCTION = '''Write the human-readable text as a concise British Army report
+appropriate to the Second World War in June 1944. Address the player as Major, the
+company commander; never as General. Use restrained, readable period phrasing such as
+platoon, section, company headquarters, the bridge, wireless, runner, ammunition, and orders.
+Avoid modern idioms such as copy that, ten-four, affirmative, and modern slang. Do not use
+caricatured dialect, invent historical quotations, or obscure the meaning with theatrical archaism.
+Keep every reported fact, uncertainty, map reference and delivery limitation intact.
+Never invent a messenger, sighting or event merely for atmosphere. These voice
+instructions apply only to prose, never to JSON keys, IDs or legal order values.
+The current demo's output locale is English; localization is a product requirement.'''
+
 # Voice profile id -> prose instruction. A scenario entry names one of these.
 VOICE_PROFILES = {VOICE_PROFILE: VOICE_INSTRUCTION, NAPOLEONIC_VOICE_PROFILE: NAPOLEONIC_VOICE_INSTRUCTION,
-                  COLONIAL_VOICE_PROFILE: COLONIAL_VOICE_INSTRUCTION}
+                  COLONIAL_VOICE_PROFILE: COLONIAL_VOICE_INSTRUCTION, WWII_VOICE_PROFILE: WWII_VOICE_INSTRUCTION}
 
 EN_DISPATCH = {
     'order.move.sent': 'To {unit}: Instructions to change position are on their way by runner. Delivery expected in {seconds} seconds.',
@@ -91,18 +106,45 @@ COLONIAL_DISPATCH = {
     'unit.arrived': '{unit} to the Colonel: We are come to the ground appointed.',
     'unit.routed': '{unit} to the Colonel: The company is giving way and falls back.',
 }
+# docs/research/53: 1944 British order text, display only like the 1775 text.
+# Authored phrasing; it quotes no historical order. "Wireless" is the British
+# word for radio in 1944.
+WWII_ORDER_WORDS = {
+    'hold': 'Hold your position', 'move': 'Move to the new position', 'rest': 'Rest the men',
+    'retreat': 'Withdraw', 'resupply': 'Draw ammunition', 'recon': 'Patrol forward',
+    'dig_in': 'Dig in', 'close_gate': 'Close the gate',
+    'hold_fire': 'Hold your fire unless fired upon', 'open_fire': 'Open fire',
+}
+WWII_PATTERNS = [
+    (r'(?P<unit>\w+): (?P<stance>\w+) order dispatched by voice\. (?P<estimate>.*)', 'order.spoken'),
+    (r'(?P<unit>\w+): (?P<stance>\w+) order dispatched by radio\. (?P<estimate>.*)', 'order.radioed'),
+    (r'(?P<unit>\w+): (?P<stance>\w+) order dispatched by runner\. (?P<estimate>.*)', 'order.carried'),
+]
+WWII_DISPATCH = {
+    'order.spoken': 'To {unit}: {words}. Given by word of mouth. {estimate}',
+    'order.radioed': 'To {unit}: {words}. Sent by wireless. {estimate}',
+    'order.carried': 'To {unit}: {words}. Sent by runner. {estimate}',
+    'order.delivered': '{unit} to company headquarters: Order {order} received, sir.',
+    'order.superseded': '{unit} to company headquarters: Order {order} set aside for later orders.',
+    'order.refused': '{unit} to company headquarters: Unable to carry out order {order}.',
+    'unit.arrived': '{unit} to company headquarters: In position.',
+    'unit.routed': '{unit} to company headquarters: We are being pushed back and are falling back.',
+}
 # Voice id -> (patterns tried first, dispatch text, order words).
-VOICE_DISPATCH = {COLONIAL_VOICE_PROFILE: (COLONIAL_PATTERNS, COLONIAL_DISPATCH, COLONIAL_ORDER_WORDS)}
+VOICE_DISPATCH = {COLONIAL_VOICE_PROFILE: (COLONIAL_PATTERNS, COLONIAL_DISPATCH, COLONIAL_ORDER_WORDS),
+                  WWII_VOICE_PROFILE: (WWII_PATTERNS, WWII_DISPATCH, WWII_ORDER_WORDS)}
 
 # Text of a scripted decision record, by voice; other voices keep the 1863 line.
 SCRIPTED_TEXT = 'General, we shall proceed according to our standing orders.'
-SCRIPTED_TEXTS = {COLONIAL_VOICE_PROFILE: 'Colonel, the companies will proceed according to their standing orders.'}
+SCRIPTED_TEXTS = {COLONIAL_VOICE_PROFILE: 'Colonel, the companies will proceed according to their standing orders.',
+                  WWII_VOICE_PROFILE: 'Major, the platoons will carry on under their standing orders.'}
 
 
 # poc-13B review: how staff address the player, by voice. Standing-order,
 # recommendation and staff-assessment text is stored as "General, ..."; a voice
 # listed here shows it with its own title. Other voices add no display field.
-VOICE_ADDRESS = {COLONIAL_VOICE_PROFILE: 'Colonel'}
+# docs/research/53: the 1944 player commands a company, as a Major (S51).
+VOICE_ADDRESS = {COLONIAL_VOICE_PROFILE: 'Colonel', WWII_VOICE_PROFILE: 'Major'}
 
 
 def _address(text, title):

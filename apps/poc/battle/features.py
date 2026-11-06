@@ -1,6 +1,6 @@
 """Authored map features and persistent fieldworks; not surveyed historical data."""
 from copy import deepcopy
-from . import grid
+from . import grid,recon
 
 
 def setup(s,layout):
@@ -52,15 +52,18 @@ def report(s):
         memory=s['feature_observations'].setdefault(u['id'],{})
         observed=[]
         for f in s['map_features']:
-            gate=bool(f.get('openings'))  # poc-10: gate state is observed like fieldworks.
+            # poc-10: gate state is observed like fieldworks; docs/research/53: so is a bridge's.
+            gate=bool(f.get('openings')) or f['kind']=='bridge'
             if not gate and (f['kind']!='fortification' or f['briefed']):continue
-            if grid.distance(u['pos'],f['pos'])>3 or not grid.visible(s['cells'],u['pos'],f['pos']):continue
+            # docs/research/53: a night observation_range also limits what is seen.
+            if grid.distance(u['pos'],f['pos'])>3 or not recon.sees(s,u,f['pos']):continue
             if memory.get(f['id'],0 if gate else None)==f['updated_turn']:continue
             memory[f['id']]=f['updated_turn'];observed.append(deepcopy(f))
         if observed:
-            works=[f for f in observed if not f.get('openings')]
+            works=[f for f in observed if not f.get('openings') and f['kind']!='bridge']
             parts=['fieldworks observed at '+', '.join(str(f['pos']) for f in works)] if works else []
             parts+=[f'{f["name"]} gate {o["state"]}' for f in observed if f.get('openings') for o in f['openings']]
+            parts+=[f'{f["name"]} {f["state"]}' for f in observed if f['kind']=='bridge']
             engine.enqueue(s,u['side'],f'{u["id"]} to headquarters: '+'; '.join(parts)+'.',
                            data={'features':observed},kind='terrain',sender=u['id'])
 

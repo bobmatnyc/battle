@@ -1,6 +1,6 @@
 """Bounded aggregate reorganization; authored POC rules, no individual roster."""
 from copy import deepcopy
-from . import grid,comms,command,gates
+from . import grid,comms,command,gates,recon
 
 MIN_STRENGTH=12
 MAX_STRENGTH=80
@@ -83,7 +83,7 @@ def obstruction(s,units):
         if u['suppression']>20 or s['turn']-u.get('last_attacked_turn',-99)<=2:return 'Incoming fire prevents regrouping.'
         if u.get('withdraw_until',0)>s['turn']:return 'A withdrawal is still in progress.'
         if any(e['side']!=u['side'] and e['strength']>0 and grid.distance(u['pos'],e['pos'])<=5
-               and grid.visible(s['cells'],u['pos'],e['pos']) for e in s['units']):return 'Enemy contact prevents regrouping.'
+               and recon.sees(s,u,e['pos']) for e in s['units']):return 'Enemy contact prevents regrouping.'  # docs/research/53
     return None
 
 def progress(s):

@@ -13,8 +13,9 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from . import grid, scenario_checks, scenario_command
+from . import grid, scenario_checks, scenario_command, scenario_wwii
 from .scenario_command import CommandEntry, WeaponEntry
+from .scenario_wwii import BridgeEntry, SignalEntry
 
 # Sides and roles of every edition before poc-9, which fixed them in the rules.
 SIDES = ("union", "confederate")
@@ -32,7 +33,8 @@ GATE_ORDER_CATALOG = ORDER_CATALOG + ("close_gate",)
 PROVENANCE = ("sourced:", "reconstruction:", "authored:")
 # comms.PROFILES ids; the Napoleonic profile shares the 1863 transport rates.
 # poc-13B: the 1775 profile adds a voice reach (scenario_command).
-COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1", scenario_command.COLONIAL_COMMUNICATIONS)
+COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1", scenario_command.COLONIAL_COMMUNICATIONS,
+                  scenario_wwii.RADIO_COMMUNICATIONS)
 
 
 def unit(uid, side, name, pos):
@@ -40,7 +42,7 @@ def unit(uid, side, name, pos):
     return {'id':uid,'side':side,'name':name,'pos':pos,'initial':40,'strength':40,
             'ammo':1600,'morale':85,'suppression':0,'fatigue':0,'status':'ready',
             'target':None,'stance':'hold','move_credit':0,'loss_credit':0,
-            'order_version':0,'skill':70,'unit_type':'infantry','weapon_class':'rifled muskets',
+            'order_version':0,'skill':70,'unit_type':'infantry','weapon_class':scenario_command.DEFAULT_WEAPON_CLASS,
             'recon_role':'line','recon_skill':35,'local_action':'hold','local_reason':'Awaiting contact; hold position.',
             'tactical_target':None,'last_attacked_turn':-99,'withdraw_until':0}
 
@@ -244,6 +246,10 @@ class ScenarioEntry:
     fire: FireEntry | None = None  # poc-13; None means FireEntry().
     command: CommandEntry | None = None  # poc-13B succession; None: none.
     weapons: Mapping[str, WeaponEntry] | None = None  # poc-13B; None: rifle baseline.
+    # docs/research/53 (1944): bridge state, codeword signals, night observation.
+    bridges: tuple[BridgeEntry, ...] | None = None
+    signals: tuple[SignalEntry, ...] | None = None
+    observation_range: int | None = None  # None: each unit's own (7 hexes).
     # Side id -> scripted control id (command_policy.SCRIPTED_POLICIES) for an
     # entry with its own controls (Concord); None: the gate or fallback rule.
     scripted: Mapping[str, str] | None = None
@@ -312,6 +318,7 @@ def validate(entry):
     problems.extend(scenario_checks.fire_problems(entry, entry.fire or FireEntry()))
     problems.extend(scenario_command.command_problems(entry))  # poc-13B
     problems.extend(scenario_command.weapon_problems(entry))
+    problems.extend(scenario_wwii.problems(entry))  # docs/research/53
     problems.extend(_scripted_problems(entry))
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
@@ -399,7 +406,7 @@ def dry_run(entry):
     road hex lies on the grid. Returns ``entry``.
     Test: `test_registry_dry_run_refuses_terrain_gaps_and_off_grid_features`.
     """
-    problems = _feature_problems(entry.map.features)
+    problems = scenario_checks.feature_problems(entry.map.features)
     if not problems:
         try:
             state = build_state(entry)
@@ -408,6 +415,7 @@ def dry_run(entry):
         else:
             problems.extend(_terrain_problems(state["cells"]))
             problems.extend(scenario_checks.water_problems(entry, state["cells"]))
+            problems.extend(scenario_wwii.bridge_cell_problems(entry, state["cells"]))
             for f in state.get("map_features", []):
                 hexes = ([f["pos"]] if "pos" in f else []) + list(f.get("hexes", []))
                 if not all(grid.valid(list(p)) for p in hexes):
@@ -440,42 +448,6 @@ def _has_gates(entry):
     return any(b.get("openings") for b in entry.map.features.get("buildings", ()))
 
 
-def _opening_problems(b):
-    """A gated building: its ``pos`` in its compound, each opening on the
-    edge between a compound hex and an outside neighbour, a known state."""
-    from . import gates
-
-    compound = [tuple(p) for p in b.get("compound", [b["pos"]])]
-    problems = []
-    if tuple(b["pos"]) not in compound or not all(grid.valid(list(p)) for p in compound):
-        problems.append(f"building {b['id']!r} compound must hold its hex and stay on the grid")
-    ids = [o.get("id") for o in b["openings"]]
-    if len(set(ids)) != len(ids):
-        problems.append(f"building {b['id']!r} opening ids must be unique")
-    for o in b["openings"]:
-        inside, outside = tuple(o["inside"]), tuple(o["outside"])
-        if o.get("state") not in gates.STATES:
-            problems.append(f"opening {o.get('id')!r} state must be one of {gates.STATES}")
-        if (inside not in compound or outside in compound or not grid.valid(list(outside))
-                or list(outside) not in grid.neighbors(list(inside))):
-            problems.append(f"opening {o.get('id')!r} must join a compound hex to an outside neighbour")
-    return problems
-
-
-def _feature_problems(features):
-    problems = []
-    for road in features.get("roads", ()):
-        if not all(grid.valid(list(p)) for p in road["points"]):
-            problems.append(f"road {road['id']!r} has points off the grid")
-    for kind in ("buildings", "works"):
-        for f in features.get(kind, ()):
-            if not grid.valid(list(f["pos"])):
-                problems.append(f"{kind[:-1]} {f['id']!r} at {f['pos']} is off the grid")
-            elif kind == "buildings" and f.get("openings"):
-                problems.extend(_opening_problems(f))
-    return problems
-
-
 def _at_least(rules, edition):
     return EDITIONS.index(rules) >= EDITIONS.index(edition)
 
@@ -506,6 +478,8 @@ def build_state(entry, rules=None):
         raise ValueError(f"{rules} has no impassable water; a river needs poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_command.declares(entry):
         raise ValueError(f"{rules} has no succession, voice reach or weapon table; they need poc-13.")
+    if not _at_least(rules, 'poc-13') and scenario_wwii.declares(entry):
+        raise ValueError(f"{rules} has no bridge state, radio, signals or night range; they need poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))
@@ -576,6 +550,7 @@ def build_state(entry, rules=None):
             u.setdefault('fire_posture', s['fire_rules']['default_posture'])
             s['friendly_reports'][u['side']][u['id']]['fire_posture'] = u['fire_posture']
         scenario_command.setup(s, entry, units)  # poc-13B: writes nothing without the data.
+        scenario_wwii.setup(s, entry, units)  # docs/research/53: nor does the 1944 data.
     return s
 
 

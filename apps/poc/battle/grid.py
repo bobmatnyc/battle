@@ -37,7 +37,9 @@ def cost(cells, a, b):
 
 def passable(cell):
     """poc-13: impassable water (``water``) is crossed only at a ``crossing``
-    (bridge or ford). Cells without ``water`` (every earlier edition) pass."""
+    (bridge or ford). Cells without ``water`` (every earlier edition) pass.
+    docs/research/53: a bridge whose ``bridge_state`` is ``destroyed`` does not."""
+    if cell.get('bridge_state')=='destroyed':return False
     return not cell.get('water') or bool(cell.get('crossing'))
 
 def path(cells, start, goal, blocked=()):

@@ -67,3 +67,40 @@ def water_problems(entry, cells):
 
 def has_water(entry):
     return any(c.get("water") for c in entry.map.terrain().values())
+
+
+def _opening_problems(b):
+    """A gated building: its ``pos`` in its compound, each opening on the
+    edge between a compound hex and an outside neighbour, a known state."""
+    from . import gates
+
+    compound = [tuple(p) for p in b.get("compound", [b["pos"]])]
+    problems = []
+    if tuple(b["pos"]) not in compound or not all(grid.valid(list(p)) for p in compound):
+        problems.append(f"building {b['id']!r} compound must hold its hex and stay on the grid")
+    ids = [o.get("id") for o in b["openings"]]
+    if len(set(ids)) != len(ids):
+        problems.append(f"building {b['id']!r} opening ids must be unique")
+    for o in b["openings"]:
+        inside, outside = tuple(o["inside"]), tuple(o["outside"])
+        if o.get("state") not in gates.STATES:
+            problems.append(f"opening {o.get('id')!r} state must be one of {gates.STATES}")
+        if (inside not in compound or outside in compound or not grid.valid(list(outside))
+                or list(outside) not in grid.neighbors(list(inside))):
+            problems.append(f"opening {o.get('id')!r} must join a compound hex to an outside neighbour")
+    return problems
+
+
+def feature_problems(features):
+    """Roads, buildings and works stay on the grid; gated buildings are well formed."""
+    problems = []
+    for road in features.get("roads", ()):
+        if not all(grid.valid(list(p)) for p in road["points"]):
+            problems.append(f"road {road['id']!r} has points off the grid")
+    for kind in ("buildings", "works"):
+        for f in features.get(kind, ()):
+            if not grid.valid(list(f["pos"])):
+                problems.append(f"{kind[:-1]} {f['id']!r} at {f['pos']} is off the grid")
+            elif kind == "buildings" and f.get("openings"):
+                problems.extend(_opening_problems(f))
+    return problems

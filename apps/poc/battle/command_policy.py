@@ -291,8 +291,13 @@ def _transport(scenario):
     from .comms import PROFILES
 
     reach = PROFILES[scenario.communications].get("voice_reach")
+    radio = PROFILES[scenario.communications].get("radio_range")
     if not reach:
         return "Orders travel by runner."
+    if radio:  # docs/research/53: the 1944 radio profile.
+        return (f"Orders reach units within {reach} hexes of your command detachment by voice and units "
+                f"within {radio} hexes of your command detachment by radio; farther units, and a unit that "
+                "moves out of range before the word reaches it, get them by runner.")
     return (f"Orders reach units within {reach} hexes of your command detachment by voice; "
             "farther units, and a unit that moves out of earshot before the word reaches it, get them by runner.")
 

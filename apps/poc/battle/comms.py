@@ -15,7 +15,12 @@ PROFILE={'id':'civil-war-courier-v1','label':'1863 · voice / foot courier',
 # command detachment; farther units get a runner at the 1863 rates. The reach
 # is an assumption, not a measured earshot.
 COLONIAL={**PROFILE,'id':'colonial-1775-voice-v1','label':'1775 · voice / runner','voice_reach':2}
-PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL)}
+# docs/research/53: 1944 company radio. A unit within ``radio_range`` hexes of
+# the command detachment gets orders, and sends reports, by radio in one
+# interval; voice and runner remain. Both reaches are assumptions.
+WWII={**PROFILE,'id':'wwii-1944-radio-v1','label':'1944 · radio / voice / runner',
+      'methods':['voice','radio','courier'],'voice_reach':2,'radio_range':10}
+PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL,WWII)}
 
 def command_unit(s,side):
     uid=s['commanders'][side]['unit_id']
@@ -65,11 +70,13 @@ def progress(s,packet,emit):
         return 'expired'
     # Voice applies only to the detachment carrying the commander.
     target=next((u for u in s['units'] if u['id']==packet['recipient_id']),None)
-    if packet['method']=='voice' and 'speaker_id' in packet:
+    # docs/research/53: a radio packet arrives in one step, as speech does.
+    spoken=packet['method'] in ('voice','radio')
+    if spoken and 'speaker_id' in packet:
         # poc-13B: a spoken order to a unit now out of earshot goes on by runner.
         from .command import relay
         if relay(s,packet,target,emit):return 'en_route'
-    if packet['method']=='voice':
+    if spoken:
         packet['pos']=list(target['pos']) if target else packet['pos']
     else:
         packet['credit']=min(400,packet['credit']+PROFILE['cost_per_turn'])

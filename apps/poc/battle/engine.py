@@ -1,6 +1,7 @@
 """Pure deterministic state transitions. Models never adjudicate effects."""
 from copy import deepcopy
 from . import grid,recon,tactics,comms,command,formations,features,gates,recommendations,standing,victory
+from . import bridges,signals
 from . import orders as order_rules
 from .scenario import SIDES
 from .scenario_entry import LEGACY_ROLES
@@ -76,6 +77,8 @@ def validate_order(s,side,order):
     order_rules.validate(s,side,order)
     return u
 
+VIA={'voice':'voice','radio':'radio'}  # Dispatch wording by transport; anything else is a runner.
+
 def issue(s,side,order,source='human'):
     if s.get('rules')!='poc-13':
         from .engine_v12 import issue as legacy_issue
@@ -86,21 +89,25 @@ def issue(s,side,order,source='human'):
     version=max([o['version'] for o in s['orders'] if o['unit_id']==u['id']]+[u['order_version']])+1
     known=s['friendly_reports'][side][u['id']]['pos']
     # poc-13B: a voice-reach profile speaks to units headquarters knows are in earshot.
-    method='voice' if command.spoken(s,side,commander,u,known) else 'courier'
+    # docs/research/53: a radio profile reaches farther units it knows are in range.
+    method='voice' if command.spoken(s,side,commander,u,known) else 'radio' if command.radioed(s,side,commander,known) else 'courier'
     # poc-10: estimate over the gate states headquarters knows, never the true ones.
     # poc-13: always over known terrain, so a recipient beyond water with no
     # crossing gets no estimate rather than a one-interval guess.
-    cells=gates.known_cells(s,side)
+    # docs/research/53: and over the bridge states headquarters knows.
+    cells=bridges.known_cells(s,side,gates.known_cells(s,side))
     packet=comms.envelope(s,commander['pos'],u['id'],known,method,cells=s['cells'] if cells is None else cells)
     oid=f'O{len(s["orders"])+1}'
     packet['id']=oid
     if method=='voice' and u['id']!=commander['id']:
         packet.update(speaker_id=commander['id'],voice_reach=command.voice_reach(s,side),expected_turn=s['turn']+1)
+    if method=='radio':
+        packet.update(speaker_id=commander['id'],radio_range=command.radio_range(s,side),expected_turn=s['turn']+1)
     item={'id':oid,'side':side,**deepcopy(order),'source':source,'version':version,
           'sent_turn':s['turn'],'arrival_turn':packet['expected_turn'],'status':'en_route','transport':packet}
     s['orders'].append(item)
     emit(s,'order_sent',order_id=oid,side=side,unit_id=u['id'],destination=order.get('destination'),version=version,arrival_turn=item['arrival_turn'],transport=deepcopy(packet))
-    message(s,side,f'{u["id"]}: {order["stance"]} order dispatched by {"voice" if method=="voice" else "runner"}. {estimate(s,item["arrival_turn"])}',kind='order')
+    message(s,side,f'{u["id"]}: {order["stance"]} order dispatched by {VIA.get(method,"runner")}. {estimate(s,item["arrival_turn"])}',kind='order')
     return item
 
 def estimate(s,arrival_turn):
@@ -122,11 +129,15 @@ def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
     origin=next((u for u in s['units']+s.get('intel_assets',[]) if u['id']==sender_id),None)
     if not origin or not commander:raise ValueError('Reports need a physical sender and command recipient.')
     if origin.get('strength',1)<=0:return  # No ghost reports from destroyed formations.
-    method='voice' if sender_id==commander['id'] else 'courier'
+    # docs/research/53: a unit (not an intelligence asset) in radio range reports by radio.
+    radio=(sender_id!=commander['id'] and command.radioed(s,side,commander,origin['pos'])
+           and any(x is origin for x in s['units']))
+    method='voice' if sender_id==commander['id'] else 'radio' if radio else 'courier'
     packet=comms.envelope(s,origin['pos'],commander['id'],commander['pos'],method,handling=max(0,delay-1))
     packet['id']=f'R{len(s["events"])+1}'
     # The commander directly observes their own detachment, within this interval.
     if method=='voice':packet.update(ready_turn=s['turn'],last_progress_turn=s['turn']-1,expected_turn=s['turn'])
+    if radio:packet.update(speaker_id=sender_id,radio_range=command.radio_range(s,side),expected_turn=packet['ready_turn'])
     report={'side':side,'text':text,'data':data,'kind':kind,'observed_turn':s['turn'],
             'arrival_turn':packet['expected_turn'],'transport':packet}
     s['reports'].append(report)
@@ -152,6 +163,8 @@ def deliver_reports(s):
             features.receive(s,report)
         if report['kind']=='formation':
             formations.receive(s,report)
+        if report['kind']=='signal':  # docs/research/53: a codeword is known only on arrival.
+            signals.receive(s,report)
         if report['kind']=='ack':
             s['acknowledgements'][side][data['order_id']]={'status':data['status'],'received_turn':s['turn']}
         if report['kind']=='friendly' and report['observed_turn']>=s['friendly_reports'][side].get(data['id'],{}).get('observed_turn',-1):
@@ -213,9 +226,10 @@ def fired_upon(s,u,turn):
 def volley(s,u,damage,suppression):
     """One unit's volley at the nearest visible enemy in range, from the
     pre-damage snapshot; adds to ``damage`` and ``suppression``. A volley by
-    a unit holding fire is marked ``returning_fire`` (poc-13)."""
+    a unit holding fire is marked ``returning_fire`` (poc-13). docs/research/53:
+    a unit fires only at what it sees, within its ``observation_range``."""
     enemies=[e for e in s['units'] if e['side']!=u['side'] and e['strength']>0
-             and grid.distance(u['pos'],e['pos'])<=5 and grid.visible(s['cells'],u['pos'],e['pos'])]
+             and grid.distance(u['pos'],e['pos'])<=5 and recon.sees(s,u,e['pos'])]
     # poc-13B: a weapon table (smoothbore, 1775) shortens the range and the effect.
     weapon=s.get('weapon_rules',{}).get(u.get('weapon_class'))
     reach=min(standing.profile(u)['fire_range'],weapon['range_hexes'] if weapon else 5)
@@ -277,6 +291,7 @@ def advance(s):
         raise ValueError('This battle has ended. Start a new battle.')
     s['turn']+=1
     comms.sync(s)
+    bridges.progress(s,emit)  # docs/research/53: authored bridge changes, before anyone moves.
     deliver_reports(s)
     for o in s['orders']:
         if o['status']!='en_route':continue
@@ -385,6 +400,7 @@ def advance(s):
     command.succession(s,emit,message)  # poc-13B: a fallen command passes on.
     gates.progress(s)  # poc-10: gate labour continues under fire, adjudicated after it.
     gates.push(s)  # poc-11: attackers push through a held gateway, also under fire.
+    signals.check(s,emit,enqueue)  # docs/research/53: a taken bridge's codeword goes out as a report.
     order_rules.progress(s)  # Recovery/loading is adjudicated after fire, never during it.
     features.report(s)
     comms.sync(s)
@@ -451,7 +467,7 @@ def view(s,side=None):
         if o['side']!=side: continue
         orders.append({k:deepcopy(v) for k,v in o.items() if k not in ('status','transport')} | {
             'status':s['acknowledgements'][side].get(o['id'],{}).get('status','awaiting_ack')})
-    return {'rules':s.get('rules','poc-1'),'turn':s['turn'],'revision':s['revision'],'status':s['status'],'winner':s['winner'],
+    result={'rules':s.get('rules','poc-1'),'turn':s['turn'],'revision':s['revision'],'status':s['status'],'winner':s['winner'],
             'reason':s['reason'],'objective':s['objective'],'max_turns':s['max_turns'],
             'seconds_per_turn':s['seconds_per_turn'],'units':units,'contacts':contacts,
             'orders':orders,'dispatches':deepcopy(s['dispatches'][side][-60:]),'side':side,
@@ -464,6 +480,8 @@ def view(s,side=None):
             'order_templates':order_rules.catalog(s),
             'supply_sites':order_rules.known_sites(s,side),
             'formation_ops':[formations.observed(s,o) for o in s['formation_ops'] if o['side']==side]}
+    if 'signals' in s:result['signals']=signals.visible(s,side)  # docs/research/53: delivered codewords only.
+    return result
 
 
 def god_view(s):
@@ -476,4 +494,5 @@ def god_view(s):
                   commands={side:comms.location(s,side) for side in sides(s)} if s.get('rules') in ('poc-3','poc-4','poc-5','poc-6','poc-7','poc-8','poc-9','poc-10','poc-11','poc-12','poc-13') else {},
                   dispatches=[dict(deepcopy(d),side=side) for side in sides(s) for d in s['dispatches'][side]])
     result.update(standing_orders=deepcopy(s.get('standing_orders',[])),recommendations=deepcopy(s.get('recommendations',[])),map_features=deepcopy(s.get('map_features',[])),supply_sites=deepcopy(s.get('supply_sites',[])),formation_ops=deepcopy(s.get('formation_ops',[])),retired_units=deepcopy(s.get('retired_units',[])))
+    if 'signals' in s:result['signals']=deepcopy(s['signals'])  # docs/research/53: sent or not, with sender.
     return result

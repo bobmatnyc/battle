@@ -15,6 +15,7 @@ from typing import Mapping
 # (comms.PROFILES); a voice packet beyond it is relayed by runner.
 COLONIAL_COMMUNICATIONS = "colonial-1775-voice-v1"
 MAX_FIRE_RANGE = 5  # engine.volley never fires beyond 5 hexes.
+DEFAULT_WEAPON_CLASS = "rifled muskets"  # scenario_entry.unit()'s class.
 
 
 @dataclass(frozen=True)
@@ -106,13 +107,28 @@ def command_problems(entry):
 
 
 def weapon_problems(entry):
-    """``entry.weapons``: each class has an integer range of 1 to 5 hexes,
-    an integer effect of 1 to 100 per cent and a basis."""
+    """Why: mixed weapon ranges are blocked while ``tactics_v10.threat_range``
+    reads a unit's own range, not the enemy's (docs/research/48 §1, 53).
+    What: ``entry.weapons``: each class has an integer range of 1 to 5 hexes,
+    an integer effect of 1 to 100 per cent and a basis; and the scenario has
+    a single weapon range: every class shares one ``range_hexes`` and every
+    unit's class is in the table (a class outside it fires at the 5-hex baseline).
+    Test: `test_a_second_different_range_is_refused_at_validation`,
+    `test_a_unit_outside_the_table_is_a_second_range_and_is_refused`."""
     problems = []
     for name, w in (entry.weapons or {}).items():
         if not (type(w.range_hexes) is int and 1 <= w.range_hexes <= MAX_FIRE_RANGE
                 and type(w.effect_pct) is int and 1 <= w.effect_pct <= 100 and w.basis):
             problems.append(f"weapon {name!r} needs range_hexes 1-{MAX_FIRE_RANGE}, effect_pct 1-100 and a basis")
+    if not entry.weapons:
+        return problems
+    ranges = sorted({w.range_hexes for w in entry.weapons.values()})
+    outside = [u.id for u in entry.units if u.overrides.get("weapon_class", DEFAULT_WEAPON_CLASS) not in entry.weapons]
+    if len(ranges) > 1 or outside:
+        problems.append(
+            f"a scenario declares a single weapon range (mixed ranges are blocked until threat_range reads "
+            f"the enemy's range, docs/research/48): weapon table ranges {ranges}"
+            + (f"; units {outside} have no weapon entry and would fire at the {MAX_FIRE_RANGE}-hex baseline" if outside else ""))
     return problems
 
 

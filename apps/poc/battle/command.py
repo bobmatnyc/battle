@@ -30,6 +30,23 @@ def spoken(s,side,commander,recipient,known):
     return bool(reach) and grid.distance(commander['pos'],known)<=reach
 
 
+def radio_range(s,side):
+    """Hexes ``side``'s radio reaches from its command detachment; 0 for
+    profiles without radio (docs/research/53: only ``wwii-1944-radio-v1``)."""
+    return comms.PROFILES[s['commanders'][side]['communications']].get('radio_range',0)
+
+
+def radioed(s,side,commander,pos):
+    """Why: a 1944 company commander reaches platoons beyond earshot by radio.
+    What: True when the profile has a radio and ``pos`` (headquarters' known
+    position of the recipient, or a reporting unit's own) lies within its
+    range of ``commander``. ``comms.progress`` checks the true distance.
+    Test: `test_order_within_radio_range_goes_by_radio_and_arrives_next_interval`,
+    `test_reports_from_units_within_radio_range_travel_by_radio`."""
+    reach=radio_range(s,side)
+    return bool(reach) and grid.distance(commander['pos'],pos)<=reach
+
+
 def officer_losses(s,u,losses,emit,enqueue):
     """Why: when an officer falls, command must pass on rather than freeze.
     What: with ``command_rules``, adds ``losses`` to ``u``'s count; each
@@ -127,13 +144,18 @@ def relay(s,packet,target,emit):
     (part B only), True when ``target`` is beyond the reach of the speaker's
     detachment; the packet then becomes a runner from the speaker's position
     (``voice_out_of_reach``). Packets without ``speaker_id`` are untouched.
-    Test: `test_unit_out_of_earshot_at_delivery_gets_the_word_by_runner`."""
-    if packet['method']!='voice' or 'speaker_id' not in packet or target is None:return False
+    docs/research/53: a radio packet beyond ``radio_range`` of its sender goes
+    on by runner in the same way (``radio_out_of_range``).
+    Test: `test_unit_out_of_earshot_at_delivery_gets_the_word_by_runner`,
+    `test_unit_out_of_radio_range_at_delivery_gets_the_word_by_runner`."""
+    if packet['method'] not in ('voice','radio') or 'speaker_id' not in packet or target is None:return False
+    radio=packet['method']=='radio'
     speaker=next((u for u in s['units'] if u['id']==packet['speaker_id']),None)
     origin=speaker['pos'] if speaker else packet['pos']
-    if speaker and speaker['strength']>0 and grid.distance(origin,target['pos'])<=packet['voice_reach']:return False
+    reach=packet['radio_range'] if radio else packet['voice_reach']
+    if speaker and speaker['strength']>0 and grid.distance(origin,target['pos'])<=reach:return False
     packet.update(method='courier',pos=list(origin),address=list(target['pos']),credit=0)
-    emit(s,'voice_out_of_reach',packet=deepcopy(packet))
+    emit(s,'radio_out_of_range' if radio else 'voice_out_of_reach',packet=deepcopy(packet))
     return True
 
 

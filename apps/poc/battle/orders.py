@@ -1,6 +1,6 @@
 """Common mission templates. All rates are authored, uncalibrated POC rules."""
 from copy import deepcopy
-from . import grid,features,gates
+from . import grid,features,gates,recon
 from . import tactics_v8 as tactics,tactics_v9,tactics_v10
 from .engine_v2 import InvalidOrder
 
@@ -169,7 +169,7 @@ def progress(s):
         unsafe=(s['turn']-u.get('last_attacked_turn',-99)<=1 or u['suppression']>20
                 or u.get('local_action') not in ('hold','observe')
                 or any(e['side']!=u['side'] and e['strength']>0 and grid.distance(u['pos'],e['pos'])<=5
-                       and grid.visible(s['cells'],u['pos'],e['pos']) for e in s['units']))
+                       and recon.sees(s,u,e['pos']) for e in s['units']))  # docs/research/53: night range.
         if stance=='dig_in':
             features.dig(s,u,unsafe)
         elif stance=='rest':
