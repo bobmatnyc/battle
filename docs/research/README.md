@@ -135,3 +135,5 @@ Historical calibration is much less complete than the game-system survey. One in
 [44 — Pushing through a held gateway (`poc-11`)](44-poc11-gateway-push.md) adds authored push effort that displaces a defender from an open gateway, freezes the `poc-10` engine, and records the Hougoumont outcomes.
 
 [45 — Contact rules (`poc-12`)](45-poc12-contact-rules.md) stops a full compound from destroying a gateway holder, adds a fair tie-break for contested hexes, exempts assaults on walls from the five-hex halt, freezes the `poc-11` engine, and records the Little Round Top and Hougoumont changes.
+
+[46 — River, fire discipline and contact age (`poc-13`, part A)](46-poc13-river-and-fire-discipline.md) adds impassable water with bridge and ford crossings, `hold_fire` and `open_fire` postures with return fire, an age limit on the contacts the assault check reads, freezes the `poc-12` engine, and records that Little Round Top and Hougoumont outcomes are unchanged.
