@@ -1,6 +1,6 @@
 """Bounded aggregate reorganization; authored POC rules, no individual roster."""
 from copy import deepcopy
-from . import grid,comms,command,gates,recon
+from . import grid,comms,command,gates,recon,bridges
 
 MIN_STRENGTH=12
 MAX_STRENGTH=80
@@ -30,7 +30,8 @@ def validate(s,side,request):
             raise ValueError('Each resulting formation needs at least 12 reported troops.')
         if not grid.valid(p) or grid.distance(a['pos'],p)!=1:raise ValueError('Select an adjacent hex for the detached formation.')
         if cells and gates.across_wall(cells,a['pos'],p):raise ValueError('A wall or shut gate separates that hex from the formation.')
-        if not grid.passable(s['cells'][grid.key(p)]):raise ValueError('That hex is impassable water.')  # poc-13
+        # poc-13; docs/research/53: on known terrain, so a blown bridge is not revealed.
+        if not grid.passable(bridges.known_terrain(s,side)[grid.key(p)]):raise ValueError('That hex is impassable water.')
         if any(u['pos']==p and u['status'] not in ('lost','merged') for u in known['units']):raise ValueError('That hex is reported occupied by a friendly formation.')
     else:
         b=units[ids[1]]

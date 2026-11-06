@@ -1,6 +1,6 @@
 """Common mission templates. All rates are authored, uncalibrated POC rules."""
 from copy import deepcopy
-from . import grid,features,gates,recon
+from . import grid,features,gates,recon,bridges
 from . import tactics_v8 as tactics,tactics_v9,tactics_v10
 from .engine_v2 import InvalidOrder
 
@@ -79,7 +79,8 @@ def validate(s,side,order):
     if template['destination']=='hex':
         if not grid.valid(order.get('destination')):raise InvalidOrder('Choose a destination hex inside the battlefield.')
         # poc-13: the briefed map shows the water; earlier maps have none.
-        if not grid.passable(s['cells'][grid.key(order['destination'])]):raise InvalidOrder('That hex is impassable water; choose a bank, bridge or ford.')
+        # docs/research/53: checked on known terrain, so a blown bridge is not revealed.
+        if not grid.passable(bridges.known_terrain(s,side)[grid.key(order['destination'])]):raise InvalidOrder('That hex is impassable water; choose a bank, bridge or ford.')
     elif order.get('destination') is not None:
         raise InvalidOrder('This template selects its own position; omit the destination.')
     if template['id']=='resupply' and not known_sites(s,side):

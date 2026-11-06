@@ -152,9 +152,12 @@ def deliver_reports(s):
         transport_status=comms.progress(s,report['transport'],emit)
         if transport_status=='en_route':
             pending.append(report); continue
-        if transport_status=='expired':continue
+        if transport_status=='expired':
+            if report['kind']=='signal':signals.dropped(s,report,'expired',emit)  # docs/research/53: re-send.
+            continue
         if not comms.operational(s,report['side']):
             emit(s,'report_undeliverable',report_id=report['transport']['id'],side=report['side'],report_kind=report['kind'],reason='command_disrupted')
+            if report['kind']=='signal':signals.dropped(s,report,'command_disrupted',emit)
             continue
         side=report['side']; data=report['data']
         if report['kind']=='recommendation':

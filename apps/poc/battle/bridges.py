@@ -46,14 +46,25 @@ def known_cells(s,side,cells):
     not been told of. What: ``cells`` (None: the live cells) with each bridge
     cell's ``bridge_state`` taken from ``side``'s feature reports. Returns
     ``cells`` unchanged in a battle without bridges.
+    Every bridge has a briefed report (``setup``), so a missing one raises.
     Test: `test_delivery_estimate_uses_the_bridge_state_headquarters_knows`."""
     bridges=present(s)
     if not bridges:return cells
     known={k:dict(c) for k,c in (s['cells'] if cells is None else cells).items()}
     for f in bridges:
-        report=s['feature_reports'][side].get(f['id'],f)
-        known[grid.key(f['pos'])]['bridge_state']=report['state']
+        known[grid.key(f['pos'])]['bridge_state']=s['feature_reports'][side][f['id']]['state']
     return known
+
+
+def known_terrain(s,side):
+    """Why: an order check that read the true cells would tell headquarters of a
+    demolition before any report (docs/research/53). What: the cells as
+    ``side`` knows them: bridge states from its reports over the gate walls it
+    knows, else the live cells (identical in a battle without bridges).
+    Test: `test_move_to_a_bridge_blown_unreported_is_accepted_and_fails_to_path`."""
+    from . import gates
+    known=known_cells(s,side,gates.known_cells(s,side))
+    return s['cells'] if known is None else known
 
 
 def setup(s,bridges):

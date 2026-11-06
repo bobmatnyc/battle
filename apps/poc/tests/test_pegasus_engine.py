@@ -88,6 +88,20 @@ class BridgeStateTests(unittest.TestCase):
         with self.assertRaisesRegex(engine.InvalidOrder, "impassable water"):
             order(s, "B2", "move", list(BRIDGE))
 
+    def test_move_to_a_bridge_blown_unreported_is_accepted_and_fails_to_path(self):
+        s = night(bridges=(dataclasses.replace(CANAL_BRIDGE, schedule=((1, "destroyed"),)),))
+        s = advance(s)
+        self.assertEqual(bridge_feature(engine.view(s, "union")["map_features"])["state"], "intact")
+        sent = order(s, "B2", "move", list(BRIDGE))  # Accepted: headquarters believes the bridge stands.
+        s = advance(s, 8)
+        self.assertTrue([e for e in events(s, "order_delivered") if e["order_id"] == sent["id"]])
+        self.assertFalse([e for e in events(s, "unit_moved") if e["unit_id"] == "B2"])
+        self.assertEqual(grid.path(s["cells"], unit(s, "B2")["pos"], list(BRIDGE)), [])
+        # Once B2's report arrives headquarters knows, and the same order is refused.
+        self.assertEqual(bridge_feature(engine.view(s, "union")["map_features"])["state"], "destroyed")
+        with self.assertRaisesRegex(engine.InvalidOrder, "impassable water"):
+            order(s, "B2", "move", list(BRIDGE))
+
     def test_scheduled_demolition_is_an_event_and_replays_identically(self):
         s = night(bridges=(dataclasses.replace(CANAL_BRIDGE, schedule=((2, "charges"), (4, "destroyed"))),))
         with tempfile.TemporaryDirectory() as tmp:
@@ -237,6 +251,35 @@ class SignalTests(unittest.TestCase):
         s = night(bridges=(dataclasses.replace(CANAL_BRIDGE, state="destroyed"),), signals=(HAM,))
         unit(s, "B2")["pos"] = list(BRIDGE)
         self.assertFalse(events(advance(s), "signal_sent"))
+
+    def test_codeword_dropped_by_a_disrupted_command_is_resent_and_arrives(self):
+        s = night(bridges=(CANAL_BRIDGE,), signals=(HAM,))
+        unit(s, "B2")["pos"] = list(BRIDGE)
+        unit(s, "B1")["leaderless"] = True  # Command disrupted: no report can be received.
+        s = advance(s, 6)
+        lost = events(s, "signal_lost")
+        self.assertEqual((lost[0]["codeword"], lost[0]["reason"], lost[0]["sent_turn"]), ("Ham", "command_disrupted", 1))
+        self.assertGreater(len(events(s, "signal_sent")), 1)  # Re-sent while the bridge is still held.
+        self.assertEqual(engine.view(s, "union")["signals"], [])
+        unit(s, "B1").pop("leaderless")
+        s = advance(s, 8)
+        [heard] = engine.view(s, "union")["signals"]
+        self.assertEqual((heard["codeword"], heard["sender_id"]), ("Ham", "B2"))
+        self.assertGreater(heard["sent_turn"], 1)
+
+    def test_codeword_whose_courier_expires_is_resent_and_arrives(self):
+        s = night(bridges=(CANAL_BRIDGE,), signals=(HAM,))
+        unit(s, "B2")["pos"] = list(BRIDGE)
+        s = advance(s)
+        report = next(r for r in s["reports"] if r["kind"] == "signal")
+        report["transport"]["expires_turn"] = s["turn"] + 1  # Fault injection: the runner is lost.
+        s = advance(s)
+        lost = events(s, "signal_lost")
+        self.assertEqual((lost[0]["reason"], lost[0]["sent_turn"]), ("expired", 1))
+        self.assertEqual([e["sent_turn"] for e in events(s, "signal_sent")], [1, 2])
+        s = advance(s, 6)
+        [heard] = engine.view(s, "union")["signals"]
+        self.assertEqual((heard["codeword"], heard["sent_turn"]), ("Ham", 2))
 
     def test_registration_refuses_a_signal_for_an_unknown_bridge_or_side(self):
         for bad in (dataclasses.replace(HAM, bridge="orne-bridge"), dataclasses.replace(HAM, side="french"),

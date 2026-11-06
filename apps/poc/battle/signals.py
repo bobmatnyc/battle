@@ -45,6 +45,20 @@ def check(s,emit,enqueue):
                 data=data,kind='signal',sender=holder['id'])
 
 
+def dropped(s,report,reason,emit):
+    """Why: a codeword whose report never arrives must not be lost for good.
+    What: for a ``signal`` report that expired or was undeliverable, marks its
+    signal unsent again (``signal_lost``) so ``check`` re-sends it while the
+    bridge is still taken.
+    Test: `test_codeword_dropped_by_a_disrupted_command_is_resent_and_arrives`,
+    `test_codeword_whose_courier_expires_is_resent_and_arrives`."""
+    data=report['data']
+    for signal in s['signals']:
+        if (signal['side'],signal['codeword'],signal['sent_turn'])==(report['side'],data['codeword'],data['sent_turn']):
+            signal.update(sent_turn=None);signal.pop('sender_id',None);signal.pop('receiver_id',None)
+            emit(s,'signal_lost',codeword=data['codeword'],side=report['side'],sent_turn=data['sent_turn'],reason=reason)
+
+
 def receive(s,report):
     """Records a delivered codeword for its side, with the turn it arrived."""
     data=report['data']
