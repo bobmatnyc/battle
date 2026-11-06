@@ -93,7 +93,7 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(catalog.ids(), ("little-round-top", "test-duel"))
         self.assertIs(catalog.resolve(), LITTLE_ROUND_TOP)
         self.assertIs(catalog.resolve("test-duel"), DUEL)
-        self.assertEqual(catalog.create("test-duel")["scenario"], "test-duel-v1")
+        self.assertEqual(catalog.create("test-duel")["scenario"], "test-duel-v2")
         for bad in ("hougoumont", "", 7):
             with self.subTest(bad=bad):
                 with self.assertRaisesRegex(UnknownScenario, "Known scenarios: little-round-top, test-duel"):
@@ -112,9 +112,9 @@ class CatalogTests(unittest.TestCase):
             LittleRoundTopCatalog().for_state(catalog.create("test-duel"))
 
     def test_catalog_refuses_entry_the_rules_cannot_run(self):
-        victory = dataclasses.replace(DUEL.victory, hold_turns=5)
+        victory = dataclasses.replace(DUEL.victory, kind="courtyard-possession")
         geometry = dataclasses.replace(DUEL.map, cols=12)
-        swapped = {
+        two_attackers = {
             "union": dataclasses.replace(DUEL.sides["union"], role="attacker"),
             "confederate": DUEL.sides["confederate"],
         }
@@ -123,12 +123,12 @@ class CatalogTests(unittest.TestCase):
             "confederate": DUEL.sides["confederate"],
         }
         cases = {
-            "rules": dict(rules="poc-9"),
-            "victory": dict(victory=victory),
+            "rules": dict(rules="poc-8"),
+            "victory kind": dict(victory=victory),
             "map must be": dict(map=geometry),
             "seconds": dict(seconds_per_turn=60),
             "order catalog": dict(order_catalog=("hold", "move")),
-            "must be the defender": dict(sides=swapped),
+            "one defender, one attacker": dict(sides=two_attackers),
             "command unit": dict(sides=command),
             "unique": dict(units=DUEL.units + (DUEL.units[0],)),
             "voice": dict(voice_profile="napoleonic-en-v1"),
@@ -238,7 +238,7 @@ class ServiceFindingTests(unittest.TestCase):
                     revision = app.repository.load(before)["revision"]
                     app.execute("new", absent, game_id=before, revision=revision)
                     self.assertNotEqual(app.game_id, before)
-                    self.assertEqual(app.repository.load(app.game_id)["scenario"], "little-round-top-v8")
+                    self.assertEqual(app.repository.load(app.game_id)["scenario"], "little-round-top-v9")
         finally:
             app.close()
 
@@ -249,7 +249,7 @@ class ServiceFindingTests(unittest.TestCase):
         app = battle_service(LittleRoundTopCatalog(), repository)
         try:
             state = repository.load(app.game_id)
-            self.assertEqual(state["scenario"], "test-duel-v1")
+            self.assertEqual(state["scenario"], "test-duel-v2")
             self.assertEqual(app.map()["setting"]["location"], LITTLE_ROUND_TOP.location)
             decision = app.commander.decide(state, side="confederate", mode="scripted")
             self.assertEqual(decision["source"], "scripted")
@@ -276,7 +276,7 @@ class SecondScenarioTests(unittest.TestCase):
                 )
                 result = runner.run()
                 state = runner.repository.load(result["game_id"])
-                self.assertEqual(state["scenario"], "test-duel-v1")
+                self.assertEqual(state["scenario"], "test-duel-v2")
                 self.assertEqual({u["id"] for u in state["units"]}, {"B1", "G1"})
                 self.assertEqual(state["run"]["scenario_id"], "test-duel")
                 self.assertEqual(state["run"]["variant"], "flat")
@@ -308,7 +308,7 @@ class SecondScenarioTests(unittest.TestCase):
     def test_commander_without_catalog_refuses_other_scenarios(self):
         state = registry().create("test-duel")
         commander = CommanderService(RulesSimulation(), RecordingProvider())
-        with self.assertRaisesRegex(ValueError, "test-duel-v1"):
+        with self.assertRaisesRegex(ValueError, "test-duel-v2"):
             commander.decide(state, side="union")
         # Little Round Top still needs no catalog, as before.
         decision = commander.decide(scenario.create(), side="union")
@@ -339,7 +339,7 @@ class SelectionTests(unittest.TestCase):
             ManualClock,
             scenario_id="test-duel",
         )
-        self.assertEqual(repository.load(app.game_id)["scenario"], "test-duel-v1")
+        self.assertEqual(repository.load(app.game_id)["scenario"], "test-duel-v2")
         self.assertEqual(app.map()["setting"]["location"], "Synthetic test ground")
         before = app.game_id
         revision = repository.load(before)["revision"]
@@ -347,7 +347,7 @@ class SelectionTests(unittest.TestCase):
             app.execute("new", {"scenario": "nope"}, game_id=before, revision=revision)
         self.assertEqual(app.game_id, before)
         app.execute("new", {"scenario": "little-round-top"}, game_id=before, revision=revision)
-        self.assertEqual(repository.load(app.game_id)["scenario"], "little-round-top-v8")
+        self.assertEqual(repository.load(app.game_id)["scenario"], "little-round-top-v9")
         self.assertEqual(app.map()["setting"]["start_local"], "1863-07-02T16:30:00")
         app.close()
 

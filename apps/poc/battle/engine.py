@@ -1,8 +1,9 @@
 """Pure deterministic state transitions. Models never adjudicate effects."""
 from copy import deepcopy
-from . import grid,recon,tactics,comms,formations,features,recommendations,standing
+from . import grid,recon,tactics,comms,formations,features,recommendations,standing,victory
 from . import orders as order_rules
 from .scenario import SIDES
+from .scenario_entry import LEGACY_ROLES
 
 from .engine_v2 import InvalidOrder
 
@@ -20,6 +21,20 @@ def find_unit(s,uid):
 
 REFUSING_STATUSES=('routed','lost','merged')
 
+def sides(s):
+    """Side ids in scenario order: the snapshot's own from poc-9, else Union/Confederate.
+    The order fixes event order, so it comes from a list, never from dict keys."""
+    return tuple(x['id'] for x in s['sides']) if 'sides' in s else SIDES
+
+def player_side(s):
+    """The side the interactive player commands: the snapshot's from poc-9, else Union."""
+    return s.get('player_side','union')
+
+def role(s,side):
+    """``defender`` or ``attacker``: the snapshot's own from poc-9, else the poc-8 roles."""
+    if 'sides' not in s:return LEGACY_ROLES[side]
+    return next(x['role'] for x in s['sides'] if x['id']==side)
+
 def report_refusal(s,side,unit_id):
     """Why: commanders must see which units will refuse orders before choosing.
     What: the poc-8 reason headquarters' own knowledge bars orders to unit_id,
@@ -32,8 +47,8 @@ def report_refusal(s,side,unit_id):
     return None
 
 def validate_order(s,side,order):
-    if s.get('rules')!='poc-8':
-        from .engine_v7 import validate_order as legacy_validate
+    if s.get('rules')!='poc-9':
+        from .engine_v8 import validate_order as legacy_validate
         return legacy_validate(s,side,order)
     if not comms.operational(s,side):
         raise InvalidOrder('Command detachment is disrupted; subordinates continue under standing orders.')
@@ -50,8 +65,8 @@ def validate_order(s,side,order):
     return u
 
 def issue(s,side,order,source='human'):
-    if s.get('rules')!='poc-8':
-        from .engine_v7 import issue as legacy_issue
+    if s.get('rules')!='poc-9':
+        from .engine_v8 import issue as legacy_issue
         return legacy_issue(s,side,order,source)
     u=validate_order(s,side,order)
     order=order_rules.prepare(s,side,order)
@@ -76,9 +91,9 @@ def summary(u):
     return result
 
 def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
-    if s.get('rules')!='poc-8':
-        from .engine_v7 import enqueue as legacy_enqueue
-        return legacy_enqueue(s,side,text,data,kind,delay)
+    if s.get('rules')!='poc-9':
+        from .engine_v8 import enqueue as legacy_enqueue
+        return legacy_enqueue(s,side,text,data,kind,delay,sender)
     commander=comms.command_unit(s,side)
     sender_id=sender or (data or {}).get('observer_id') or (data or {}).get('id')
     origin=next((u for u in s['units']+s.get('intel_assets',[]) if u['id']==sender_id),None)
@@ -95,8 +110,8 @@ def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
     emit(s,'report_sent',report_id=packet['id'],side=side,report_kind=kind,arrival_turn=report['arrival_turn'],transport=deepcopy(packet))
 
 def deliver_reports(s):
-    if s.get('rules')!='poc-8':
-        from .engine_v7 import deliver_reports as legacy_deliver
+    if s.get('rules')!='poc-9':
+        from .engine_v8 import deliver_reports as legacy_deliver
         return legacy_deliver(s)
     pending=[]
     for report in s['reports']:
@@ -152,7 +167,10 @@ def advance(s):
     if s.get('rules')=='poc-7':
         from .engine_v7 import advance as seventh_advance
         return seventh_advance(s)
-    if s.get('rules')!='poc-8':raise ValueError('Unsupported battle rules version.')
+    if s.get('rules')=='poc-8':
+        from .engine_v8 import advance as eighth_advance
+        return eighth_advance(s)
+    if s.get('rules')!='poc-9':raise ValueError('Unsupported battle rules version.')
     if s['status']!='active':
         raise ValueError('This battle has ended. Start a new battle.')
     s['turn']+=1
@@ -266,7 +284,7 @@ def advance(s):
     # better but distant scout's report, which still has to travel to command.
     outgoing=list(outgoing)
     chosen={(side,c['observer_id'],c['id']) for side,c in outgoing}
-    for side in SIDES:
+    for side in sides(s):
         commander=comms.command_unit(s,side)
         if commander:
             outgoing.extend((side,deepcopy(c)) for c in sightings.get(commander['id'],[])
@@ -283,27 +301,23 @@ def advance(s):
         enqueue(s,side,text,contact,kind='contact',delay=delay)
     recommendations.generate(s,sightings)
     deliver_reports(s)  # Local voice reports arrive now; couriers cannot move twice.
-    defenders=[u for u in s['units'] if u['status'] not in ('routed','lost','merged') and grid.distance(u['pos'],s['objective'])<=1]
-    occupied_sides={u['side'] for u in defenders}
-    s['capture']=s['capture']+1 if occupied_sides=={'confederate'} else 0
-    active={side:any(u['side']==side and u['status'] not in ('routed','lost','merged') for u in s['units']) for side in SIDES}
-    winner=None; reason=None
-    if not any(active.values()): winner='draw'; reason='Both commands lost combat effectiveness.'
-    elif not active['union']: winner='confederate'; reason='Union formations can no longer hold the position.'
-    elif not active['confederate']: winner='union'; reason='The attacking formations have broken.'
-    elif s['capture']>=3: winner='confederate'; reason='The attackers held the summit uncontested for 90 seconds.'
-    elif s['turn']>=s['max_turns']: winner='union'; reason='The Union held out until the scenario deadline.'
+    winner,reason=victory.score(s)  # The scenario's victory kind, stored in the snapshot.
     if winner:
         s['status']='complete'; s['winner']=winner; s['reason']=reason
         emit(s,'battle_ended',winner=winner,reason=reason)
-        for side in SIDES: message(s,side,reason,kind='outcome')
+        for side in sides(s): message(s,side,reason,kind='outcome')
     emit(s,'turn_completed',turn_number=s['turn'])
     return s
 
-def view(s,side='union'):
-    if s.get('rules')!='poc-8':
-        from .engine_v7 import view as legacy_view
-        return legacy_view(s,side)
+def view(s,side=None):
+    """Why: each side commands from its own delivered reports only.
+    What: the commander view for ``side``; None means the snapshot's player
+    side (Union before poc-9). Earlier editions use their frozen views.
+    Test: `test_renamed_side_duel_runs_headless_and_replays`."""
+    if s.get('rules')!='poc-9':
+        from .engine_v8 import view as legacy_view
+        return legacy_view(s,side or 'union')
+    side=side or player_side(s)
     units=[deepcopy(u) for u in s['friendly_reports'][side].values() if u.get('status')!='merged']
     commander=comms.command_unit(s,side)
     if commander:
@@ -340,7 +354,7 @@ def god_view(s):
                   contacts=[],orders=deepcopy(s['orders']),reports=deepcopy(s['reports']),
                   events=deepcopy(s['events']),decisions=deepcopy(s['decisions']),
                   headquarters=deepcopy(s['hq']),
-                  commands={side:comms.location(s,side) for side in SIDES} if s.get('rules') in ('poc-3','poc-4','poc-5','poc-6','poc-7','poc-8') else {},
-                  dispatches=[dict(deepcopy(d),side=side) for side in SIDES for d in s['dispatches'][side]])
+                  commands={side:comms.location(s,side) for side in sides(s)} if s.get('rules') in ('poc-3','poc-4','poc-5','poc-6','poc-7','poc-8','poc-9') else {},
+                  dispatches=[dict(deepcopy(d),side=side) for side in sides(s) for d in s['dispatches'][side]])
     result.update(standing_orders=deepcopy(s.get('standing_orders',[])),recommendations=deepcopy(s.get('recommendations',[])),map_features=deepcopy(s.get('map_features',[])),supply_sites=deepcopy(s.get('supply_sites',[])),formation_ops=deepcopy(s.get('formation_ops',[])),retired_units=deepcopy(s.get('retired_units',[])))
     return result

@@ -169,7 +169,7 @@ class BattleService:
             orders = payload.get("orders")
             if not isinstance(orders, list) or not 1 <= len(orders) <= 3:
                 raise ValueError("Issue one to three orders.")
-            self.simulation.validate_orders(state, "union", orders)
+            self.simulation.validate_orders(state, self.simulation.player_side(state), orders)
             return {"type": "orders", "orders": orders}
         if command in ("standing", "formation"):
             return {"type": command, "instruction": payload.get("instruction")}
@@ -188,7 +188,9 @@ class BattleService:
                 role="staff",
                 turn=state["turn"],
                 request=text,
-                observation=self.simulation.observation(state, "union"),
+                observation=self.simulation.observation(
+                    state, self.simulation.player_side(state)
+                ),
             )
             return {"type": "chat", "decision": decision}
         raise ValueError("Unknown action.")

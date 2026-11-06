@@ -1,5 +1,7 @@
 """Synthetic scenario entries for tests only; never in the player-facing catalog."""
 
+import dataclasses
+
 from battle.grid import COLS, METRES_PER_HEX, ROWS, key
 from battle.scenario_entry import (
     RULES_VERSION,
@@ -12,7 +14,7 @@ from battle.scenario_entry import (
 
 
 def flat_terrain():
-    """Open, level ground on every hex of the poc-8 grid."""
+    """Open, level ground on every hex of the grid."""
     return {
         key([c, r]): {
             "pos": [c, r],
@@ -34,7 +36,7 @@ DUEL = ScenarioEntry(
     rules=RULES_VERSION,
     prompt_version="test-duel-v1",
     prompt_setting="Test Duel, 1863",
-    labels={"poc-8": "test-duel-v1"},
+    labels={"poc-8": "test-duel-v1", "poc-9": "test-duel-v2"},
     location="Synthetic test ground",
     date="1863-07-01",
     start_time="09:00:00",
@@ -66,9 +68,8 @@ DUEL = ScenarioEntry(
     victory=VictoryEntry(
         kind="hold-objective",
         objective=(4, 5),
-        defender="union",
-        attacker="confederate",
         deadline_turns=12,
+        objective_name="knoll",
     ),
     map=MapEntry(
         terrain=flat_terrain,
@@ -84,4 +85,22 @@ DUEL = ScenarioEntry(
     order_catalog=("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in"),
     communications="civil-war-courier-v1",
     voice_profile="civil-war-en-v1",
+)
+
+
+def renamed_sides(entry, names, *, id, label):
+    """``entry`` with its side ids replaced through ``names`` (old id -> new id)."""
+    return dataclasses.replace(
+        entry,
+        id=id,
+        labels={entry.rules: label},
+        sides={names[side]: spec for side, spec in entry.sides.items()},
+        units=tuple(dataclasses.replace(u, side=names[u.side]) for u in entry.units),
+        player_side=names[entry.player],
+    )
+
+
+# The duel with side ids that are neither Union nor Confederate (poc-9 only).
+BLUE_GREY_DUEL = renamed_sides(
+    DUEL, {"union": "blue", "confederate": "grey"}, id="test-duel-blue-grey", label="test-duel-blue-grey-v1"
 )

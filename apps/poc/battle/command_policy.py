@@ -3,19 +3,28 @@
 from . import engine, grid, orders as order_rules
 from .presentation import VOICE_INSTRUCTION, VOICE_PROFILE
 from .scenario import LITTLE_ROUND_TOP
+from .scenario_entry import LEGACY_ROLES
 
 
-def fallback_orders(observation):
+def fallback_orders(observation, role=None):
+    """Why: the scripted control must play either role of any scenario.
+    What: up to three orders sending live units to the objective and its
+    neighbours: a ``defender`` fills the ring from the second hex, an
+    ``attacker`` uses separate lanes from the objective itself. ``role`` None
+    takes the poc-8 role of ``observation['side']`` (Union defends).
+    Test: `test_renamed_side_duel_runs_headless_and_replays`,
+    `test_default_headless_run_keeps_baseline_path`.
+    """
     if observation.get("command", {}).get("operational") is False:
         return []
     goal = observation["objective"]
-    side = observation["side"]
+    role = role or LEGACY_ROLES[observation["side"]]
     orders = []
     positions = [goal] + grid.neighbors(goal)
     for i, u in enumerate(sorted(observation["units"], key=lambda u: u["id"])):
         if u["status"] in ("lost", "routed"):
             continue
-        if side == "union":
+        if role == "defender":
             target = positions[(i + 1) % len(positions)]
         else:
             # Separate attack lanes avoid stacking at the summit.
@@ -147,7 +156,7 @@ def observation_for(s, side):
         "max_orders": 3,
         "one_order_per_unit": True,
     }
-    if s.get("rules") == "poc-8":
+    if s.get("rules") in ("poc-8", "poc-9"):
         mark_order_acceptance(s, side, observation)
     return observation
 

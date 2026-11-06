@@ -223,7 +223,7 @@ class CommanderService:
             "source": "scripted",
             "side": side,
             "orders": self.simulation.validate_orders(
-                state, side, fallback_orders(observation)
+                state, side, fallback_orders(observation, self.simulation.role(state, side))
             ),
             "text": "General, we shall proceed according to our standing orders.",
             "observation": observation,
@@ -265,32 +265,34 @@ class CommanderService:
         charge comes from ``display_scenario`` and so never fails on the label.
         Test: `test_scripted_paths_and_map_survive_an_unmapped_label`.
         """
-        observation = self.simulation.observation(state, "union")
+        side = self.simulation.player_side(state)
+        observation = self.simulation.observation(state, side)
         error = None
         if mode == "openrouter":
             scenario = self.scenario(state)
             try:
                 result, metadata = self.provider.request(
-                    system_prompt("union", scenario)
-                    + " You are the Union player's staff adviser. Answer their question. Propose orders only when requested. Orders require player approval.",
+                    system_prompt(side, scenario)
+                    + f" You are the {scenario.sides[side].name} player's staff adviser. Answer their question. Propose orders only when requested. Orders require player approval.",
                     {"request": text, "observation": deepcopy(observation)},
                 )
                 return {
                     **metadata,
                     "text": str(result.get("text", "No dispatch."))[:3000],
                     "orders": self.simulation.validate_orders(
-                        state, "union", result.get("orders", [])
+                        state, side, result.get("orders", [])
                     ),
                     "source": "openrouter",
                     "voice_profile": VOICE_PROFILE,
                 }
             except Exception as exc:
                 error = failure_kind(exc)
-        scenario = self.display_scenario(state)
+        spec = self.display_scenario(state).sides.get(side)
+        charge = f"Our charge is to {spec.charge}. " if spec else ""
         answer = (
             f"General, our command comprises {len(observation['units'])} detachments, "
             f"with {len(observation['contacts'])} enemy sightings reported to headquarters. "
-            f"Our charge is to {scenario.sides['union'].charge}. Send your instructions by runner; "
+            f"{charge}Send your instructions by runner; "
             "the latest reports may already be out of date."
         )
         return {

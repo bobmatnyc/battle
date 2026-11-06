@@ -78,11 +78,11 @@ const TroopAnalysis = {
         (unit.standing_version !== null ? ' · version ' + unit.standing_version : '');
       $('standing-recommendation').textContent = 'Suggested: ' + label(unit.recommendation.profile_id) + '. ' + unit.recommendation.reason;
 
-      const disabled = busy || replay || godMode || state.rules !== 'poc-8' || state.status !== 'active' ||
+      const disabled = busy || replay || godMode || !['poc-8', 'poc-9'].includes(state.rules) || state.status !== 'active' ||
         !assessment.command_operational || ['routed', 'lost'].includes(unit.status);
       for (const id of ['standing-send', 'standing-recommend', 'standing-profile']) $(id).disabled = disabled;
       let status = 'Changing a selection is a draft. Dispatch sends it by voice or runner.';
-      if (state.rules !== 'poc-8') status = 'Use Reset to start a battle with configurable standing orders.';
+      if (!['poc-8', 'poc-9'].includes(state.rules)) status = 'Use Reset to start a battle with configurable standing orders.';
       else if (godMode) status = 'Observer view: switch off God Mode to send instructions.';
       else if (replay) status = 'Recorded assessment; return to live to send instructions.';
       else if (!assessment.command_operational) status = 'Headquarters is disrupted. Existing standing orders continue.';

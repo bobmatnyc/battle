@@ -1,36 +1,42 @@
 """Recorded input transitions: replay never calls a model or wall clock."""
 from copy import deepcopy
 from . import engine,formations,recommendations,standing
-from .scenario import SIDES
 
 def apply(state,action):
+    """Why: one recorded action changes one snapshot, identically on replay.
+    What: applies ``action`` to a copy of ``state``. Player actions (orders,
+    formation, recommendation, standing) act for the snapshot's player side:
+    Union before poc-9, the scenario's ``player_side`` from poc-9.
+    Test: `test_renamed_side_duel_runs_headless_and_replays`.
+    """
     s=deepcopy(state)
+    player=engine.player_side(s)
     if s['status']!='active' and action['type']!='chat':
         raise ValueError('Battle complete. Start a new battle.')
     if action['type']=='orders':
         for order in action['orders']:
-            engine.issue(s,'union',order,'human')
+            engine.issue(s,player,order,'human')
     elif action['type']=='formation':
         if s.get('rules')=='poc-4':
             from . import formations_v4
-            formations_v4.request(s,'union',action['instruction'])
+            formations_v4.request(s,player,action['instruction'])
         elif s.get('rules')=='poc-5':
             from . import formations_v5
-            formations_v5.request(s,'union',action['instruction'])
+            formations_v5.request(s,player,action['instruction'])
         elif s.get('rules')=='poc-6':
             from . import formations_v6
-            formations_v6.request(s,'union',action['instruction'])
+            formations_v6.request(s,player,action['instruction'])
         elif s.get('rules')=='poc-7':
             from . import formations_v7
-            formations_v7.request(s,'union',action['instruction'])
-        else:formations.request(s,'union',action['instruction'])
+            formations_v7.request(s,player,action['instruction'])
+        else:formations.request(s,player,action['instruction'])
     elif action['type']=='recommendation':
         if s.get('rules')=='poc-7':
             from . import recommendations_v7
-            recommendations_v7.respond(s,'union',action['recommendation_id'],action['response'])
-        else:recommendations.respond(s,'union',action['recommendation_id'],action['response'])
+            recommendations_v7.respond(s,player,action['recommendation_id'],action['response'])
+        else:recommendations.respond(s,player,action['recommendation_id'],action['response'])
     elif action['type']=='standing':
-        standing.issue(s,'union',action['instruction'])
+        standing.issue(s,player,action['instruction'])
     elif action['type']=='advance':
         decision=action.get('decision')
         if decision:record_decision(s,decision)
@@ -58,7 +64,7 @@ def record_decision(s,decision):
     `test_decision_without_side_replays_as_confederate`.
     """
     side=decision.get('side','confederate')
-    if side not in SIDES:raise ValueError('Unknown decision side.')
+    if side not in engine.sides(s):raise ValueError('Unknown decision side.')
     s['decisions'].append(deepcopy(decision))
     engine.emit(s,'commander_decision',source=decision['source'],decision_index=len(s['decisions'])-1)
     for order in decision['orders']:

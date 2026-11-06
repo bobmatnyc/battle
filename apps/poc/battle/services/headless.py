@@ -2,7 +2,6 @@
 
 from ..command_policy import OPPONENT_POLICY, fallback_orders
 from ..contracts import BattleRepository, Commander, ScenarioCatalog, Simulation
-from ..scenario import SIDES
 from .replay import ReplayService
 
 PLAYER_MODES = ("scripted", "openrouter")
@@ -12,8 +11,10 @@ class HeadlessRunner:
     """Why: a model must be able to play one side end to end, with a scripted
     control on the other side, and the run must replay without a provider.
     What: ``player_side`` is driven by ``commander`` in ``player_mode``; the
-    other side is the explicit scripted ``opponent``. The scripted Union
-    default keeps today's direct-orders path, so its run is unchanged.
+    other side is the explicit scripted ``opponent``. Sides come from the
+    scenario entry; ``player_side`` None is the entry's player side. A
+    scripted run of that side keeps the direct-orders path, so Little Round
+    Top's default run is unchanged.
     ``scenario_id`` selects the catalog entry (None: the catalog default);
     an unknown id raises ``UnknownScenario`` before anything is stored.
     Test: `test_model_player_run_records_side_decisions_and_replays`,
@@ -29,14 +30,18 @@ class HeadlessRunner:
         scenarios: ScenarioCatalog,
         replay: ReplayService,
         *,
-        player_side="union",
+        player_side=None,
         player_mode="scripted",
         opponent=OPPONENT_POLICY,
         scenario_id=None,
     ):
         self.scenario = scenarios.resolve(scenario_id)
-        if player_side not in SIDES:
-            raise ValueError(f"Unknown player side {player_side!r}")
+        sides = tuple(self.scenario.sides)
+        player_side = self.scenario.player if player_side is None else player_side
+        if player_side not in sides:
+            raise ValueError(
+                f"Unknown player side {player_side!r}; {self.scenario.id} has {', '.join(sides)}"
+            )
         if player_mode not in PLAYER_MODES:
             raise ValueError(f"Unknown player provider {player_mode!r}")
         if opponent != OPPONENT_POLICY:
@@ -47,14 +52,16 @@ class HeadlessRunner:
         self.scenarios = scenarios
         self.replay = replay
         self.player_side = player_side
-        self.opponent_side = next(s for s in SIDES if s != player_side)
+        # Two-sided scenarios only: the victory kind refuses any other count.
+        self.opponent_side = next(s for s in sides if s != player_side)
         self.player_mode = player_mode
         self.opponent = opponent
 
     @property
     def baseline(self):
-        # Today's scripted-vs-scripted run: Union orders bypass decision records.
-        return self.player_mode == "scripted" and self.player_side == "union"
+        # Scripted-vs-scripted run: the interactive player's side issues direct
+        # orders without decision records, as the Union always did.
+        return self.player_mode == "scripted" and self.player_side == self.scenario.player
 
     def metadata(self, state):
         model_run = self.player_mode == "openrouter"
@@ -109,7 +116,8 @@ class HeadlessRunner:
 
     def _player_action(self, state):
         if self.baseline:
-            orders = fallback_orders(self.simulation.view(state, "union"))
+            role = self.scenario.sides[self.player_side].role
+            orders = fallback_orders(self.simulation.view(state, self.player_side), role)
             return {"type": "orders", "orders": orders} if orders else None
         decision = self.commander.decide(
             state, side=self.player_side, mode=self.player_mode

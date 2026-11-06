@@ -83,7 +83,7 @@ Use the pinned, locally vendored MapLibre renderer for the POC, with the shared 
 
 Reconnaissance was introduced in `poc-2`; preserve `poc-1` transitions in `battle/engine_v1.py` and never silently migrate existing battles. Enemy composition/strength are observation-derived estimates, with independent source/time evidence for identification. Scouts and spies improve estimation through explicit authored profiles, not omniscience. Delayed intelligence must not overwrite fresher position/strength. Local standing behavior defends, seeks cover or withdraws from local observations and own condition while preserving delivered mission intent. Do not replace observation estimates with exact enemy inventory or require user action for self-defense. See `docs/research/20-reconnaissance-and-standing-reactions.md`. Spy assets are currently scenario/fixture support; no spy deployment interface is implemented.
 
-Preserve saved rules editions: `engine_v1.py` through `engine_v4.py` and `formations_v4.py` contain frozen transitions. New rules use `poc-8`; do not silently change existing snapshots. Observer presentation does not mutate battle state or trigger inference.
+Preserve saved rules editions: `engine_v1.py` through `engine_v4.py` and `formations_v4.py` contain frozen transitions. New rules use `poc-9`; do not silently change existing snapshots. Observer presentation does not mutate battle state or trigger inference.
 
 Unit inspection and limited split/combine are now authorized and implemented in poc-4. Keep the panel observer-aware; orders use normal transport, and both participants must receive combine instructions. Require safe regrouping, preserve aggregate resources/residuals and lineage, retire absorbed IDs, and report results through communications. See `docs/research/22-unit-panel-and-formation-actions.md`. Broader training and force provisioning remain deferred.
 
@@ -102,6 +102,10 @@ The `poc-7` edition introduced this behavior. Commanders recommend bounded actio
 ## Standing orders and assessments — 2026-11-05
 
 New games use `poc-8`. Keep doctrine persistent and independently versioned from missions; use physical courier/voice transport and observed acknowledgements. Models and UI never apply it directly. Preserve hard self-preservation and inherited doctrine through aggregate formation operations. Analysis consumes only authorized headquarters views, even when displayed beside God Mode. Reading/recommending is side-effect-free; dispatch requires explicit player action and normal command authority. Preserve seventh-edition transitions and dependencies in `engine_v7.py`, `orders_v7.py`, `formations_v7.py`, `features_v7.py`, `recommendations_v7.py`; never silently migrate old saves. See `docs/research/26-standing-orders-and-troop-analysis.md`.
+
+## Scenario-defined sides and victory kinds — 2026-11-05
+
+New games use `poc-9`. Side ids, names, roles, the player side and the victory kind come from the scenario entry and are stored in the snapshot; do not reintroduce `union`/`confederate` literals in live code. Add a victory kind through `battle/victory.py` and a new edition. Keep `engine_v8.py` frozen for `poc-8` replay. See `docs/research/39-scenario-sides-and-victory-kinds.md`.
 
 ## Structured demo architecture — 2026-11-05
 

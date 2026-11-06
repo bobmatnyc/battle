@@ -38,7 +38,10 @@ def main():
         "headless player run", "Used with --headless; defaults reproduce the scripted run"
     )
     headless.add_argument(
-        "--player-side", choices=["union", "confederate"], default="union"
+        "--player-side",
+        metavar="SIDE",
+        help="Side id the player provider commands (default: the scenario's player side, "
+        "union for Little Round Top)",
     )
     headless.add_argument(
         "--player-provider",

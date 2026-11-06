@@ -33,6 +33,8 @@ with tempfile.TemporaryDirectory() as tmp:
         else:raise RuntimeError('Server did not start')
         assert b'Little Round Top' in request('/')
         assert len(request('/api/map')['cells'])==504
+        assert request('/api/map')['setting']['location']=='Little Round Top · Gettysburg, Pennsylvania'
+        assert state['rules']=='poc-9' and state['side']=='union'
         assert state['contacts']==[] and len(state['units'])==3
         assert all(u['side']=='union' for u in state['units'])
         assert state['command']['unit_id']=='U2' and state['command']['pos']==[13,15]

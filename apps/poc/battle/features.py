@@ -27,7 +27,7 @@ def setup(s,layout):
     for f in works:
         c=s['cells'][grid.key(f['pos'])];c['cover']=max(c['cover'],f['cover'])
     s['briefing_cells']=deepcopy(s['cells'])
-    s['feature_reports']={side:{f['id']:dict(deepcopy(f),observed_turn=0,received_turn=0) for f in s['map_features']} for side in ('union','confederate')}
+    s['feature_reports']={side:{f['id']:dict(deepcopy(f),observed_turn=0,received_turn=0) for f in s['map_features']} for side in s['contacts']}
     s['feature_observations']={}
 
 

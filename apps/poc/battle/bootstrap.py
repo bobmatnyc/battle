@@ -62,7 +62,7 @@ def build_replay(db):
 def build_headless(
     db,
     *,
-    player_side="union",
+    player_side=None,
     player_provider="scripted",
     opponent=None,
     settings=None,
@@ -81,7 +81,8 @@ def build_headless(
     ``Settings`` value. The defaults reproduce the scripted baseline run.
     ``scenario_id`` picks the scenario from ``scenarios`` (default: the
     player-facing catalog); an unknown id raises ``UnknownScenario`` before
-    any credential is read or database opened.
+    any credential is read or database opened. ``player_side`` None is the
+    scenario's player side; a side the scenario lacks raises ValueError.
     Test: `test_build_headless_composes_openrouter_overrides`,
     `test_build_headless_refuses_openrouter_without_credential`,
     `test_build_headless_refuses_unknown_scenario`.
@@ -91,7 +92,12 @@ def build_headless(
     from .services.headless import HeadlessRunner
 
     scenarios = scenarios if scenarios is not None else build_scenarios()
-    scenarios.resolve(scenario_id)
+    entry = scenarios.resolve(scenario_id)
+    if player_side is not None and player_side not in entry.sides:
+        # Checked before any credential is read or database opened.
+        raise ValueError(
+            f"Unknown player side {player_side!r}; {entry.id} has {', '.join(entry.sides)}."
+        )
     if player_provider == "openrouter" and provider is None:
         settings = settings if settings is not None else Settings.load()
         overrides = {

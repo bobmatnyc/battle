@@ -12,6 +12,8 @@ class RulesSimulation:
     god_view = staticmethod(engine.god_view)
     observation = staticmethod(command_policy.observation_for)
     validate_orders = staticmethod(command_policy.validated)
+    player_side = staticmethod(engine.player_side)
+    role = staticmethod(engine.role)
 
 
 class ScenarioRegistry:

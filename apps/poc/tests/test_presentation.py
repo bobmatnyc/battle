@@ -16,12 +16,13 @@ def _plain(html):
 
 class MissionTextTests(unittest.TestCase):
     def test_mission_text_states_early_summit_loss_before_deadline(self):
-        # The poc-8 rule ends the battle when Confederates hold the summit ring
-        # uncontested for three intervals, before 17:00. The text must say so.
+        # The hold-objective rule (poc-8, and poc-9 as a victory kind) ends the
+        # battle when Confederates hold the summit ring uncontested for three
+        # intervals, before 17:00. The text must say so.
         with tempfile.TemporaryDirectory() as directory:
             app = Application(Path(directory) / 'battle.sqlite', offline=True)
             gid, state = app.gid, app.state()
-            self.assertEqual(state['rules'], 'poc-8')
+            self.assertEqual(state['rules'], 'poc-9')
             app.mutate('/api/orders', dict(game_id=gid, revision=state['revision'], orders=[
                 {'unit_id': 'U1', 'destination': [11, 9], 'stance': 'move'}]))
             while (saved := app.store.load(gid))['status'] == 'active':

@@ -120,4 +120,6 @@ Historical calibration is much less complete than the game-system survey. One in
 
 [37 — First five selections and source register](37-first-five-selection-register.md) names the five company-scale comparisons, holds Gergovia as the sixth, lists Cannae separately, proposes a Hougoumont gate state and Hill 223 reconstruction variants, and records order and outcome sources per case.
 
-[38 — Scenario catalog](38-scenario-catalog.md) defines the scenario-entry format, how the catalog resolves new and saved games, the `poc-8` limits an entry must respect, and what each planned battle still needs beyond data.
+[38 — Scenario catalog](38-scenario-catalog.md) defines the scenario-entry format, how the catalog resolves new and saved games, the `poc-9` limits an entry must respect, and what each planned battle still needs beyond data.
+
+[39 — Scenario-defined sides and victory kinds](39-scenario-sides-and-victory-kinds.md) records the `poc-9` edition: side ids, names, roles, the player side and a pluggable victory kind come from the scenario entry, with `poc-8` frozen for replay and Little Round Top unchanged.

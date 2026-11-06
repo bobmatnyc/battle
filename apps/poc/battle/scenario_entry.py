@@ -8,22 +8,25 @@ initial snapshot for a rules edition; ``validate`` refuses an entry the current
 rules cannot run. Format: ``docs/research/38-scenario-catalog.md``.
 """
 
+import re
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
 from . import grid
 
+# Sides and roles of every edition before poc-9, which fixed them in the rules.
 SIDES = ("union", "confederate")
-RULES_VERSION = "poc-8"
-EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8")
-# The poc-8 engine scores one victory model with fixed side roles and constants
-# (engine.advance). An entry asking for anything else needs a new rules edition.
-POC8_VICTORY = {"kind": "hold-objective", "radius": 1, "hold_turns": 3}
-POC8_ROLES = {"union": "defender", "confederate": "attacker"}
-POC8_SECONDS_PER_TURN = 30  # engine.issue states delays as turns * 30 seconds.
-POC8_ORDER_CATALOG = ("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in")
-POC8_COMMUNICATIONS = "civil-war-courier-v1"  # comms.PROFILE, the only profile.
+LEGACY_ROLES = {"union": "defender", "confederate": "attacker"}
+RULES_VERSION = "poc-9"
+EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9")
+# poc-9 takes side ids, names, roles, the player side and the victory kind from
+# the entry (stored in the snapshot); these remain fixed by the rules.
+ROLES = ("defender", "attacker")
+SIDE_ID = re.compile(r"[a-z][a-z0-9_]{0,31}")
+SECONDS_PER_TURN = 30  # engine.issue states delays as turns * 30 seconds.
+ORDER_CATALOG = ("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in")
+COMMUNICATIONS = "civil-war-courier-v1"  # comms.PROFILE, the only profile.
 
 
 def unit(uid, side, name, pos):
@@ -50,6 +53,8 @@ class SupplyEntry:
 class SideEntry:
     """One side: its mission is the only objective text its own prompt shows.
 
+    ``name`` labels the side in outcome reports and staff prose; ``role`` is
+    ``defender`` or ``attacker`` for the victory kind (poc-9 stores both).
     ``headquarters`` is the rally point (and the poc-1/poc-2 headquarters);
     ``command_unit`` is the detachment the side's controller is attached to.
     ``charge`` completes the staff adviser's scripted summary.
@@ -77,16 +82,16 @@ class UnitEntry:
 
 @dataclass(frozen=True)
 class VictoryEntry:
-    """Victory model. ``deadline_turns`` and ``objective`` are free; the rest is
-    fixed by the rules edition (see ``POC8_VICTORY``)."""
+    """Victory: ``kind`` names an entry of ``victory.KINDS``, which checks the
+    remaining fields. Sides take part through their ``role``. ``radius``,
+    ``hold_turns`` and ``objective_name`` parameterise ``hold-objective``."""
 
     kind: str
     objective: tuple[int, int]
-    defender: str
-    attacker: str
     deadline_turns: int
     radius: int = 1
     hold_turns: int = 3
+    objective_name: str = "objective"
 
 
 @dataclass(frozen=True)
@@ -110,6 +115,8 @@ class ScenarioEntry:
 
     ``labels`` maps each supported rules edition to the snapshot's
     ``scenario`` label; a catalog resolves saved games by that label.
+    ``player_side`` is the side the interactive player commands (None: the
+    first side).
     """
 
     id: str
@@ -133,6 +140,11 @@ class ScenarioEntry:
     communications: str
     voice_profile: str
     tools_per_unit: int = 20
+    player_side: str | None = None
+
+    @property
+    def player(self):
+        return self.player_side or next(iter(self.sides))
 
     @property
     def start_local(self):
@@ -146,8 +158,9 @@ class ScenarioEntry:
 def validate(entry):
     """Why: a scenario must fail at registration, not mid-battle, when it asks
     for something the current rules cannot do.
-    What: raises ValueError listing every mismatch with the poc-8 engine: side
-    ids and roles, victory model, grid geometry, turn length, order catalog,
+    What: raises ValueError listing every mismatch with the current engine:
+    side ids, names and roles, the player side, the victory kind and its own
+    checks (``victory.KINDS``), grid geometry, turn length, order catalog,
     communications, voice, unit roster and command attachment, headquarters
     and supply hexes on the grid, and unit overrides that would replace a
     unit's id, side or hex.
@@ -162,28 +175,19 @@ def validate(entry):
         problems.append(f"rules {entry.rules!r} is not the current edition {RULES_VERSION!r}")
     if entry.rules not in entry.labels:
         problems.append(f"no snapshot label for {entry.rules!r}")
-    if tuple(entry.sides) != SIDES:
-        problems.append(f"sides must be {SIDES} in {RULES_VERSION}")
-    for side, role in POC8_ROLES.items():
-        if side in entry.sides and entry.sides[side].role != role:
-            problems.append(f"{side} must be the {role} in {RULES_VERSION}")
+    problems.extend(_side_problems(entry))
     victory = entry.victory
-    for name, required in POC8_VICTORY.items():
-        if getattr(victory, name) != required:
-            problems.append(f"victory {name} must be {required!r} in {RULES_VERSION}")
-    if (victory.defender, victory.attacker) != ("union", "confederate"):
-        problems.append("victory defender/attacker must be union/confederate")
     if not grid.valid(list(victory.objective)) or victory.deadline_turns <= 0:
         problems.append("victory objective or deadline is invalid")
     shape = (entry.map.cols, entry.map.rows, entry.map.metres_per_hex)
     if shape != (grid.COLS, grid.ROWS, grid.METRES_PER_HEX):
         problems.append(f"map must be {grid.COLS}x{grid.ROWS} hexes of {grid.METRES_PER_HEX} m")
-    if entry.seconds_per_turn != POC8_SECONDS_PER_TURN:
-        problems.append(f"turns must be {POC8_SECONDS_PER_TURN} seconds")
-    if tuple(entry.order_catalog) != POC8_ORDER_CATALOG:
-        problems.append(f"order catalog must be {POC8_ORDER_CATALOG}")
-    if entry.communications != POC8_COMMUNICATIONS:
-        problems.append(f"communications must be {POC8_COMMUNICATIONS!r}")
+    if entry.seconds_per_turn != SECONDS_PER_TURN:
+        problems.append(f"turns must be {SECONDS_PER_TURN} seconds")
+    if tuple(entry.order_catalog) != ORDER_CATALOG:
+        problems.append(f"order catalog must be {ORDER_CATALOG}")
+    if entry.communications != COMMUNICATIONS:
+        problems.append(f"communications must be {COMMUNICATIONS!r}")
     if entry.voice_profile != VOICE_PROFILE:
         problems.append(f"voice profile must be {VOICE_PROFILE!r}")
     if not entry.prompt_version or not all(s.mission for s in entry.sides.values()):
@@ -192,6 +196,29 @@ def validate(entry):
     if problems:
         raise ValueError(f"Scenario {entry.id!r} cannot run: " + "; ".join(problems))
     return entry
+
+
+def _side_problems(entry):
+    from . import victory
+
+    problems = []
+    if len(entry.sides) < 2:
+        problems.append("a scenario needs at least two sides")
+    for side, spec in entry.sides.items():
+        if not isinstance(side, str) or not SIDE_ID.fullmatch(side):
+            problems.append(f"side id {side!r} must be lower-case letters, digits or _")
+        if not spec.name:
+            problems.append(f"side {side!r} needs a display name")
+        if spec.role not in ROLES:
+            problems.append(f"side {side!r} role must be one of {ROLES}")
+    if entry.player not in entry.sides:
+        problems.append(f"player side {entry.player!r} is not a scenario side")
+    kind = victory.KINDS.get(entry.victory.kind)
+    if kind is None:
+        problems.append(f"victory kind {entry.victory.kind!r} is not one of {tuple(victory.KINDS)}")
+    else:
+        problems.extend(kind.problems(entry))
+    return problems
 
 
 # Fields a unit override may not replace: the roster and command attachment
@@ -290,13 +317,21 @@ def build_state(entry, rules=None):
     What: returns the initial snapshot of ``entry`` in ``rules`` (default the
     entry's edition), layering each edition's additions in the order the
     Little Round Top builder always used, so its snapshots stay byte-identical.
-    Raises ValueError for an edition the entry has no label for.
+    From poc-9 the snapshot also stores ``sides`` (a list of id, name and
+    role in entry order; a list because storage sorts object keys and side
+    order fixes event order), ``player_side`` and ``victory`` (the kind's
+    parameters), so the engine and replay never need the catalog.
+    Raises ValueError for an edition the entry has no label for, or for an
+    edition before poc-9 when the sides are not Union/Confederate.
     Test: `test_little_round_top_entry_rebuilds_every_edition_byte_identically`,
     `test_duel_fixture_runs_headless_and_replays`.
     """
     rules = rules or entry.rules
     if rules not in entry.labels or rules not in EDITIONS:
         raise ValueError(f"Scenario {entry.id!r} has no {rules!r} edition.")
+    sides = tuple(entry.sides)
+    if not _at_least(rules, 'poc-9') and sides != SIDES:
+        raise ValueError(f"{rules} supports only the sides {SIDES}.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))
@@ -307,10 +342,10 @@ def build_state(entry, rules=None):
          'max_turns': entry.victory.deadline_turns,
          'seconds_per_turn': entry.seconds_per_turn, 'units': units,
          'cells': entry.map.terrain(), 'orders': [], 'reports': [],
-         'contacts': {x: {} for x in SIDES},
+         'contacts': {x: {} for x in sides},
          'friendly_reports': {side: {u['id']: dict(u, observed_turn=0, received_turn=0)
-                                     for u in units if u['side'] == side} for side in SIDES},
-         'dispatches': {x: [] for x in SIDES}, 'events': [], 'decisions': [],
+                                     for u in units if u['side'] == side} for side in sides},
+         'dispatches': {x: [] for x in sides}, 'events': [], 'decisions': [],
          'weather': dict(entry.weather),
          'hq': {side: list(spec.headquarters) for side, spec in entry.sides.items()}}
     if _at_least(rules, 'poc-3'):
@@ -322,7 +357,7 @@ def build_state(entry, rules=None):
                            for side, spec in entry.sides.items()}
         s['hq'] = {side: next(list(u['pos']) for u in units if u['id'] == c['unit_id'])
                    for side, c in s['commanders'].items()}
-        s['acknowledgements'] = {side: {} for side in SIDES}
+        s['acknowledgements'] = {side: {} for side in sides}
     if _at_least(rules, 'poc-4'):
         s.update(formation_ops=[], formation_notices={}, retired_units=[])
     if _at_least(rules, 'poc-5'):
@@ -339,12 +374,18 @@ def build_state(entry, rules=None):
             s['friendly_reports'][u['side']][u['id']]['tools'] = u['tools']
     if rules == 'poc-7':
         s['recommendations'] = []
-    if rules == 'poc-8':
+    if _at_least(rules, 'poc-8'):
         s.update(recommendations=[], standing_orders=[])
         for u in units:
             u.update(standing_profile='balanced', standing_version=0)
             s['friendly_reports'][u['side']][u['id']].update(
                 standing_profile='balanced', standing_version=0)
+    if _at_least(rules, 'poc-9'):
+        from . import victory
+        s['sides'] = [{'id': side, 'name': spec.name, 'role': spec.role}
+                      for side, spec in entry.sides.items()]
+        s['player_side'] = entry.player
+        s['victory'] = victory.KINDS[entry.victory.kind].setup(entry)
     return s
 
 
