@@ -29,7 +29,7 @@ Each variant is a `scenario_concord.Variant` in `SENSITIVITY`, separate from the
 
 **Validation.** Every variant passes `validate` and `dry_run`, including `water_problems` (Concord has no building, so the compound and gateway check finds nothing to refuse). It uses `WEAPONS_1775` with one range. With the bridge made impassable, no route joins the two ends, so the river cuts the map. The variants are in no catalog: Concord stays headless only.
 
-**Baseline unchanged.** `test_baseline_run_keeps_its_pinned_digest` pins the sha256 of the run summary without `game_id` and the saved final state, taken at `d6f1748` before this change. `test_baseline_timeline_is_the_same_under_two_hash_seeds` runs `concord_timeline.py` in two processes, under `PYTHONHASHSEED=1` and `2`, masks `game_id`, and asserts equal output with a pinned digest. One process has one hash seed, so the earlier replay test could not catch an order that depends on hashing; this test can. Changing B2's start hex makes both tests fail.
+**Baseline unchanged.** `test_baseline_run_keeps_its_pinned_digest` pins the sha256 of the run summary without `game_id` and the saved final state, taken at `d6f1748` before this change. `test_baseline_timeline_is_the_same_under_two_hash_seeds` runs `concord_timeline.py` in two processes, under `PYTHONHASHSEED=1` and `2`, masks `game_id`, and asserts equal output with a pinned digest. One process has one hash seed, so the earlier replay test could not catch an order that depends on hashing; this test can. Changing B2's start hex makes both tests fail. Since [50](50-concord-command-fire-release.md), these two digests pin the v1 entry, `CONCORD_NORTH_BRIDGE_BEFORE` (`test_before_entry_keeps_its_pinned_digest`, `concord_timeline.py --before`).
 
 ## 3. The runs
 
