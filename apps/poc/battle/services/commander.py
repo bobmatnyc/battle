@@ -31,6 +31,7 @@ KNOWN_REASONS = frozenset(
         "NoContent",
         "ReplyTooLarge",
         "ReplyTruncated",
+        "ProviderError",
         "KeyError",
         "IndexError",
         "TypeError",
@@ -74,6 +75,9 @@ def record_response(telemetry, metadata):
         # json, extracted or tool_call; null when a provider does not report it.
         reply_format=metadata.get("reply_format"),
     )
+    # Only an in-body provider error adds this key, so other records keep their shape.
+    if "error_code" in metadata:
+        telemetry["provider_error_code"] = metadata["error_code"]
 
 
 class CommanderService:

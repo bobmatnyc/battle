@@ -285,8 +285,45 @@ class ProviderFailureReasonTests(unittest.TestCase):
         # An identifier-shaped reason outside the adapter's names may be content.
         self.assertEqual(failure_kind(ProviderFailure("sk_live_abc123")), "ProviderFailure")
         self.assertEqual(failure_kind(ProviderUnavailable("HTTP 5034")), "ProviderUnavailable")
-        for reason in ("ReplyTooLarge", "ReplyTruncated", "AmbiguousJSON", "TimeoutError"):
+        for reason in ("ReplyTooLarge", "ReplyTruncated", "AmbiguousJSON", "TimeoutError", "ProviderError"):
             self.assertEqual(failure_kind(ProviderUnavailable(reason)), reason)
+
+
+class InBodyProviderErrorTests(unittest.TestCase):
+    """A 200 body holding ``error`` instead of ``choices``, as Astra returned on
+    Hougoumont (game 99fcf7ffc8854278: id kept, no model, usage or finish)."""
+
+    def test_in_body_provider_error_falls_back_as_provider_error(self):
+        detail = "upstream detail " + SECRET
+        bodies = {
+            "top-level": {"id": "gen-in-body-error", "error": {"code": 502, "message": detail}},
+            "first choice": {
+                "id": "gen-in-body-error",
+                "choices": [{"finish_reason": "error", "error": {"code": 502, "message": detail}}],
+            },
+        }
+        for label, body in bodies.items():
+            with self.subTest(label):
+                opener = lambda request, timeout, body=body: Response(json.dumps(body).encode())
+                decision = decide(opener)
+                self.assertTrue(decision["fallback"])
+                self.assertEqual(decision["fallback_stage"], "provider_error")
+                self.assertEqual(decision["fallback_reason"], "ProviderError")
+                self.assertEqual(decision["response_id"], "gen-in-body-error")
+                self.assertEqual(decision["provider_error_code"], 502)
+                self.assertNotIn(detail, json.dumps(decision))
+
+    def test_non_numeric_error_code_is_not_recorded(self):
+        body = {"id": "gen-x", "error": {"code": "sk_live_abc123", "message": "m"}}
+        decision = decide(lambda request, timeout: Response(json.dumps(body).encode()))
+        self.assertEqual(decision["fallback_reason"], "ProviderError")
+        self.assertIsNone(decision["provider_error_code"])
+        self.assertNotIn("sk_live_abc123", json.dumps(decision))
+
+    def test_successful_decision_has_no_provider_error_code(self):
+        decision = decide(answer(lambda orders: {"content": dispatch(orders)}))
+        self.assertFalse(decision["fallback"])
+        self.assertNotIn("provider_error_code", decision)
 
 
 class EffortDefaultTests(unittest.TestCase):

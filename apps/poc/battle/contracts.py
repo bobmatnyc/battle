@@ -25,7 +25,8 @@ class ProviderFailure(RuntimeError):
     """Why: a decoded but unusable response was still paid for; its telemetry
     must reach the decision record.
     What: ``str()`` is a safe reason (HTTP code or type name). ``metadata`` holds
-    only response metadata (model, usage, response_id, finish_reason), never
+    only response metadata (model, usage, response_id, finish_reason, and an
+    in-body provider error's numeric error_code), never
     message content, prompt text or credentials; empty when nothing was decoded.
     Test: `test_truncated_reasoning_response_keeps_paid_telemetry`.
     """

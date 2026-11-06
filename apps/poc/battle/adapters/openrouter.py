@@ -29,6 +29,11 @@ class ReplyTruncated(ValueError):
     """The provider stopped at its token limit (``finish_reason`` ``length``)."""
 
 
+class ProviderError(ValueError):
+    """The response body, or its first choice, carried an ``error`` object
+    instead of a reply. OpenRouter can send this with HTTP 200."""
+
+
 # OpenRouter structured outputs: strict JSON Schema for the order reply.
 RESPONSE_FORMAT = {
     "type": "json_schema",
@@ -43,24 +48,55 @@ RESPONSE_FORMAT = {
 RESPONSE_FORMAT_ID = "json_schema:commander_orders"
 
 
+def first_choice(body):
+    """The first choice of a decoded body when it is an object, else None."""
+    choices = body.get("choices")
+    first = choices[0] if isinstance(choices, list) and choices else None
+    return first if isinstance(first, dict) else None
+
+
+def body_error(body):
+    """The ``error`` object of the body or its first choice, else None."""
+    for holder in (body, first_choice(body) or {}):
+        error = holder.get("error")
+        if error is not None:
+            return error if isinstance(error, dict) else {}
+    return None
+
+
+def error_code(error):
+    """An HTTP-shaped integer code from a provider error object, else None.
+    The message and any string code are dropped: they may carry content."""
+    code = error.get("code")
+    if isinstance(code, int) and not isinstance(code, bool) and 100 <= code <= 599:
+        return code
+    return None
+
+
 def response_metadata(body):
     """Why: telemetry must survive a response whose content fails to parse.
     What: extracts model, usage, response_id and finish_reason from a decoded
-    body; never message content. Malformed fields become None or {}.
-    Test: `test_truncated_reasoning_response_keeps_paid_telemetry`.
+    body; never message content. Malformed fields become None or {}. A body
+    carrying an ``error`` object adds ``error_code`` (see ``error_code``);
+    other bodies have no such key.
+    Test: `test_truncated_reasoning_response_keeps_paid_telemetry`,
+    `test_in_body_provider_error_falls_back_as_provider_error`.
     """
     if not isinstance(body, dict):
         return {}
-    choices = body.get("choices")
-    first = choices[0] if isinstance(choices, list) and choices else None
+    first = first_choice(body)
     usage = body.get("usage")
-    return {
+    metadata = {
         # Returned model only; None when the provider omits it.
         "model": body.get("model"),
         "usage": usage if isinstance(usage, dict) else {},
         "response_id": body.get("id"),
-        "finish_reason": first.get("finish_reason") if isinstance(first, dict) else None,
+        "finish_reason": first.get("finish_reason") if first else None,
     }
+    error = body_error(body)
+    if error is not None:
+        metadata["error_code"] = error_code(error)
+    return metadata
 
 
 def reasoning_field(effort):
@@ -208,10 +244,16 @@ def decoded_reply(body, metadata):
     object, and telemetry must record how the order object was found.
     What: returns ``(object, reply_format)`` from a decoded body; the format is
     ``tool_call`` for tool-call arguments, else ``parse_reply``'s format.
-    Raises ReplyTruncated when ``finish_reason`` is ``length``, after the
-    content parsed; a reply that also fails to parse keeps the parse reason.
-    Test: `test_length_finish_with_complete_object_falls_back`.
+    Raises ProviderError when the body or its first choice holds an ``error``
+    object, before any content is read. Raises ReplyTruncated when
+    ``finish_reason`` is ``length``, after the content parsed; a reply that
+    also fails to parse keeps the parse reason.
+    Test: `test_length_finish_with_complete_object_falls_back`,
+    `test_in_body_provider_error_falls_back_as_provider_error`.
     """
+    # A 200 body {"id", "error"} once hit body["choices"] and fell back as KeyError.
+    if body_error(body) is not None:
+        raise ProviderError("Response body carries a provider error")
     text, from_tool_call = reply_text(body)
     result, reply_format = parse_reply(text)
     if metadata.get("finish_reason") == "length":
