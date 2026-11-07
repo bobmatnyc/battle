@@ -12,7 +12,14 @@ from battle.analysis import assess
 from battle.bootstrap import build_scenarios
 from battle.engine import view
 from battle.presentation import present_view, scenario_brief
+from battle.adapters.rules import RulesSimulation
+from battle.services.queries import BattleQueries
 catalog = build_scenarios()
+queries = BattleQueries(None, RulesSimulation(), None, assess=assess, present=present_view, scenarios=catalog)
+opening = catalog.create("little-round-top")
+# docs/research/65: what /api/replay returns for each view of the opening revision.
+replays = {"union": queries.project(opening), "confederate": queries.project(opening, side="confederate"),
+           "god": queries.project(opening, god=True)}
 def shown(scenario_id):
     entry = catalog.resolve(scenario_id)
     v = view(catalog.create(scenario_id))
@@ -20,7 +27,7 @@ def shown(scenario_id):
     shown_view["scenario_brief"] = scenario_brief(entry, v["side"])
     shown_view["analysis"] = assess(v)
     return {"view": shown_view, "map": catalog.map(scenario_id)}
-print(json.dumps({**shown("little-round-top"), "hougoumont": shown("hougoumont-north-gate")}))`;
+print(json.dumps({**shown("little-round-top"), "hougoumont": shown("hougoumont-north-gate"), "replays": replays}))`;
 const generated=spawnSync('python3',['-c',fixtureScript],{cwd:root,encoding:'utf8'});
 assert.equal(generated.status,0);
 const initial={...JSON.parse(generated.stdout).view,game_id:'test-initial',mode:'scripted',messages:[],clock:{running:false,inflight:false,speed:10,remaining_seconds:30,speeds:[0.5,1,2,5,10,30,60]}};
@@ -28,6 +35,8 @@ const elements=new Map();
 const element=id=>{if(!elements.has(id))elements.set(id,{id,classList:{toggle(){},add(){},remove(){}},addEventListener(){},setAttribute(){},focus(){},showModal(){this.open=true;},close(){this.open=false;},scrollIntoView(){},value:'',innerHTML:'',textContent:''});return elements.get(id);};
 const requests=[];
 const hougoumont=JSON.parse(generated.stdout).hougoumont;
+const replays=JSON.parse(generated.stdout).replays;
+const replayed=path=>{const q=new URLSearchParams(path.split('?')[1]);return {...replays[q.get('view')==='god'?'god':q.get('side')||'union'],revision:+q.get('revision')};};
 const hougoumontView={...hougoumont.view,game_id:'test-hougoumont',mode:'scripted',messages:[],clock:initial.clock};
 let served='little-round-top';  // Which scenario the mock server is playing.
 const setCells=[];
@@ -38,6 +47,8 @@ const context=vm.createContext({document:{getElementById:element},window:{matchM
     if(path==='/api/new'&&options?.body)served=JSON.parse(options.body).scenario==='hougoumont-north-gate'?'hougoumont-north-gate':'little-round-top';
     const hg=served==='hougoumont-north-gate';
     const catalog={default:'little-round-top',scenarios:[{id:'little-round-top',title:'Little Round Top'},{id:'hougoumont-north-gate',title:'Hougoumont: the north gate'}]};
+    if(path.startsWith('/api/history'))return {ok:true,json:async()=>[{revision:0,turn:0},{revision:1,turn:0}]};
+    if(path.startsWith('/api/replay'))return {ok:true,json:async()=>replayed(path)};
     return {ok:true,json:async()=>path==='/api/map'?{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}:path==='/api/scenarios'?catalog:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:initial};}});
 vm.runInContext(readFileSync(new URL('../static/cartography.js',import.meta.url),'utf8'),context);
 for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
@@ -208,6 +219,44 @@ assert.equal(element('map-reference').href,'https://www.loc.gov/item/99447491/')
 assert.equal(vm.runInContext('state.voice_profile',context),'civil-war-en-v1');
 assert.match(element('scenario-select').innerHTML,/value="little-round-top".*value="hougoumont-north-gate"/);
 console.log('Scenario text passed: Little Round Top mission, headings, objective and voice come from the brief unchanged.');
+
+// docs/research/65: Replay as the Union, then the Confederates, then God, then the Union again.
+const lastReplay=()=>requests.filter(r=>r.path.startsWith('/api/replay')).at(-1).path;
+const chooseReplayView=async value=>{element('replay-view').value=value;await element('replay-view').onchange();};
+const commandsBefore=requests.filter(r=>r.options?.method==='POST'&&r.path!=='/api/clock').length;
+await element('history-toggle').onclick();
+assert.equal(vm.runInContext('replay',context),true);
+assert.equal(lastReplay(),'/api/replay?game_id=test-initial&revision=0');  // The player's own view by default.
+assert.match(element('replay-view').innerHTML,/value="union">Union commander.*value="confederate">Confederate commander.*value="god">God view/);
+assert.equal(element('replay-view').value,'union');
+await chooseReplayView('confederate');
+assert.equal(lastReplay(),'/api/replay?game_id=test-initial&revision=0&side=confederate');
+assert.equal(vm.runInContext('state.side',context),'confederate');
+assert.equal(element('god-toggle-state').textContent,'Off');
+assert.match(element('clock-status').textContent,/recorded Confederate commander view/);
+assert.match(element('unit-list').innerHTML,/data-unit="C1"/);
+assert.doesNotMatch(element('unit-list').innerHTML,/data-unit="U\d"/);  // No Union unit the Confederates have not seen.
+assert.doesNotMatch(element('map').innerHTML,/data-unit="U\d"/);
+assert.equal(element('mission-title').textContent,replays.confederate.scenario_brief.mission.title);
+assert.equal(element('replay-view').value,'confederate');
+await chooseReplayView('god');
+assert.equal(lastReplay(),'/api/replay?game_id=test-initial&revision=0&view=god');
+assert.equal(element('god-toggle-state').textContent,'On');
+assert.match(element('unit-list').innerHTML,/data-unit="U1"/);assert.match(element('unit-list').innerHTML,/data-unit="C1"/);
+await chooseReplayView('union');
+assert.equal(lastReplay(),'/api/replay?game_id=test-initial&revision=0');
+assert.equal(element('god-toggle-state').textContent,'Off');
+assert.doesNotMatch(element('unit-list').innerHTML,/data-unit="C\d"/);
+await chooseReplayView('confederate');
+element('replay-slider').value='1';await element('replay-slider').oninput({target:element('replay-slider')});
+assert.equal(lastReplay(),'/api/replay?game_id=test-initial&revision=1&side=confederate');  // Seeking keeps the view.
+await element('live-view').onclick();
+assert.equal(vm.runInContext('replay',context),false);
+assert.equal(requests.at(-1).path,'/api/state');  // Live is the player's commander view again.
+assert.equal(vm.runInContext('state.side',context),'union');
+assert.equal(element('replay-view').innerHTML,'');
+assert.equal(requests.filter(r=>r.options?.method==='POST'&&r.path!=='/api/clock').length,commandsBefore);  // Replay sent no command.
+console.log('Replay sides passed: Union, Confederate and God replay views by selector, seek keeps the view, live returns to the player, no commands or dialogs.');
 
 // New-game selection: pick Hougoumont, Reset, and the whole desk follows the new game.
 element('scenario-select').value='hougoumont-north-gate';

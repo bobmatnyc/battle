@@ -34,8 +34,18 @@ class BattleQueries:
         except UnknownScenario:
             return None
 
-    def project(self, state, *, god=False):
-        commander_view = self.simulation.view(state)
+    def project(self, state, *, god=False, side=None):
+        """Why: the desk and replay show one side's commander view or God's.
+        What: the presented view of ``state``: God's when ``god``, else the
+        commander view of ``side`` (None: the snapshot's player side), with
+        that side's brief and assessment. A side the snapshot lacks, or a side
+        named together with ``god``, raises ValueError. Never mutates ``state``.
+        Test: `test_each_side_replay_equals_its_live_view_at_every_revision`,
+        `test_replay_refuses_an_unknown_side_and_side_with_god`."""
+        if side is not None and (god or side not in state.get("friendly_reports", {})):
+            # docs/research/65: one view per request; a side must be the battle's own.
+            raise ValueError("Unknown side for this battle, or a side with the God view.")
+        commander_view = self.simulation.view(state, side)
         # Early report summaries omitted immutable, pre-briefed own-unit traits.
         # These editions have no training/remixing; restore only those traits,
         # never live strength, condition, position or enemy information.
@@ -56,8 +66,9 @@ class BattleQueries:
         result["analysis"] = present_analysis(self.assess(commander_view), entry)  # poc-13B review: 1775 address
         return result
 
-    def replay(self, game_id, revision, *, god=False):
-        return self.project(self.repository.load(game_id, revision), god=god)
+    def replay(self, game_id, revision, *, god=False, side=None):
+        """Read-only: the stored snapshot at ``revision`` through ``project``."""
+        return self.project(self.repository.load(game_id, revision), god=god, side=side)
 
     def history(self, game_id):
         return self.repository.history(game_id)

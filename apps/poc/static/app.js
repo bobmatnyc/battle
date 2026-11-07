@@ -5,7 +5,7 @@ const unitIcons=UnitIcons.create({esc});
 let state,mapData,mapScenario,selected=null,destination=null,busy=false,replay=false,liveState,history=[],hexes=true,terrain=false,toastTimer;
 let godMode=false,godEventLimit=60,unitAction=null;
 const stateUrl=()=>'/api/state'+(godMode?'?view=god':'');
-let replayPlaying=false,replaySpeed=10,replayIndex=0,replayTimer,replayGeneration=0,viewEpoch=0;
+let replayPlaying=false,replaySpeed=10,replayIndex=0,replayTimer,replayGeneration=0,viewEpoch=0,replaySide=null;
 const speeds=[0.5,1,2,5,10,30,60];
 const center=p=>[(p[0]+.5*(p[1]&1))*Math.sqrt(3)*25.5+24,p[1]*38.25+26];
 const elapsedSeconds=t=>t*state.seconds_per_turn;
@@ -102,13 +102,13 @@ $('clock-toggle').disabled=busy||(!replay&&state.status!=='active')||(!replay&&c
 $('clock-toggle').textContent=replay?(running?'Pause replay Ⅱ':'Play replay ▶'):(running?'Pause clock Ⅱ':'Start clock ▶');
 $('clock-speed').textContent=`${rate}×${replay?' replay':''}`;
 $('clock-slower').disabled=busy||rate===speeds[0];$('clock-faster').disabled=busy||rate===speeds.at(-1);
-$('clock-status').textContent=replay?`${running?'Playing':'Paused'} · recorded ${godMode?'omniscient':'commander'} view`:c.error||
+$('clock-status').textContent=replay?`${running?'Playing':'Paused'} · recorded ${replayViewName()} view`:c.error||
 (c.inflight?(c.running?'Updating battlefield…':'Pausing clock…'):
 state.status!=='active'?'Battle complete · replay available':`${c.running?'Running':'Paused'} · battlefield time${c.running?' · '+c.speed+'×':''}`);
-$('send-order').disabled=Boolean(unitAction&&unitAction!=='move')||inactive||!u||!destination||['routed','lost'].includes(u.status);$('hold-order').disabled=inactive||!u||['routed','lost'].includes(u.status);$('new-game').disabled=busy;$('ai-mode').disabled=busy||replay;$('chat-send').disabled=busy||replay||godMode;$('chat-input').disabled=busy||replay||godMode;$('god-toggle').disabled=busy;
+$('send-order').disabled=Boolean(unitAction&&unitAction!=='move')||inactive||!u||!destination||['routed','lost'].includes(u.status);$('hold-order').disabled=inactive||!u||['routed','lost'].includes(u.status);$('new-game').disabled=busy;$('ai-mode').disabled=busy||replay;$('chat-send').disabled=busy||replay||godMode;$('chat-input').disabled=busy||replay||godMode;$('god-toggle').disabled=busy;$('replay-view').disabled=busy;if(replay)$('replay-view').value=godMode?'god':state.side;
 $('send-order').textContent=u&&u.id===state.command?.unit_id?'Give local order ↗':'Dispatch runner ↗';
 $('order-summary').innerHTML='<span class="eyebrow">MOVEMENT ORDERS</span><strong>'+(!u?'Select a detachment to begin.':`${esc(u.name)}${destination?` → hex ${destination.join(',')}`:' · choose a destination hex'}`)+'</strong>';
-$('map-tip').textContent=unitAction==='split'?'Split: choose an adjacent hex, then send instructions in the unit panel.':godMode?'God Mode · inspect all sides. Return to commander view to give orders.':replay?'Recorded commander view. Orders are disabled.':u?(destination?`${u.id} → ${destination.join(',')} · ${u.id===state.command?.unit_id?'give a local order':'dispatch a runner'}.`:`${u.id} selected. Choose a hex or hold position.`):'Select a blue unit, then choose a destination hex.';
+$('map-tip').textContent=unitAction==='split'?'Split: choose an adjacent hex, then send instructions in the unit panel.':godMode?'God Mode · inspect all sides. Return to commander view to give orders.':replay?`Recorded ${replayViewName()} view. Orders are disabled.`:u?(destination?`${u.id} → ${destination.join(',')} · ${u.id===state.command?.unit_id?'give a local order':'dispatch a runner'}.`:`${u.id} selected. Choose a hex or hold position.`):'Select a blue unit, then choose a destination hex.';
 $('ai-mode').value=state.mode||liveState?.mode||'scripted';$('ai-status').textContent=replay?'Recorded view · live commands paused':state.last_fallback_reason?`Local fallback used (${state.last_fallback_reason}). Battle continues.`:state.last_commander_source?`Last decision: ${state.last_commander_source==='openrouter'?'OpenRouter agent':'scripted commander'} · plans every 90s`:'First command decision arrives when the clock runs.';
 }
 function render(){$('rules-notice').classList.toggle('hidden',state.rules==='poc-13');renderBrief();renderObserver();renderContacts();renderTimeline();renderMap();renderUnits();renderDispatches();renderMessages();renderControls();$('outcome').classList.toggle('hidden',state.status==='active');const outcomes=state.scenario_brief?.outcomes||noBriefOutcomes;if(state.status!=='active')$('outcome').innerHTML=`<strong>${esc(state.winner===state.side?outcomes.win:state.winner==='draw'?outcomes.draw:outcomes.loss)}</strong><p>${esc(state.reason)}</p><a href="/api/export" target="_blank">Open complete event log & replay audit ↗</a>`;}
@@ -237,7 +237,7 @@ $('clock-slower').onclick=()=>changeSpeed(-1);$('clock-faster').onclick=()=>chan
 $('new-game').onclick=async()=>{
   if(busy)return;
   stopReplay();
-  if(replay){replay=false;state=liveState;$('replay-bar').classList.add('hidden');}
+  if(replay){closeReplay();state=liveState;}
   const scenario=scenarioPicker.selected();
   const r=await post('/api/new',scenario?{scenario}:{});
   if(r){selected=null;destination=null;unitAction=null;history=[];replayIndex=0;godEventLimit=60;scenarioPicker.reset();render();toast(`Battle reset to ${clock(0)}. Clock paused; previous battle archived.`);}
@@ -250,6 +250,11 @@ $('chat-tab').onclick=()=>tab('chat');$('dispatch-tab').onclick=()=>tab('dispatc
 $('chat-form').onsubmit=async e=>{e.preventDefault();const text=$('chat-input').value.trim();if(!text)return;const result=await post('/api/chat',{text});if(result)$('chat-input').value='';};
 $('messages').onclick=async e=>{const button=e.target.closest('[data-proposal]');if(!button)return;const msg=(state.messages||[]).find(m=>m.id===+button.dataset.proposal);if(!msg)return;const result=await post('/api/orders',{orders:msg.proposals});if(result)toast('Proposed orders dispatched.');};
 function stopReplay(){replayPlaying=false;clearTimeout(replayTimer);replayGeneration++;}
+// docs/research/65: replay either side's commander view or God's; the player's side is the default request.
+const replaySides=()=>{const b=liveState?.scenario_brief;return b?[b.side,b.opponent]:[{id:liveState?.side,name:liveState?.side}];};
+const replayQuery=()=>godMode?'&view=god':replaySide?'&side='+encodeURIComponent(replaySide):'';
+const replayViewName=()=>godMode?'omniscient':`${(replaySides().find(s=>s.id===state.side)||{name:state.side}).name} commander`;
+function closeReplay(){replay=false;replaySide=null;$('replay-bar').classList.add('hidden');$('replay-view').innerHTML='';}
 function scheduleReplay(){
   if(!replayPlaying||!replay)return;
   if(replayIndex>=history.length-1){stopReplay();renderControls();return;}
@@ -260,20 +265,27 @@ function scheduleReplay(){
 $('history-toggle').onclick=async()=>{
   if(busy)return;if(replay)return;
   busy=true;viewEpoch++;renderControls();
-  try{await pauseLive();history=await get('/api/history?game_id='+state.game_id);liveState=state;replay=true;replaySpeed=state.clock.speed;
+  try{await pauseLive();history=await get('/api/history?game_id='+state.game_id);liveState=state;replay=true;replaySpeed=state.clock.speed;replaySide=null;
+    $('replay-view').innerHTML=[...replaySides().map(s=>`<option value="${esc(s.id)}">${esc(s.name)} commander</option>`),'<option value="god">God view</option>'].join('');
     $('replay-bar').classList.remove('hidden');$('replay-slider').max=history.length-1;await loadReplay(0);
   }catch(e){toast(e.message);}finally{busy=false;renderControls();}
 };
 async function loadReplay(i){
   const generation=replayGeneration;
-  try{const data=await get('/api/replay?game_id='+liveState.game_id+'&revision='+history[i].revision+(godMode?'&view=god':''));
+  try{const data=await get('/api/replay?game_id='+liveState.game_id+'&revision='+history[i].revision+replayQuery());
     if(!replay||generation!==replayGeneration)return;
     replayIndex=i;state={...data,mode:liveState.mode,messages:[]};$('replay-slider').value=i;
     render();return true;
   }catch(e){stopReplay();toast(e.message);renderControls();return false;}
 }
 $('replay-slider').oninput=async e=>{stopReplay();await loadReplay(+e.target.value);};
-$('live-view').onclick=async()=>{stopReplay();viewEpoch++;try{state=await get(stateUrl());liveState=state;replay=false;$('replay-bar').classList.add('hidden');render();}catch(e){toast(e.message);}};
+$('replay-view').onchange=async()=>{
+  if(busy||!replay)return;busy=true;stopReplay();const value=$('replay-view').value,previous=[godMode,replaySide];
+  godMode=value==='god';replaySide=godMode||value===replaySides()[0].id?null:value;selected=null;destination=null;unitAction=null;godEventLimit=60;renderControls();
+  try{if(!await loadReplay(replayIndex))throw Error('Could not change replay view.');}
+  catch(e){[godMode,replaySide]=previous;toast(e.message);}finally{busy=false;renderControls();}
+};
+$('live-view').onclick=async()=>{stopReplay();viewEpoch++;try{state=await get(stateUrl());liveState=state;closeReplay();render();}catch(e){toast(e.message);}};
 async function poll(){
   const epoch=viewEpoch;
   try{if(!busy&&!replay){const fresh=await get(stateUrl());if(!busy&&!replay&&epoch===viewEpoch){const changed=!state||fresh.game_id!==state.game_id||fresh.revision!==state.revision;state=fresh;liveState=state;if(changed){await syncMap();render();}else renderControls();}}}

@@ -33,8 +33,10 @@ class HttpApi:
         if path == "/api/history":
             return self.service.queries.history(game_id)
         if path == "/api/replay":
+            # docs/research/65: ``side`` replays that side's commander view.
             return self.service.queries.replay(
-                game_id, int(query.get("revision", ["0"])[0]), god=god
+                game_id, int(query.get("revision", ["0"])[0]), god=god,
+                side=query.get("side", [None])[0],
             )
         if path == "/api/export":
             return self.service.queries.export(self.service.game_id)

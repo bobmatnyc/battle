@@ -70,6 +70,15 @@ with tempfile.TemporaryDirectory() as tmp:
         assert god['events'] and god['decisions']
         assert all(u['side']=='confederate' for u in god['decisions'][0]['observation']['units'])
         assert len(request('/api/history'))==4
+        # docs/research/65: each side's recorded commander view; one view per request.
+        for revision in range(4):
+            mine=request(f'/api/replay?revision={revision}')
+            assert request(f'/api/replay?revision={revision}&side=union')==mine and mine['side']=='union'
+            theirs=request(f'/api/replay?revision={revision}&side=confederate')
+            assert theirs['side']=='confederate' and theirs['scenario_brief']['side']['id']=='confederate'
+            assert all(u['side']=='confederate' for u in theirs['units']) and 'events' not in theirs
+        request('/api/replay?revision=0&side=french',expected=400)
+        request('/api/replay?revision=0&side=union&view=god',expected=400)
         gid=state['game_id']
         assert state['clock']['running'] is False
         request('/api/clock',{'game_id':gid,'command':'speed','speed':60})
@@ -128,7 +137,7 @@ with tempfile.TemporaryDirectory() as tmp:
         print('Recommendation HTTP smoke passed: receipt, explicit acceptance, duplicate rejection and normal order delivery.')
         print('Order template HTTP smoke passed: shared catalog, legal mission delivery, hidden stocks and invalid template rejection.')
         print('Formation HTTP smoke passed: delivered split/combine, resource conservation, retired unit removal and authority enforcement.')
-        print('HTTP smoke passed: explicit God Mode, normal/model isolation, command unit, clock, immutable replay, map, movement, chat, stale revisions, secret/static boundaries.')
+        print('HTTP smoke passed: explicit God Mode, normal/model isolation, command unit, clock, immutable replay, replay per side, map, movement, chat, stale revisions, secret/static boundaries.')
         state=request('/api/new',{'game_id':state['game_id'],'revision':state['revision']})
         before=request('/api/history')
         assert request('/api/state')['analysis']['turn']==0
@@ -155,6 +164,10 @@ with tempfile.TemporaryDirectory() as tmp:
             assert view['scenario_brief']==brief
             assert 'pass men through' not in json.dumps(view['scenario_brief']),'Opponent mission leaked into the brief'
         assert 'pass men through' not in json.dumps(state)
+        french=request('/api/replay?revision=0&side=french')  # docs/research/65: the opponent's own brief and units.
+        assert french['side']=='french' and french['scenario_brief']['side']['name']=='French'
+        assert all(u['side']=='french' for u in french['units']) and 'Hold the farm' not in json.dumps(french)
+        assert request('/api/replay?revision=0&side=allied')==request('/api/replay?revision=0')
         state=request('/api/new',{'game_id':state['game_id'],'revision':state['revision']})
         assert state['scenario_brief']['id']=='little-round-top' and state['voice_profile']=='civil-war-en-v1'
         print('Scenario text HTTP passed: catalog list, Hougoumont brief and voice, player-only mission, map and replay carry it.')
