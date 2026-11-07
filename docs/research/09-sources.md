@@ -459,3 +459,33 @@ Access date for every entry: **2026-11-06 (UTC)**. Used in [56 — Hill 223](56-
 **Wikipedia — *Battle of Gergovia*.** [Page](https://en.wikipedia.org/wiki/Battle_of_Gergovia). Tertiary. Read through a summarising fetch for the site (Merdogne, renamed Gergovie 1865), force ranges with no attribution (Romans 20,000–45,000; Gauls about 30,000), and the statement that nearly all information comes from Caesar and no Gallic account survives. Bibliography: Dodge 1892, Goldsworthy, *The Economist* 18 December 2021; none read.
 
 **Not retrievable or not read 2026-11-06:** the official Medal of Honor citation for York (cmohs.org, HTTP 403); Mastriano, *Alvin York: A New Biography of the Hero of the Argonne* (University Press of Kentucky, 2014, ISBN 9780813145198, listing only); Gregory (2023) beyond S41 and a review listing (Midwest Military Studies Association dispatches, 2024; snippet only); the full affidavits; any German regimental or division record for 8 October 1918; the *Army History* no. 50 field study; the regimental order to the patrol; the 1995–96 Gergovie excavation record (Deberge and Guichard, Université de Neuchâtel record; found only in search-result summaries); the Latin text of *Gallic War* VII; Goldsworthy and other modern accounts of Gergovia; any contour or LIDAR data for the plateau (a LIDAR survey is noted by S63 as planned for winter 2023).
+
+## Cannae source pass — 2026-11-07
+
+Access date for every entry: **2026-11-07 (UTC)**. Used in [63 — Cannae](63-cannae-scenario-plan.md). S65, S66, S67, S68 and S70 were read as downloaded HTML, wikitext or PDF text; S69 through a summarising fetch and may be paraphrased. [36](36-cannae-army-scale.md) and the [gallery note](battle-gallery/cannae.md) linked Polybius and Livy without S-ids; S65 and S66 are those texts in the editions read here (36 linked a Richmond PDF of Livy, not re-read).
+
+### S65
+
+**Polybius — *Histories*, Book III, chapters 107 to 117.** Translation by W. R. Paton, Loeb Classical Library, transcribed by Bill Thayer at [LacusCurtius](https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Polybius/3*.html). Read in full for those chapters. **The earliest surviving narrative**, written some sixty years after the battle (S67 p. 7) by a friend of Aemilius Paullus's grandson (S67 p. 23). Thayer marks only some section numbers; locators are chapter, and section where marked. Thayer's notes correct Paton's distances in places (110.1, 110.10); the plan uses the text as Thayer prints it. Gives the forces, the deployment, the crescent, the Africans' turn "the situation itself indicating to them how to act", Hasdrubal's ride and the losses. The Greek text was not read.
+
+### S66
+
+**Livy — *History of Rome*, Book XXII, chapters 40 to 52 and 59.** Translation by Rev. Canon Roberts (1905), [Wikisource *From the Founding of the City/Book 22*](https://en.wikisource.org/wiki/From_the_Founding_of_the_City/Book_22), read as page wikitext. Augustan; a Roman account later than S65 and not independent of the Polybian tradition (gallery note). Differs from S65 on facing (Romans north, 46), the Carthaginian right-wing commander (Maharbal, 46), Servilius's post (the smaller camp, 40) and losses (49); adds the dust (43, 46), the false deserters (48), the fugitives' destinations (49) and the night breakout (50). The Latin was not read.
+
+### S67
+
+**Martin Samuels — "The Reality of Cannae".** *Militärgeschichtliche Mitteilungen* 47 (1990), no. 1, pp. 7–32, DOI [10.1524/mgzs.1990.47.1.7](https://www.degruyter.com/document/doi/10.1524/mgzs.1990.47.1.7/html). Read in full from a scan hosted at [gwern.net](https://gwern.net/doc/history/1990-samuels.pdf) (26 pages; page numbers taken from the printed margin numbers, scan page 1 = p. 7). Modern secondary. Used for the Roman totals (57,000 heavy, 14,000 skirmishers, 6,400 cavalry, p. 22), the frontage and depth (p. 23), the cavalry split (pp. 23–24), Aemilius as possible commander (p. 23), the fighting withdrawal and the Africans in column (p. 24, his inference) and his doubt about the death toll (p. 25). Not checked against the publisher's copy.
+
+### S68
+
+**Joanne Elizabeth Ball — *Collecting the Field: A Methodological Reassessment of Greek and Roman Battlefield Archaeology*.** PhD thesis, University of Liverpool, February 2016, [repository PDF](https://livrepository.liverpool.ac.uk/3000526/1/200272740_Feb2016.pdf). Read pp. 87–89 and 107 (PDF text search). Secondary. No conclusive location for Cannae; "at least eight locations have been proposed", citing Daly 2002, pp. 32–35 (fig. 4, reproduced from Daly). Daly himself was not read.
+
+### S69
+
+**Italian Ministry of Culture, Musei della Puglia — *Museo e Parco Archeologico di Canne della Battaglia*.** [Page](https://museipuglia.cultura.gov.it/musei-puglia/museo-e-parco-archeologico-canne-della-battaglia/). Read through a summarising fetch. The site "stands on the hills that dominate the valley of the Ofanto river"; "no archaeological documentation has yet been found regarding the battle of 216". No distances. Already linked by the gallery note without an S-id.
+
+### S70
+
+**Wikipedia — *Battle of Cannae*.** [Page](https://en.wikipedia.org/wiki/Battle_of_Cannae), read as wikitext. Tertiary. Used only for pointers and labelled where used: the date (2 August 216 BCE, Roman calendar; primary not read), the Carthaginian contingent figures citing Daly 2002 and Goldsworthy 2001, the eastward facing in some modern accounts (citing Dodge and Bradford), and the view that the crescent may not have been designed (citing Healy 1994, p. 84). None of the cited books was read.
+
+**Not retrievable or not read 2026-11-07:** Daly, *Cannae: The Experience of Battle in the Second Punic War* (Routledge, 2002; a copy linked from Wikipedia is unlicensed and was not opened); Goldsworthy, *Cannae* (Cassell, 2001); Healy, *Cannae 216 BC* (Osprey, 1994; the Internet Archive copy did not load); Lazenby, *Hannibal's War* (1978); Walbank, *A Historical Commentary on Polybius* I (1957); Delbrück, *Geschichte der Kriegskunst* I and the 1975 English translation; Kromayer and Veith, *Antike Schlachtfelder* III; Appian, *Hannibalic War*; Polybius VI on the manipular legion; the Greek of Polybius and the Latin of Livy; Gellius or Macrobius for the date; any survey or excavation report for the battlefield.
