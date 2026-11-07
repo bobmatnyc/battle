@@ -20,6 +20,33 @@ SIGNAL_CONDITIONS = ("taken",)
 MAX_OBSERVATION_RANGE = 7  # grid.visible never sees beyond 7 hexes.
 
 
+DEMOLITION_TRIGGERS = ("contact", "crossing")
+
+
+@dataclass(frozen=True)
+class DemolitionEntry:
+    """A guard that fires a wired bridge, and an enemy that can clear the charges
+    (docs/research/54), stored in the snapshot as ``bridge_demolition``.
+
+    The charges are armed at the first interval start when ``trigger`` holds:
+    ``contact``, a live, unrouted unit of ``side`` within ``reach`` hexes of the
+    bridge sees an enemy unit (``recon.sees``); ``crossing``, an enemy unit
+    stands on the bridge hex. ``delay`` intervals after arming, at the first
+    interval start when a live, unrouted unit of ``side`` is still within
+    ``reach`` (the firing party), the bridge is destroyed. Enemy units on the
+    bridge hex clear the charges after ``removal_turns`` intervals there in
+    all (the sappers' work); a cleared bridge is ``intact`` and cannot be
+    fired. Authored sensitivity values, labelled by ``basis``.
+    """
+
+    side: str
+    trigger: str
+    delay: int
+    reach: int = 1
+    removal_turns: int = 2
+    basis: str = "authored: demolition trigger and timings are POC choices"
+
+
 @dataclass(frozen=True)
 class BridgeEntry:
     """A bridge hex with a state (docs/research/53), stored in ``map_features``.
@@ -28,7 +55,9 @@ class BridgeEntry:
     ``intact``, ``charges`` (wired for demolition, still passable) or
     ``destroyed`` (impassable). ``schedule`` lists authored ``(turn, state)``
     changes, applied at the start of that interval: the scripted stand-in
-    for a demolition or a removal of charges. ``basis`` labels the values.
+    for a demolition or a removal of charges. ``demolition`` (None: none)
+    triggers the firing from the battle instead (docs/research/54). ``basis``
+    labels the values.
     """
 
     id: str
@@ -37,6 +66,7 @@ class BridgeEntry:
     state: str = "intact"
     schedule: tuple[tuple[int, str], ...] = ()
     basis: str = "authored: bridge state and schedule are POC choices"
+    demolition: DemolitionEntry | None = None
 
 
 @dataclass(frozen=True)
@@ -70,14 +100,30 @@ def _schedule_problems(b):
     return []
 
 
+def _demolition_problems(entry, b):
+    """docs/research/54: a demolition names a side, a known trigger, non-negative
+    integer delay and reach, a positive clearing time, and a wired bridge."""
+    d = b.demolition
+    if d is None:
+        return []
+    counts = ((d.delay, 0), (d.reach, 0), (d.removal_turns, 1))
+    if (d.side not in entry.sides or d.trigger not in DEMOLITION_TRIGGERS
+            or not all(type(n) is int and n >= low for n, low in counts) or b.state != "charges"):
+        return [f"bridge {b.id!r} demolition needs a scenario side, a trigger in {DEMOLITION_TRIGGERS}, "
+                "non-negative integer delay and reach, removal_turns of 1 or more and a bridge wired with charges"]
+    return []
+
+
 def problems(entry):
     """Why: 1944 data the rules cannot run must fail at registration.
     What: problems with ``entry``'s bridges (unique ids, known states, a
-    schedule in increasing turns that never revives a destroyed bridge),
+    schedule in increasing turns that never revives a destroyed bridge, a
+    demolition the rules can run: docs/research/54),
     signals (a scenario side, a declared bridge, a known condition, a
     non-negative integer radius, a codeword) and ``observation_range`` (an
     integer of 1 to 7). Terrain checks are in ``bridge_cell_problems``.
     Test: `test_registration_refuses_bad_bridge_data`,
+    `test_registration_refuses_bad_demolition_data`,
     `test_registration_refuses_a_signal_for_an_unknown_bridge_or_side`,
     `test_registration_refuses_a_bad_observation_range`."""
     found = []
@@ -87,6 +133,7 @@ def problems(entry):
         found.append("bridge ids must be unique")
     for b in bridges:
         found.extend(_schedule_problems(b))
+        found.extend(_demolition_problems(entry, b))
     for x in entry.signals or ():
         if (x.side not in entry.sides or x.bridge not in ids or x.condition not in SIGNAL_CONDITIONS
                 or type(x.radius) is not int or x.radius < 0 or not x.codeword):

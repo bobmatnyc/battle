@@ -30,7 +30,8 @@ SECONDS_PER_TURN = 30  # engine.issue states delays as turns * 30 seconds.
 ORDER_CATALOG = ("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in")
 # poc-10: an entry whose map declares a gate offers Close the gate as well.
 GATE_ORDER_CATALOG = ORDER_CATALOG + ("close_gate",)
-PROVENANCE = ("sourced:", "reconstruction:", "authored:")
+# docs/research/52 labels; "inferred:" is a reading from sourced facts (54).
+PROVENANCE = ("sourced:", "reconstruction:", "authored:", "inferred:")
 # comms.PROFILES ids; the Napoleonic profile shares the 1863 transport rates.
 # poc-13B: the 1775 profile adds a voice reach (scenario_command).
 COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1", scenario_command.COLONIAL_COMMUNICATIONS,
@@ -128,7 +129,10 @@ class UnitEntry:
 class VictoryEntry:
     """Victory: ``kind`` names an entry of ``victory.KINDS``, which checks the
     remaining fields. Sides take part through their ``role``. ``radius``,
-    ``hold_turns`` and ``objective_name`` parameterise ``hold-objective``."""
+    ``hold_turns`` and ``objective_name`` parameterise ``hold-objective``.
+    ``seize-and-hold`` (docs/research/54) also reads ``more_objectives``
+    (further hexes to seize) and ``relief_turn`` (None: no relief); the
+    other kinds refuse both."""
 
     kind: str
     objective: tuple[int, int]
@@ -136,6 +140,8 @@ class VictoryEntry:
     radius: int = 1
     hold_turns: int = 3
     objective_name: str = "objective"
+    more_objectives: tuple[tuple[int, int], ...] = ()
+    relief_turn: int | None = None
 
 
 @dataclass(frozen=True)

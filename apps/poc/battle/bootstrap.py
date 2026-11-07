@@ -11,6 +11,7 @@ from .presentation import present_view
 from .scenario import LITTLE_ROUND_TOP
 from .scenario_concord import CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1
 from .scenario_hougoumont import HOUGOUMONT_NORTH_GATE
+from .scenario_pegasus import PEGASUS_BRIDGE
 from .services.battle import BattleService
 from .services.commander import CommanderService
 from .services.queries import BattleQueries
@@ -21,8 +22,9 @@ from .storage import Store
 PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE)
 # Headless runs also offer Concord, whose river the command desk cannot draw
 # yet (docs/research/43, row 8; docs/research/48), and its v1 entry, so saved
-# v1 games still open (docs/research/50).
-HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1)
+# v1 games still open (docs/research/50), and Pegasus Bridge, whose canal the
+# desk cannot draw either (docs/research/54).
+HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1, PEGASUS_BRIDGE)
 
 
 def build_scenarios():

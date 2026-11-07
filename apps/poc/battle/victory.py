@@ -15,7 +15,10 @@ What: ``KINDS`` maps a kind id to an object with three members:
 
 A new kind changes rule effects, so it needs a new rules edition (AGENTS.md).
 ``hold-compound`` arrived with poc-10 and needs that edition's walled
-compounds; no earlier snapshot can name it.
+compounds; no earlier snapshot can name it. ``seize-and-hold`` stays in
+poc-13 under docs/research/53's rule: only the new Pegasus entry names it,
+so no saved snapshot holds it and every earlier battle scores as before
+(docs/research/54).
 Test: `test_victory_kinds_refuse_unknown_kinds_and_bad_roles`,
 `test_little_round_top_poc9_plays_identically_to_poc8`.
 """
@@ -40,6 +43,10 @@ class HoldObjective:
     kind = "hold-objective"
 
     def problems(self, entry):
+        return self.ring_problems(entry) + _seize_only_problems(entry)
+
+    def ring_problems(self, entry):
+        """The sides, radius, hold count and name checks seize-and-hold shares."""
         problems = []
         roles = sorted(spec.role for spec in entry.sides.values())
         if roles != ["attacker", "defender"]:
@@ -136,7 +143,7 @@ class HoldCompound:
             problems.append("hold-compound needs an objective_name for outcome reports")
         if _walled_compound(entry) is None:
             problems.append("hold-compound objective must lie in a building compound with openings")
-        return problems
+        return problems + _seize_only_problems(entry)
 
     def setup(self, entry):
         building, compound = _walled_compound(entry)
@@ -189,7 +196,103 @@ class HoldCompound:
         return None, None
 
 
-KINDS = {kind.kind: kind for kind in (HoldObjective(), HoldCompound())}
+def _seize_only_problems(entry):
+    """docs/research/54: relief and further objectives belong to seize-and-hold."""
+    v = entry.victory
+    if v.relief_turn is not None or tuple(v.more_objectives):
+        return [f"{v.kind} does not read relief_turn and more_objectives; use seize-and-hold"]
+    return []
+
+
+class SeizeAndHold:
+    """Seize a crossing, then hold it until relieved (docs/research/52 §5, 54).
+
+    The attacker seizes an objective by holding the ground within ``radius``
+    of it for ``hold_turns`` intervals with no effective defender there (the
+    ``hold-objective`` count, kept per objective). A seized objective stays
+    seized while an effective attacker formation remains within ``radius``;
+    when none does the seizure lapses and must be made again. The attacker
+    wins at the first interval at or after ``relief_turn`` with every
+    objective seized; with no relief, at the deadline with every objective
+    seized. The defender wins at the deadline otherwise, or at once when a
+    declared bridge on an objective is destroyed. Either side also wins when
+    the other has no effective formation left. ``s['victory']`` holds the
+    parameters plus the kind's own state: ``captures`` and ``seized`` (the
+    turn each objective was seized, or None) and ``history`` (seized and
+    lapsed records), so replay needs no catalog.
+    Test: `test_seized_objective_held_until_relief_wins_at_the_relief_turn`,
+    `test_seizure_lapses_when_no_attacker_remains_and_the_defender_wins_at_the_deadline`,
+    `test_without_relief_the_seizure_must_last_to_the_deadline`,
+    `test_destroyed_objective_bridge_is_a_defender_win`.
+    """
+
+    kind = "seize-and-hold"
+
+    def problems(self, entry):
+        problems = HoldObjective().ring_problems(entry)
+        v = entry.victory
+        if v.relief_turn is not None and not (type(v.relief_turn) is int and 1 <= v.relief_turn <= v.deadline_turns):
+            problems.append("seize-and-hold relief_turn must be None or an integer from 1 to the deadline")
+        objectives = [tuple(v.objective)] + [tuple(p) for p in v.more_objectives]
+        if len(set(objectives)) != len(objectives) or not all(grid.valid(list(p)) for p in objectives):
+            problems.append("seize-and-hold more_objectives must be distinct hexes on the grid")
+        return problems
+
+    def setup(self, entry):
+        v = entry.victory
+        objectives = [list(v.objective)] + [list(p) for p in v.more_objectives]
+        return {
+            "kind": self.kind,
+            "radius": v.radius,
+            "hold_turns": v.hold_turns,
+            "objective_name": v.objective_name,
+            "objectives": objectives,
+            "relief_turn": v.relief_turn,
+            "captures": [0] * len(objectives),
+            "seized": [None] * len(objectives),
+            "history": [],
+        }
+
+    def score(self, s):
+        v = s["victory"]
+        defender = _side_with_role(s, "defender")
+        attacker = _side_with_role(s, "attacker")
+        names = {x["id"]: x["name"] for x in s["sides"]}
+        bridges = {tuple(f["pos"]): f for f in s.get("map_features", ()) if f.get("kind") == "bridge"}
+        for p in v["objectives"]:
+            bridge = bridges.get(tuple(p))
+            if bridge and bridge["state"] == "destroyed":
+                return defender, f"The {bridge['name']} was destroyed before it could be held."
+        effective = [u for u in s["units"] if u["status"] not in INEFFECTIVE]
+        for i, p in enumerate(v["objectives"]):
+            near = {u["side"] for u in effective if grid.distance(u["pos"], p) <= v["radius"]}
+            v["captures"][i] = v["captures"][i] + 1 if near == {attacker} else 0
+            if v["seized"][i] is None and v["captures"][i] >= v["hold_turns"]:
+                v["seized"][i] = s["turn"]
+                v["history"].append({"objective": i, "event": "seized", "turn": s["turn"]})
+            elif v["seized"][i] is not None and attacker not in near:
+                v["seized"][i] = None
+                v["history"].append({"objective": i, "event": "lapsed", "turn": s["turn"]})
+        s["capture"] = min(v["captures"])
+        active = {side: any(u["side"] == side for u in effective) for side in names}
+        if not any(active.values()):
+            return "draw", "Both commands lost combat effectiveness."
+        if not active[defender]:
+            return attacker, f"{names[defender]} formations can no longer hold the position."
+        if not active[attacker]:
+            return defender, "The attacking formations have broken."
+        held = all(t is not None for t in v["seized"])
+        relief = v["relief_turn"]
+        if held and relief is not None and s["turn"] >= relief:
+            return attacker, f"The attackers seized the {v['objective_name']} and held it until relieved."
+        if s["turn"] >= s["max_turns"]:
+            if held:
+                return attacker, f"The attackers seized the {v['objective_name']} and held it to the deadline."
+            return defender, f"The {names[defender]} kept the {v['objective_name']} from being held until the deadline."
+        return None, None
+
+
+KINDS = {kind.kind: kind for kind in (HoldObjective(), HoldCompound(), SeizeAndHold())}
 
 
 def score(s):
