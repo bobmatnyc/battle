@@ -33,11 +33,13 @@ ROMAN_ORDERS = (
      "provenance": "reconstruction: Roman S1 (doc 57 §3); a heard recall stops the pursuit (docs/research/60 §2)"},
     {"id": "recall", "unit": None, "trigger": f"the entry's broadcast at interval {RECALL_TURN}, not a sent order",
      "stance": "retreat", "hex": RALLY, "source": "S60 VII.47: Caesar orders the retreat sounded",
-     "provenance": "authored: the interval, reach and block (doc 57 §8)"},
+     # D85 (Bob 2026-11-07 13:10Z): earlier recall; the interval follows VII.47, the camps taken at the start.
+     "provenance": "inferred: the interval, sounded once the camps are taken (S60 VII.47; D85 ruling "
+                   "2026-11-07); authored: the reach and block (doc 57 §8)"},
     {"id": "runner-recall", "unit": FORWARD, "trigger": f"the first decisions at or after interval "
      f"{RECALL_TURN}, recall-by-runner only", "stance": "retreat", "hex": RALLY,
      "source": "S60 VII.47: the legions 'were kept back by the tribunes of the soldiers and the lieutenants'",
-     "provenance": "reconstruction: the tribunes' word as a delivered order; the timing is authored"},
+     "provenance": "reconstruction: the tribunes' word as a delivered order, sent with the recall (D85)"},
     {"id": "sextius-out", "unit": "R13", "trigger": f"the first decision at or after interval {SEXTIUS_TURN}, not "
      "in no-cover", "stance": "move", "hex": SEXTIUS_POST,
      "source": "S60 VII.49: Sextius to bring his cohorts out to the foot of the hill on the enemy's right",
