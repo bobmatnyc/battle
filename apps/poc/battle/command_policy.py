@@ -1,6 +1,9 @@
 """Pure commander observations, validated order contracts and scripted policy."""
 
-from . import concord_policy, concord_sensitivity, engine, grid, hill223_policy, orders as order_rules, pegasus_policy
+from . import (
+    concord_policy, concord_sensitivity, engine, gergovia_policy, grid, hill223_policy, orders as order_rules,
+    pegasus_policy,
+)
 from .presentation import VOICE_PROFILES
 from .scenario import LITTLE_ROUND_TOP
 from .scenario_entry import LEGACY_ROLES
@@ -233,7 +236,8 @@ SCRIPTED_POLICIES = (OPPONENT_POLICY, GATE_DEFENDER_POLICY, GATE_ATTACKER_POLICY
                      concord_policy.MILITIA_POLICY, concord_policy.REGULARS_POLICY,
                      *concord_sensitivity.POLICIES,  # docs/research/49: rebound to variant hexes
                      *pegasus_policy.POLICIES,  # docs/research/54
-                     *hill223_policy.POLICIES)  # docs/research/61
+                     *hill223_policy.POLICIES,  # docs/research/61
+                     *gergovia_policy.POLICIES)  # docs/research/62
 # Gate-aware controls by role; their decisions record ``policy`` and ``standing``.
 GATE_POLICIES = {"defender": GATE_DEFENDER_POLICY, "attacker": GATE_ATTACKER_POLICY}
 # Controls that fit one side of one kind of scenario, with the side they need.
@@ -246,6 +250,7 @@ NAMED_POLICIES = {
     **concord_sensitivity.NEEDS,
     **pegasus_policy.NEEDS,
     **hill223_policy.NEEDS,
+    **gergovia_policy.NEEDS,
 }
 
 
@@ -288,6 +293,8 @@ def scripted_actions(policy, observation, role):
         return pegasus_policy.POLICIES[policy](observation)
     if policy in hill223_policy.POLICIES:  # docs/research/61
         return hill223_policy.POLICIES[policy](observation)
+    if policy in gergovia_policy.POLICIES:  # docs/research/62
+        return gergovia_policy.POLICIES[policy](observation)
     return [], fallback_orders(observation, role)
 
 # Voice profile id -> prose instruction. Entries name one of these.

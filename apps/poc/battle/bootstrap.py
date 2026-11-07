@@ -11,6 +11,7 @@ from .config import Settings
 from .presentation import present_view
 from .scenario import LITTLE_ROUND_TOP
 from .scenario_concord import CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1
+from .scenario_gergovia import GERGOVIA_RECALL
 from .scenario_hill223 import HILL_223_PATROL
 from .scenario_hougoumont import HOUGOUMONT_NORTH_GATE
 from .scenario_pegasus import PEGASUS_BRIDGE
@@ -25,10 +26,11 @@ PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE)
 # Headless runs also offer Concord, whose river the command desk cannot draw
 # yet (docs/research/43, row 8; docs/research/48), and its v1 entry, so saved
 # v1 games still open (docs/research/50), and Pegasus Bridge, whose canal the
-# desk cannot draw either (docs/research/54), and Hill 223, whose ravine it
-# cannot draw (docs/research/56 §9 q6, 61).
+# desk cannot draw either (docs/research/54), Hill 223, whose ravine it
+# cannot draw (docs/research/56 §9 q6, 61), and Gergovia, whose signal and
+# valley it cannot draw (docs/research/57 §9 q7, 62).
 HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1, PEGASUS_BRIDGE,
-                                         HILL_223_PATROL)
+                                         HILL_223_PATROL, GERGOVIA_RECALL)
 
 
 def build_scenarios():
