@@ -421,3 +421,41 @@ Access date for every entry: **2026-11-06 (UTC)**. Used in [52 — Pegasus Bridg
 **Normandy War Guide — *Pegasus Bridge*.** [Page](https://www.normandywarguide.com/articles/pegasus-bridge). Visitor guide, tertiary, no bibliography. Read for the silent unlit landing, the 10-minute canal-bridge fight, the PIAT counter-attack, the captured anti-tank gun fired at a gunboat, the Café Gondrée "at the foot" of the bridge and the commandos' early-afternoon arrival with the piper.
 
 **Not retrievable or not read 2026-11-06:** Imperial War Museums *Operation Deadstick* page (HTTP 403); Luck, *Panzer Commander* (1989); Ambrose, *Pegasus Bridge* (1985); Mitcham (1983); Keusgen; TNA WO 171/1239 and any 2nd Ox and Bucks, 6th Airlanding Brigade or 716th Infantry Division war diary; Bundesarchiv holdings; the 6th Airborne Division operation order itself.
+
+## Hill 223 and Gergovia source pass — 2026-11-06
+
+Access date for every entry: **2026-11-06 (UTC)**. Used in [56 — Hill 223](56-hill-223-scenario-plan.md) and [57 — Gergovia](57-gergovia-scenario-plan.md). S57 and S60 to S62 were read as downloaded plain text or HTML; S58, S59, S63 and S64 through a summarising fetch and may be paraphrased. S40 to S43 are re-used for Hill 223 (S40 re-read for the patrol roster, valley width and affidavits).
+
+### S57
+
+**Official History of the 82nd Division, American Expeditionary Forces, "All American" Division.** Bobbs-Merrill, Indianapolis, 1919; "written by divisional officers designated by the division commander". Read from an OCR text of a HathiTrust copy at [distantreader.org](https://distantreader.org/stacks/trust/uc2/uc2_ark+=13960=t0rr1vt8j.txt) (file name `uc2_ark+=13960=t0rr1vt8j`; the library record was not checked). Read pp. 47–62 (6–8 October 1918) and searched the text for Hill 223, York, Early and Decauville. Page numbers are from the OCR running heads and may be off by one. Contains the 2nd Battalion, 328th Infantry order (pp. 57–58), the patrol of "four non-commissioned officers and thirteen privates" under Acting Sergeant Early (pp. 59–62), the German group, the 132 prisoners counted by Lt Woods and the dead-runner anecdote. **Near-contemporary and unit-authored, so interested** (it credits York, names Early as acting sergeant and then "Corporal Early"); rough OCR; not the regimental order. Independent of Cowan (S40).
+
+### S58
+
+**Douglas V. Mastriano — "Alvin York and the Meuse-Argonne Offensive".** [HistoryNet](https://historynet.com/alvin-york-and-the-meuse-argonne-offensive/), from *Military History*, September 2006; posted 2006-08-23, page updated 2019-09-27. Read through a summarising fetch. German side from archival records as the article says (2nd Württemberg Landwehr Division, 1st Bn 120th Landwehr, Lt Paul Vollmer; 7th Bavarian Sapper Company; 210th Prussian Reserve Infantry; "more than 50 machine guns"; counter-attack set for 10:30); names Sgt Harry Parson as the sergeant who ordered Early; valley "about one mile wide". The summary of its casualty paragraph was garbled, so no casualty figure is taken from it. Mastriano is the officer who disputed the MTSU site (S43). The German archival citations were not seen.
+
+### S59
+
+**Sgt. York Patriotic Foundation — "Meuse Argonne Offensive".** [sgtyork.org](https://sgtyork.org/meuse-argonne-offensive). Advocacy site run by the foundation; repeats S58's content and adds no evidence. Used only to cross-check S58.
+
+### S60
+
+**Caesar — *De Bello Gallico*, Book VII, chapters 34 to 53.** English translation by W. A. McDevitte, in *"De Bello Gallico" and Other Commentaries*, Project Gutenberg eBook [#10657](https://www.gutenberg.org/cache/epub/10657/pg10657.txt), released 2004-01-01, last updated 2024-10-28. Read in full. **The only narrative of the battle; the Roman commander's own account**, written for a Roman audience after the defeat. A different translation of the passage doc 34 cites (Thayer page); the Latin was not read. The translator prints "Marcus Petreius"; other editions print Petronius.
+
+### S61
+
+**Cassius Dio — *Roman History*, Book 40, chapters 35 to 39.** Translation by Earnest Cary, Loeb Classical Library vol. III, 1914, transcribed by Bill Thayer at [LacusCurtius](https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Cassius_Dio/40*.html). Read. Third-century writer, later than the events and probably derived; describes a failed siege and withdrawal in a few lines; no recall, no centurions. A second reading of the outcome, not a second witness.
+
+### S62
+
+**Plutarch — *Life of Caesar*, chapters 25 to 27.** Loeb Classical Library vol. VII, 1919 (translator not stated on the page read), transcribed by Bill Thayer at [LacusCurtius](https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Plutarch/Lives/Caesar*.html). Read. No account of Gergovia. The sword shown in an Arverni temple (26.7) follows a passage about the Sequani and does not name Gergovia, so it is not used as Gergovia evidence.
+
+### S63
+
+**Musée archéologique de la bataille de Gergovie.** Two pages: [History of the plateau](https://musee-gergovie.fr/en/the-gergovie-plateau/history/) and [Archaeological digs](https://musee-gergovie.fr/en/the-gergovie-plateau/archaeological-digs/). Museum site, no author or date given. Gives the camps (main camp in the plain southwest of the town, small camp on La Roche-Blanche, double ditch), a "24,000 men" figure for six legions with no basis stated, and the dig history (Aucler and Stoffel 1861–62; Hatt and Labrousse 1930s–1949; 1995–2010 research; Jud from 2013). Does not say the finds confirm Caesar's wall (VII.46) and mentions no weapons or coins.
+
+### S64
+
+**Wikipedia — *Battle of Gergovia*.** [Page](https://en.wikipedia.org/wiki/Battle_of_Gergovia). Tertiary. Read through a summarising fetch for the site (Merdogne, renamed Gergovie 1865), force ranges with no attribution (Romans 20,000–45,000; Gauls about 30,000), and the statement that nearly all information comes from Caesar and no Gallic account survives. Bibliography: Dodge 1892, Goldsworthy, *The Economist* 18 December 2021; none read.
+
+**Not retrievable or not read 2026-11-06:** the official Medal of Honor citation for York (cmohs.org, HTTP 403); Mastriano, *Alvin York: A New Biography of the Hero of the Argonne* (University Press of Kentucky, 2014, ISBN 9780813145198, listing only); Gregory (2023) beyond S41 and a review listing (Midwest Military Studies Association dispatches, 2024; snippet only); the full affidavits; any German regimental or division record for 8 October 1918; the *Army History* no. 50 field study; the regimental order to the patrol; the 1995–96 Gergovie excavation record (Deberge and Guichard, Université de Neuchâtel record; found only in search-result summaries); the Latin text of *Gallic War* VII; Goldsworthy and other modern accounts of Gergovia; any contour or LIDAR data for the plateau (a LIDAR survey is noted by S63 as planned for winter 2023).
