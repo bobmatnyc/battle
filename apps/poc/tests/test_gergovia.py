@@ -20,7 +20,7 @@ from battle.scenario_command import ROMAN_COMMUNICATIONS, TACTICS_V11
 from battle.scenario_entry import PROVENANCE, build_state, dry_run, validate
 from battle.scenario_gergovia import (
     AS_DEFAULT, BELOW_GATE, DC0, DEADLINE, FORWARD, GALLIC_DELAYS, GALLIC_POLICY, GERGOVIA_RECALL as ENTRY,
-    PUSH_TO, RALLY, RECALL_REACH, RECALL_TURN, RETURN_TURN, ROMAN_NO_COVER_POLICY, ROMAN_POLICY, ROMAN_RUNNER_POLICY,
+    PURSUIT, PUSH_TO, RALLY, RECALL_REACH, RECALL_TURN, RETURN_TURN, ROMAN_NO_COVER_POLICY, ROMAN_POLICY, ROMAN_RUNNER_POLICY,
     SEXTIUS_POST, SEXTIUS_TURN, TENTH, UNDER_WALL, VALLEY, VARIANTS, gallic_delay_policy,
 )
 from test_hill_223 import digest, run, unit
@@ -72,10 +72,10 @@ class GergoviaEntryTests(unittest.TestCase):
         self.assertEqual((ENTRY.communications, ENTRY.voice_profile, ENTRY.tactics),
                          (ROMAN_COMMUNICATIONS, ROMAN_VOICE_PROFILE, TACTICS_V11))
         self.assertEqual(set(ENTRY.weapons), {u["weapon_class"] for u in s["units"]})
-        # S1: every forward group holds the taken camps, with no exploit and the default 2 officers.
+        # S1: every forward group pursues to the gate until it hears the recall; the default 2 officers.
         for uid in FORWARD:
             u = unit(s, uid)
-            self.assertEqual((u["stance"], "exploit" in u, u["officers"]), ("hold", False, 2), uid)
+            self.assertEqual((u["exploit"], u["officers"]), (PURSUIT, 2), uid)
         self.assertEqual((unit(s, "R8f")["initial"], unit(s, "R8f")["rout_strength"]), (4, 0))
         self.assertEqual([unit(s, u)["initial"] for u in FORWARD[:4]], [60] * 4)
         self.assertNotIn("AE", {u["id"] for u in s["units"]})  # Doc 57 §9 q6: no Aedui by default.
@@ -127,62 +127,73 @@ class GergoviaEntryTests(unittest.TestCase):
             self.assertEqual(VARIANTS[f"gallic-delay-{d}"].entry.scripted["gallic"], gallic_delay_policy(d))
 
 
+def sounded_early(entry, turn=2, **positions):
+    """``entry``'s state with the recall moved to ``turn`` and units placed at
+    ``positions``, advanced to it. The battle can end before interval 40, so
+    reach, block and binding are tested on the starting geometry."""
+    s = build_state(entry)
+    for uid, pos in positions.items():
+        unit(s, uid)["pos"] = list(pos)
+    s["broadcasts"][0]["turn"] = turn
+    return advance(s, turn)
+
+
 class GergoviaSignalTests(unittest.TestCase):
     """The recall, its reach and the valley block, through the engine."""
 
     def test_the_valley_blocks_the_recall_and_reach_bounds_it(self):
-        s = advance(build_state(ENTRY), RECALL_TURN)
-        self.assertEqual((s["broadcasts"][0]["sounded_turn"], s["broadcasts"][0]["sounder_id"]), (RECALL_TURN, "RX"))
+        s = sounded_early(ENTRY)
+        self.assertEqual((s["broadcasts"][0]["sounded_turn"], s["broadcasts"][0]["sounder_id"]), (2, "RX"))
         got = {uid: (r["heard"], r["reason"]) for uid, r in receipts(s).items() if uid in FORWARD}
         self.assertEqual(got, {"R8a": (False, "blocked"), **{u: (False, "out_of_reach") for u in FORWARD[1:]}})
-        self.assertEqual({unit(s, u)["stance"] for u in FORWARD}, {"hold"})  # S1: unheard, they keep the camps.
+        # S1: an unheard group keeps its mission and its pursuit.
+        self.assertEqual({(unit(s, u)["stance"], unit(s, u)["exploit_state"]) for u in FORWARD}, {("hold", "pressing")})
         signal = s["broadcasts"][0]
         self.assertEqual(hears(signal, list(TENTH), [14, 17]), (False, "blocked"))
         self.assertEqual(hears(dict(signal, block_hexes=[]), list(TENTH), [14, 17]), (True, "heard"))
-        self.assertEqual(RECALL_REACH, 8)
+        self.assertEqual((ENTRY.broadcasts[0].turn, RECALL_REACH), (RECALL_TURN, 8))
 
     def test_a_group_in_reach_on_the_tenths_side_hears_and_obeys(self):
-        s = build_state(ENTRY)
-        unit(s, "R8a")["pos"] = list(EAST_OF_VALLEY)
-        s = advance(s, RECALL_TURN)
+        s = sounded_early(ENTRY, R8a=EAST_OF_VALLEY)
         self.assertEqual((receipts(s)["R8a"]["heard"], receipts(s)["R8a"]["obeyed"]), (True, True))
         self.assertEqual((unit(s, "R8a")["stance"], unit(s, "R8a")["target"]), ("retreat", list(RALLY)))
 
     def test_recall_audible_reaches_every_forward_group(self):
-        s = advance(build_state(VARIANTS["recall-audible"].entry), RECALL_TURN)
+        s = sounded_early(VARIANTS["recall-audible"].entry)
         self.assertTrue(all(receipts(s)[u]["heard"] and receipts(s)[u]["obeyed"] for u in FORWARD))
         self.assertEqual({unit(s, u)["stance"] for u in FORWARD}, {"retreat"})
+        self.assertEqual({unit(s, u)["exploit_state"] for u in FORWARD}, {"stopped"})
 
 
 class GergoviaArdourTests(unittest.TestCase):
     """Ardour (Caesar's VII.52 reading) against signal failure (VII.47)."""
 
-    def test_ardour_presses_to_the_gate_from_the_start(self):
-        s = advance(build_state(VARIANTS["ardour"].entry), 1)
-        started = [e["unit_id"] for e in s["events"] if e["kind"] == "exploit_started"]
-        self.assertEqual(sorted(started), sorted(FORWARD))
-        self.assertTrue(all(e["press_to"] == list(BELOW_GATE) for e in s["events"] if e["kind"] == "exploit_started"))
-        self.assertFalse([e for e in advance(build_state(ENTRY), 1)["events"] if e["kind"] == "exploit_started"])
+    def test_both_readings_pursue_to_the_gate_from_the_start(self):
+        for entry in (ENTRY, VARIANTS["ardour"].entry):
+            s = advance(build_state(entry), 1)
+            started = [e for e in s["events"] if e["kind"] == "exploit_started"]
+            self.assertEqual(sorted(e["unit_id"] for e in started), sorted(FORWARD), entry.id)
+            self.assertTrue(all(e["press_to"] == list(BELOW_GATE) for e in started))
+        self.assertEqual({unit(build_state(ENTRY), u)["exploit"]["recall_binding"] for u in FORWARD}, {True})
+        self.assertEqual({unit(build_state(VARIANTS["ardour"].entry), u)["exploit"]["recall_binding"]
+                          for u in FORWARD}, {False})
 
-    def test_a_heard_recall_binds_under_signal_failure_but_not_under_ardour(self):
+    def test_a_heard_recall_stops_the_pursuit_under_signal_failure_but_not_under_ardour(self):
         result = {}
         for name, entry in (("signal-failure", ENTRY), ("ardour", VARIANTS["ardour"].entry)):
-            s = build_state(entry)
-            # Under ardour the group has left reach by interval 40, so the recall sounds early here.
-            unit(s, "R8a")["pos"] = list(EAST_OF_VALLEY)
-            s["broadcasts"][0]["turn"] = 2
-            s = advance(s, 2)
+            s = sounded_early(entry, R8a=EAST_OF_VALLEY)
             u = unit(s, "R8a")
             result[name] = (receipts(s)["R8a"]["heard"], u["stance"], u.get("exploit_state"))
         # Both hear and take up the recall as the mission; only ardour keeps pressing.
-        self.assertEqual(result, {"signal-failure": (True, "retreat", None), "ardour": (True, "retreat", "pressing")})
+        self.assertEqual(result, {"signal-failure": (True, "retreat", "stopped"),
+                                  "ardour": (True, "retreat", "pressing")})
 
-    def test_an_unheard_group_keeps_its_hold_under_signal_failure_and_presses_under_ardour(self):
-        default = advance(build_state(ENTRY), RECALL_TURN + 2)
-        self.assertEqual((unit(default, "R8c")["pos"], receipts(default)["R8c"]["heard"]), ([10, 17], False))
-        ardour = advance(build_state(VARIANTS["ardour"].entry), 20)
-        self.assertLess(unit(ardour, "R8c")["pos"][1], 17)
-        self.assertEqual(unit(ardour, "R8c")["exploit_state"], "pressing")
+    def test_an_unheard_group_presses_on_under_both_readings(self):
+        for entry in (ENTRY, VARIANTS["ardour"].entry):
+            s = sounded_early(entry, turn=20)
+            self.assertFalse(receipts(s)["R8c"]["heard"], entry.id)
+            self.assertLess(unit(s, "R8c")["pos"][1], 17)
+            self.assertEqual(unit(s, "R8c")["exploit_state"], "pressing")
 
 
 class GergoviaVictoryTests(unittest.TestCase):
@@ -253,6 +264,8 @@ class GergoviaPolicyTests(unittest.TestCase):
         self.assertEqual(gallic_actions(view), ([], push))
         view["contacts"] = [{"id": "c1", "pos": [11, 3], "age": 5}]
         self.assertEqual(gallic_actions(view), ([], []))  # A stale contact does not count.
+        view["contacts"] = [{"id": "c1", "pos": [11, 3]}]
+        self.assertEqual(gallic_actions(view), ([], []))  # A contact with no age is stale, not fresh.
         delayed = POLICIES[gallic_delay_policy(GALLIC_DELAYS[0])]
         view.update(turn=RETURN_TURN, orders=[], contacts=[])
         self.assertEqual(delayed(view), ([], []))

@@ -104,17 +104,21 @@ def _men(n, weapon, **extra):
 
 FORWARD = ("R8a", "R8b", "R8c", "R8d", "R8f")
 CENTURIES = FORWARD[:4]
-# Doc 57 §3 S2 (ardour): press on to the gate after the camps are taken, and
-# take up a heard recall only once the press stops (docs/research/60 §2).
-ARDOUR = {"trigger": "start", "press_to": list(BELOW_GATE), "recall_binding": False, "max_loss_pct": 50}
+# Doc 57 §3 S1: the forward groups, past the stone wall in the taken camps,
+# pursue up the slope toward the gate (S60 VII.47: they pursued to the wall and
+# gates); a group that hears the recall stops and obeys it, a group that does
+# not hear it keeps pressing (docs/research/60 §2, recall_binding true). The
+# pursuit is the battle's opening state (trigger "start"; 57 §2, the camps taken).
+PURSUIT = {"trigger": "start", "press_to": list(BELOW_GATE), "recall_binding": True, "max_loss_pct": 50}
+# Doc 57 §3 S2 (ardour): the same pursuit, but a heard recall is taken up only
+# once the press stops (recall_binding false, docs/research/60 §2).
+ARDOUR = {**PURSUIT, "recall_binding": False}
 
 
-def roman_units(strength=STRENGTH, exploit=None, officers=None):
-    """The forward groups hold the taken camps (S1); ``exploit`` and
-    ``officers`` are the ardour and leaders-fall readings."""
-    extra = {}
-    if exploit:
-        extra["exploit"] = dict(exploit)
+def roman_units(strength=STRENGTH, exploit=PURSUIT, officers=None):
+    """The forward groups pursue toward the gate until recalled (S1);
+    ``exploit`` ARDOUR and ``officers`` are the ardour and leaders-fall readings."""
+    extra = {"exploit": dict(exploit)}
     if officers:
         extra["officers"] = officers
 
@@ -243,9 +247,12 @@ PROVENANCE = {
     "signal": f"sourced: the trumpet recall (S60 VII.47), which the Tenth heard and the legions across the valley "
               f"did not; interval 40, reach 8 and the valley block are authored (doc 57 §8); {DC0} (doc 57 §9 q3: "
               f"signal failure and ardour are separate variants, neither the default truth)",
-    "restraint": "reconstruction: Roman S1 (doc 57 §3): the forward groups hold the taken camps, and a group "
-                 "that hears the recall obeys it; tribunes' voices are the command's 2-hex voice reach, used "
-                 "only when an order is sent (recall-by-runner)",
+    "restraint": "reconstruction: Roman S1 (doc 57 §3): the forward groups pursue from the taken camps toward "
+                 "the gate (S60 VII.47: they pursued to the wall and gates); a group that hears the recall stops and "
+                 "falls back to the Tenth's line, where it holds; a group that does not hear it keeps pressing "
+                 "(exploit, trigger start, press to the hex below the gate, recall_binding true, loss limit 50 per "
+                 "cent; docs/research/60 §2); tribunes' voices are the command's 2-hex voice reach, used only "
+                 "when an order is sent (recall-by-runner)",
     "victory": "authored: recover-force (doc 57 §5, docs/research/60 §3): half the forward force's starting "
                "strength within 2 hexes of the Tenth's line by the deadline; a 'force recovered' reading, not a "
                "historical result; 57 §5's limit_row condition is not in the kind",
@@ -266,7 +273,7 @@ PROVENANCE = {
 }
 
 
-def gergovia_entry(variant=None, *, strength=STRENGTH, signal=None, exploit=None, officers=None, aedui=False,
+def gergovia_entry(variant=None, *, strength=STRENGTH, signal=None, exploit=PURSUIT, officers=None, aedui=False,
                    scripted=None, notes=None):
     """One Gergovia entry; ``variant`` None is the catalog default. The
     keywords change one question each; ``notes`` adds provenance."""
@@ -333,8 +340,8 @@ def _variants():
          f"the recall also goes as a retreat order to each forward group at interval {RECALL_TURN}, by voice "
          "within 2 hexes, else by runner", "sourced: S60 VII.47, tribunes and legates",
          dict(scripted={"roman": ROMAN_RUNNER_POLICY, "gallic": GALLIC_POLICY})),
-        ("ardour", "doc 57 §8 ardour", "the forward groups press on to the gate after the camps are taken and "
-         "take up a heard recall only when the press stops (exploit, recall_binding false)",
+        ("ardour", "doc 57 §8 ardour", "the forward groups' pursuit to the gate does not stop for a heard "
+         "recall; they take it up only when the press stops (exploit, recall_binding false)",
          "sourced as Caesar's account: S60 VII.47, VII.52; the mechanism is authored", dict(exploit=ARDOUR)),
         ("leaders-fall", "doc 57 §8 leaders-fall",
          "each forward group has one officer, its centurion; when he falls the group is leaderless and does not "

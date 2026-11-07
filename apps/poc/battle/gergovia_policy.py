@@ -4,7 +4,8 @@ Why: the comparison with the record needs each side to act as Caesar
 describes (Roman, S60) or as Caesar describes the Gauls (Gallic G1), and
 nothing more; the engine decides what that leads to, so no winner is forced.
 What: the recall is entry data (a broadcast at a fixed interval), as are the
-forward groups' hold, the wall garrison's hold and the ardour doctrine.
+forward groups' pursuit (exploit, recall-binding in S1, not in ardour) and the
+wall garrison's hold.
 ``ROMAN_ORDERS`` and ``GALLIC_ORDERS`` list each order with its trigger and
 source locator, or an ``inferred:`` or ``authored:`` label. The sent orders:
 Sextius's cohorts go out at a fixed interval (Roman S1; not in ``no-cover``);
@@ -18,7 +19,7 @@ Test: `test_every_order_carries_a_source_locator_or_a_label`,
 """
 
 from .scenario_gergovia import (
-    FORWARD, GALLIC_DELAYS, GALLIC_POLICY, PUSH_TO, RALLY, RECALL_TURN, RETURN_TURN, ROMAN_NO_COVER_POLICY,
+    BELOW_GATE, FORWARD, GALLIC_DELAYS, GALLIC_POLICY, PUSH_TO, RALLY, RECALL_TURN, RETURN_TURN, ROMAN_NO_COVER_POLICY,
     ROMAN_POLICY, ROMAN_RUNNER_POLICY, SEXTIUS_POST, SEXTIUS_TURN, TOWN_WALL_ROW, UNDER_WALL, gallic_delay_policy,
 )
 
@@ -26,10 +27,10 @@ ROMAN_ORDERS = (
     {"id": "take-the-camps", "unit": None, "trigger": "before the start: the camps are taken at 12:00",
      "stance": None, "hex": None, "source": "S60 VII.45, VII.46: the signal for action; the camps are taken",
      "provenance": "authored: the battle opens after the success (doc 57 §2)"},
-    {"id": "hold-the-camps", "unit": None, "trigger": "the entry's initial hold stance of the forward groups, "
-     "not a sent order", "stance": "hold", "hex": None,
-     "source": "S60 VII.45: the legates are to restrain the men, success 'depended on a surprise'",
-     "provenance": "reconstruction: Roman S1 (doc 57 §3)"},
+    {"id": "pursue", "unit": FORWARD, "trigger": "the entry's exploit doctrine from the start (recall_binding "
+     "true), not a sent order", "stance": None, "hex": BELOW_GATE,
+     "source": "S60 VII.47: the legions across the valley pursued to the wall and gates of the town",
+     "provenance": "reconstruction: Roman S1 (doc 57 §3); a heard recall stops the pursuit (docs/research/60 §2)"},
     {"id": "recall", "unit": None, "trigger": f"the entry's broadcast at interval {RECALL_TURN}, not a sent order",
      "stance": "retreat", "hex": RALLY, "source": "S60 VII.47: Caesar orders the retreat sounded",
      "provenance": "authored: the interval, reach and block (doc 57 §8)"},
@@ -47,7 +48,8 @@ ROMAN_ORDERS = (
 )
 GALLIC_ORDERS = (
     {"id": "hold-the-wall", "unit": ("G1", "G2", "G3", "G4"), "trigger": "the entry's initial hold stance, not a "
-     "sent order", "stance": "hold", "hex": None, "source": "S60 VII.46, VII.48: the wall held, missiles thrown",
+     "sent order", "stance": "hold", "hex": None, "source": "S60 VII.46, VII.48: the wall and the camps by it held; "
+     "S61 Dio 40.36.3: stones and javelins",
      "provenance": "inferred: Gallic G1 (doc 57 §3)"},
     {"id": "return", "unit": ("GR", "GC"), "trigger": f"the first decision at or after interval {RETURN_TURN} "
      "(later by 10, 20 or 40 in gallic-delay)", "stance": "move", "hex": UNDER_WALL,
@@ -115,7 +117,8 @@ def roman_runner_actions(observation):
 
 
 def _at_wall(observation):
-    return any(c.get("age", 0) <= FRESH and c["pos"][1] <= TOWN_WALL_ROW + AT_WALL_ROWS
+    # A contact with no age is stale, not fresh.
+    return any(c.get("age") is not None and c["age"] <= FRESH and c["pos"][1] <= TOWN_WALL_ROW + AT_WALL_ROWS
                for c in observation.get("contacts", ()))
 
 
