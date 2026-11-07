@@ -132,7 +132,11 @@ class VictoryEntry:
     ``hold_turns`` and ``objective_name`` parameterise ``hold-objective``.
     ``seize-and-hold`` (docs/research/54) also reads ``more_objectives``
     (further hexes to seize) and ``relief_turn`` (None: no relief); the
-    other kinds refuse both."""
+    other kinds refuse both. ``raid-and-return`` (docs/research/59) alone
+    reads ``raiders`` (attacker unit ids), ``return_hex``,
+    ``return_radius``, one of ``return_strength`` (men) or ``return_pct``
+    (per cent of the raiders' starting strength) and ``min_captives``
+    (None: captives are not counted)."""
 
     kind: str
     objective: tuple[int, int]
@@ -142,6 +146,12 @@ class VictoryEntry:
     objective_name: str = "objective"
     more_objectives: tuple[tuple[int, int], ...] = ()
     relief_turn: int | None = None
+    raiders: tuple[str, ...] = ()
+    return_hex: tuple[int, int] | None = None
+    return_radius: int = 0
+    return_strength: int | None = None
+    return_pct: int | None = None
+    min_captives: int | None = None
 
 
 @dataclass(frozen=True)

@@ -18,7 +18,9 @@ A new kind changes rule effects, so it needs a new rules edition (AGENTS.md).
 compounds; no earlier snapshot can name it. ``seize-and-hold`` stays in
 poc-13 under docs/research/53's rule: only the new Pegasus entry names it,
 so no saved snapshot holds it and every earlier battle scores as before
-(docs/research/54).
+(docs/research/54). ``raid-and-return`` stays in poc-13 the same way: only an
+entry that names it writes its fields (docs/research/59), and the other kinds
+refuse them.
 Test: `test_victory_kinds_refuse_unknown_kinds_and_bad_roles`,
 `test_little_round_top_poc9_plays_identically_to_poc8`.
 """
@@ -201,6 +203,18 @@ def _seize_only_problems(entry):
     v = entry.victory
     if v.relief_turn is not None or tuple(v.more_objectives):
         return [f"{v.kind} does not read relief_turn and more_objectives; use seize-and-hold"]
+    return _raid_only_problems(entry)
+
+
+RAID_FIELDS = (("raiders", ()), ("return_hex", None), ("return_radius", 0), ("return_strength", None),
+               ("return_pct", None), ("min_captives", None))
+
+
+def _raid_only_problems(entry):
+    """docs/research/59: the raid fields belong to raid-and-return."""
+    v = entry.victory
+    if v.kind != RaidAndReturn.kind and any(getattr(v, name) != empty for name, empty in RAID_FIELDS):
+        return [f"{v.kind} does not read {', '.join(name for name, _ in RAID_FIELDS)}; use raid-and-return"]
     return []
 
 
@@ -236,7 +250,7 @@ class SeizeAndHold:
         objectives = [tuple(v.objective)] + [tuple(p) for p in v.more_objectives]
         if len(set(objectives)) != len(objectives) or not all(grid.valid(list(p)) for p in objectives):
             problems.append("seize-and-hold more_objectives must be distinct hexes on the grid")
-        return problems
+        return problems + _raid_only_problems(entry)
 
     def setup(self, entry):
         v = entry.victory
@@ -292,7 +306,109 @@ class SeizeAndHold:
         return None, None
 
 
-KINDS = {kind.kind: kind for kind in (HoldObjective(), HoldCompound(), SeizeAndHold())}
+def _starting_strength(entry, uid):
+    from .scenario_entry import unit
+
+    spec = next(u for u in entry.units if u.id == uid)
+    return spec.overrides.get("strength", unit(spec.id, spec.side, spec.name, list(spec.pos))["strength"])
+
+
+class RaidAndReturn:
+    """Reach an objective, then bring the force back (docs/research/59 §3).
+
+    The raid is made when an effective formation of ``raiders`` has stood
+    within ``radius`` of the objective for ``hold_turns`` consecutive
+    intervals (``raided_turn``). At any later interval, the attacker wins
+    when the effective raiders within ``return_radius`` of ``return_hex``
+    number at least ``return_needed`` men: ``return_strength``, or
+    ``return_pct`` per cent (rounded up) of the raiders' starting strength
+    (``force``). With ``min_captives`` set, those returned raiders must also
+    hold at least that many captives (``s['captives']``, status ``held``).
+    The defender wins when no raider is effective, or at the deadline. The
+    score reads the truth; ``s['victory']`` is not in either side's view.
+    Test: `test_raid_then_return_wins_for_the_attacker`,
+    `test_too_few_returning_men_do_not_win`,
+    `test_min_captives_counts_captives_held_by_the_returning_raiders`,
+    `test_nothing_of_the_raid_state_reaches_either_view`.
+    """
+
+    kind = "raid-and-return"
+
+    def problems(self, entry):
+        problems = HoldObjective().ring_problems(entry)
+        v = entry.victory
+        units = {u.id: u.side for u in entry.units}
+        attacker = next((side for side, spec in entry.sides.items() if spec.role == "attacker"), None)
+        raiders = tuple(v.raiders)
+        if not raiders or len(set(raiders)) != len(raiders) or any(units.get(r) != attacker for r in raiders):
+            problems.append("raid-and-return raiders must be distinct attacker unit ids, at least one")
+        if v.return_hex is None or not grid.valid(list(v.return_hex)):
+            problems.append("raid-and-return return_hex must be a hex on the grid")
+        if type(v.return_radius) is not int or v.return_radius < 0:
+            problems.append("raid-and-return return_radius must be an integer of 0 or more")
+        force = sum(_starting_strength(entry, r) for r in raiders if r in units)
+        by_count = v.return_strength is not None
+        if by_count == (v.return_pct is not None):
+            problems.append("raid-and-return needs exactly one of return_strength and return_pct")
+        elif by_count and not (type(v.return_strength) is int and 1 <= v.return_strength <= force):
+            problems.append(f"raid-and-return return_strength must be an integer of 1 to the raiders' {force}")
+        elif not by_count and not (type(v.return_pct) is int and 1 <= v.return_pct <= 100):
+            problems.append("raid-and-return return_pct must be an integer of 1 to 100")
+        if v.min_captives is not None and not (type(v.min_captives) is int and v.min_captives >= 1):
+            problems.append("raid-and-return min_captives must be None or a positive integer")
+        if v.relief_turn is not None or tuple(v.more_objectives):
+            problems.append("raid-and-return does not read relief_turn and more_objectives; use seize-and-hold")
+        return problems
+
+    def setup(self, entry):
+        v = entry.victory
+        force = sum(_starting_strength(entry, r) for r in v.raiders)
+        needed = v.return_strength if v.return_strength is not None else -(-force * v.return_pct // 100)
+        return {
+            "kind": self.kind,
+            "objective": list(v.objective),
+            "radius": v.radius,
+            "hold_turns": v.hold_turns,
+            "objective_name": v.objective_name,
+            "raiders": list(v.raiders),
+            "force": force,
+            "return_hex": list(v.return_hex),
+            "return_radius": v.return_radius,
+            "return_needed": needed,
+            "min_captives": v.min_captives,
+            "captures": 0,
+            "raided_turn": None,
+        }
+
+    def score(self, s):
+        v = s["victory"]
+        defender = _side_with_role(s, "defender")
+        attacker = _side_with_role(s, "attacker")
+        names = {x["id"]: x["name"] for x in s["sides"]}
+        raiders = [u for u in s["units"] if u["id"] in v["raiders"]
+                   and u["status"] not in INEFFECTIVE and u["strength"] > 0]
+        if v["raided_turn"] is None:
+            near = any(grid.distance(u["pos"], v["objective"]) <= v["radius"] for u in raiders)
+            v["captures"] = v["captures"] + 1 if near else 0
+            if v["captures"] >= v["hold_turns"]:
+                v["raided_turn"] = s["turn"]
+        elif s["turn"] > v["raided_turn"]:
+            home = [u for u in raiders if grid.distance(u["pos"], v["return_hex"]) <= v["return_radius"]]
+            ids = {u["id"] for u in home}
+            men = sum(u["strength"] for u in home)
+            held = sum(k["count"] for k in s.get("captives", ()) if k["status"] == "held" and k["holder_id"] in ids)
+            if men >= v["return_needed"] and (v["min_captives"] is None or held >= v["min_captives"]):
+                brought = f" They brought back {held} captives." if v["min_captives"] is not None else ""
+                return attacker, (f"The raiders reached the {v['objective_name']} and {men} of them came back "
+                                  f"by the deadline.{brought}")
+        if not raiders:
+            return defender, "The raiding force is no longer effective."
+        if s["turn"] >= s["max_turns"]:
+            return defender, f"The {names[defender]} kept the raiders from returning by the deadline."
+        return None, None
+
+
+KINDS = {kind.kind: kind for kind in (HoldObjective(), HoldCompound(), SeizeAndHold(), RaidAndReturn())}
 
 
 def score(s):
