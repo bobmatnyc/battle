@@ -13,7 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from . import grid, scenario_checks, scenario_command, scenario_wwii
+from . import grid, scenario_checks, scenario_command, scenario_units, scenario_wwii
 from .scenario_command import CommandEntry, WeaponEntry
 from .scenario_wwii import BridgeEntry, SignalEntry
 
@@ -326,6 +326,7 @@ def validate(entry):
     problems.extend(scenario_command.command_problems(entry))  # poc-13B
     problems.extend(scenario_command.weapon_problems(entry))
     problems.extend(scenario_wwii.problems(entry))  # docs/research/53
+    problems.extend(scenario_units.problems(entry))  # docs/research/58
     problems.extend(_scripted_problems(entry))
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
@@ -487,6 +488,8 @@ def build_state(entry, rules=None):
         raise ValueError(f"{rules} has no succession, voice reach, weapon table or tactics_v11; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_wwii.declares(entry):
         raise ValueError(f"{rules} has no bridge state, radio, signals or night range; they need poc-13.")
+    if not _at_least(rules, 'poc-13') and scenario_units.declares(entry):
+        raise ValueError(f"{rules} has no declared rout_strength; it needs poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))

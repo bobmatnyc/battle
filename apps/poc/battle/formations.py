@@ -23,6 +23,17 @@ def carries_sappers(units):
     `test_split_applied_after_the_unit_gained_sappers_is_refused_at_execution`."""
     return any(u is not None and u.get('clears_charges') for u in units)
 
+# docs/research/58: a split would copy one absolute rout threshold to two smaller
+# halves and a combine would keep only one, so a declaring unit does neither.
+ROUT_REFUSAL='A formation with a declared rout_strength cannot split or combine.'
+
+
+def declares_rout(units):
+    """True when any of ``units`` declares ``rout_strength``.
+    Test: `test_split_of_a_declaring_unit_is_refused_at_request`,
+    `test_split_applied_after_the_unit_declared_is_refused_at_execution`."""
+    return any(u is not None and 'rout_strength' in u for u in units)
+
 
 def validate(s,side,request):
     from . import engine
@@ -37,6 +48,7 @@ def validate(s,side,request):
         engine.validate_order(s,side,{'unit_id':uid,'stance':'hold','destination':None})
         if uid not in units:raise ValueError('That formation has not reported to headquarters.')
     if carries_sappers([engine.find_unit(s,uid) for uid in ids]):raise ValueError(SAPPER_REFUSAL)
+    if declares_rout([engine.find_unit(s,uid) for uid in ids]):raise ValueError(ROUT_REFUSAL)
     a=units[ids[0]]
     cells=gates.known_cells(s,side)  # poc-10: walls as headquarters knows them; None without gates.
     if kind=='split':
@@ -118,6 +130,7 @@ def progress(s):
             engine.emit(s,'formation_regrouping',operation_id=op['id'],ready_turn=op['ready_turn'])
         if s['turn']<op['ready_turn']:continue
         if carries_sappers(units):finish(s,op,'refused',SAPPER_REFUSAL,units);continue  # D2: at execution too.
+        if declares_rout(units):finish(s,op,'refused',ROUT_REFUSAL,units);continue  # docs/research/58
         a=units[0]
         if op['kind']=='split':
             n=op['count'];p=op['destination']

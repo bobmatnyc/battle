@@ -397,7 +397,8 @@ def advance(s):
         if losses: emit(s,'casualties',unit_id=u['id'],count=losses,remaining=u['strength'])
         command.officer_losses(s,u,losses,emit,enqueue)  # poc-13B: an officer may fall.
         if u['strength']==0: u['status']='lost'
-        elif (u['morale']<28 or u['strength']<12) and u['status']!='routed':
+        # docs/research/58: a unit may declare its own rout_strength; else 12.
+        elif (u['morale']<28 or u['strength']<u.get('rout_strength',12)) and u['status']!='routed':
             u['status']='routed'; emit(s,'unit_routed',unit_id=u['id'])
             enqueue(s,u['side'],f'{u["id"]}: formation breaking; withdrawing toward headquarters.',kind='morale',sender=u['id'])
     command.succession(s,emit,message)  # poc-13B: a fallen command passes on.
