@@ -20,7 +20,11 @@ COLONIAL={**PROFILE,'id':'colonial-1775-voice-v1','label':'1775 · voice / runne
 # interval; voice and runner remain. Both reaches are assumptions.
 WWII={**PROFILE,'id':'wwii-1944-radio-v1','label':'1944 · radio / voice / runner',
       'methods':['voice','radio','courier'],'voice_reach':2,'radio_range':10}
-PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL,WWII)}
+# docs/research/59: 1918 infantry, voice and runner only. The profile carries no
+# reach: the entry declares ``voice_reach`` (scenario_command), written to each
+# side's ``s['commanders']`` entry, which ``command.voice_reach`` reads first.
+WWI={**PROFILE,'id':'wwi-1918-voice-runner-v1','label':'1918 · voice / runner','voice_reach_from_entry':True}
+PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL,WWII,WWI)}
 
 def command_unit(s,side):
     uid=s['commanders'][side]['unit_id']

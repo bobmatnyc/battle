@@ -14,6 +14,8 @@ from typing import Mapping
 # poc-13B: the 1775 profile adds a voice reach to the courier transport
 # (comms.PROFILES); a voice packet beyond it is relayed by runner.
 COLONIAL_COMMUNICATIONS = "colonial-1775-voice-v1"
+# docs/research/59: 1918 voice and runner; the entry declares the voice reach.
+WWI_COMMUNICATIONS = "wwi-1918-voice-runner-v1"
 MAX_FIRE_RANGE = 5  # engine.volley never fires beyond 5 hexes.
 DEFAULT_WEAPON_CLASS = "rifled muskets"  # scenario_entry.unit()'s class.
 # docs/research/55: the one tactics edition an entry may select; None is tactics_v10.
@@ -74,6 +76,33 @@ def _count(value, low=0):
     return type(value) is int and value >= low
 
 
+def _takes_reach(entry):
+    from . import comms
+
+    return bool(comms.PROFILES.get(entry.communications, {}).get("voice_reach_from_entry"))
+
+
+def entry_voice_reach(entry):
+    """The voice reach ``entry`` gives orders: its own ``voice_reach`` for a
+    profile that takes one (docs/research/59), else the profile's, else None."""
+    from . import comms
+
+    if _takes_reach(entry):
+        return entry.voice_reach
+    return comms.PROFILES.get(entry.communications, {}).get("voice_reach")
+
+
+def _reach_problems(entry):
+    """docs/research/59: a profile that takes its reach from the entry needs an
+    integer of 0 or more; every other profile refuses ``voice_reach``.
+    Test: `test_the_profile_refuses_a_missing_or_bad_reach`, `test_other_profiles_refuse_a_reach`."""
+    if not _takes_reach(entry):
+        return [] if entry.voice_reach is None else [
+            f"voice_reach is read only by {WWI_COMMUNICATIONS}, not {entry.communications}"]
+    return [] if _count(entry.voice_reach) else [
+        f"{entry.communications} needs an entry voice_reach of 0 or more hexes, not {entry.voice_reach!r}"]
+
+
 def command_problems(entry):
     """Why: a succession list the rules cannot follow must fail at registration.
     What: problems with ``entry.command``: every side of the list is a
@@ -82,7 +111,7 @@ def command_problems(entry):
     override) is a positive integer, the other counts non-negative integers.
     Test: `test_registration_refuses_bad_command_data`,
     `test_registration_refuses_units_without_an_officer`."""
-    command, problems = entry.command, []
+    command, problems = entry.command, _reach_problems(entry)
     # poc-13B review: a unit starts with at least one officer; only losses or
     # a split make it leaderless, so no unit starts orderable without one.
     for u in entry.units:
@@ -151,7 +180,7 @@ def declares(entry):
     from . import comms
 
     reach = comms.PROFILES.get(entry.communications, {}).get("voice_reach")
-    return bool(entry.command or entry.weapons or entry.tactics or reach)
+    return bool(entry.command or entry.weapons or entry.tactics or reach or _takes_reach(entry))
 
 
 def setup(s, entry, units):
@@ -173,3 +202,6 @@ def setup(s, entry, units):
         s["weapon_rules"] = {name: asdict(w) for name, w in entry.weapons.items()}
     if entry.tactics:  # docs/research/55: only a selecting entry writes the key.
         s["tactics"] = entry.tactics
+    if _takes_reach(entry):  # docs/research/59: the entry's reach, with each commander.
+        for c in s["commanders"].values():
+            c["voice_reach"] = entry.voice_reach

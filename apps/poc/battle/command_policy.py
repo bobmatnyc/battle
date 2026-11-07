@@ -291,10 +291,12 @@ VOICES = VOICE_PROFILES
 
 
 def _transport(scenario):
-    """poc-13B: a voice-reach profile (1775) states its reach; others keep the runner line."""
+    """poc-13B: a voice-reach profile (1775) states its reach; others keep the runner line.
+    docs/research/59: the 1918 profile states the reach its entry declares."""
     from .comms import PROFILES
+    from .scenario_command import entry_voice_reach
 
-    reach = PROFILES[scenario.communications].get("voice_reach")
+    reach = entry_voice_reach(scenario)
     radio = PROFILES[scenario.communications].get("radio_range")
     if not reach:
         return "Orders travel by runner."

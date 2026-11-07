@@ -13,8 +13,10 @@ from . import comms,grid
 
 def voice_reach(s,side):
     """Hexes a spoken order carries from ``side``'s command detachment; 0
-    for profiles without one (only the detachment itself hears its orders)."""
-    return comms.PROFILES[s['commanders'][side]['communications']].get('voice_reach',0)
+    for profiles without one (only the detachment itself hears its orders).
+    docs/research/59: a reach the entry declared, stored with the commander, wins."""
+    c=s['commanders'][side]
+    return c['voice_reach'] if 'voice_reach' in c else comms.PROFILES[c['communications']].get('voice_reach',0)
 
 
 def spoken(s,side,commander,recipient,known):

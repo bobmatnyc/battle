@@ -35,7 +35,7 @@ PROVENANCE = ("sourced:", "reconstruction:", "authored:", "inferred:")
 # comms.PROFILES ids; the Napoleonic profile shares the 1863 transport rates.
 # poc-13B: the 1775 profile adds a voice reach (scenario_command).
 COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1", scenario_command.COLONIAL_COMMUNICATIONS,
-                  scenario_wwii.RADIO_COMMUNICATIONS)
+                  scenario_wwii.RADIO_COMMUNICATIONS, scenario_command.WWI_COMMUNICATIONS)
 
 
 def unit(uid, side, name, pos):
@@ -267,6 +267,7 @@ class ScenarioEntry:
     bridges: tuple[BridgeEntry, ...] | None = None
     signals: tuple[SignalEntry, ...] | None = None
     observation_range: int | None = None  # None: each unit's own (7 hexes).
+    voice_reach: int | None = None  # docs/research/59: read only by the 1918 profile.
     # Side id -> scripted control id (command_policy.SCRIPTED_POLICIES) for an
     # entry with its own controls (Concord); None: the gate or fallback rule.
     scripted: Mapping[str, str] | None = None
