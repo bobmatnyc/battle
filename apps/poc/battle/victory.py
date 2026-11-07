@@ -342,6 +342,7 @@ class RaidAndReturn:
     `test_too_few_returning_men_do_not_win`,
     `test_min_captives_counts_captives_held_by_the_returning_raiders`,
     `test_min_captives_is_refused_when_no_defender_declares_surrender`,
+    `test_the_deadline_reason_names_the_unmet_condition`,
     `test_nothing_of_the_raid_state_reaches_either_view`.
     """
 
@@ -410,10 +411,7 @@ class RaidAndReturn:
             if v["captures"] >= v["hold_turns"]:
                 v["raided_turn"] = s["turn"]
         elif s["turn"] > v["raided_turn"]:
-            home = [u for u in raiders if grid.distance(u["pos"], v["return_hex"]) <= v["return_radius"]]
-            ids = {u["id"] for u in home}
-            men = sum(u["strength"] for u in home)
-            held = sum(k["count"] for k in s.get("captives", ()) if k["status"] == "held" and k["holder_id"] in ids)
+            men, held = _returned(s, v, raiders)
             if men >= v["return_needed"] and (v["min_captives"] is None or held >= v["min_captives"]):
                 brought = f" They brought back {held} captives." if v["min_captives"] is not None else ""
                 return attacker, (f"The raiders reached the {v['objective_name']} and {men} of them came back "
@@ -421,8 +419,43 @@ class RaidAndReturn:
         if not raiders:
             return defender, "The raiding force is no longer effective."
         if s["turn"] >= s["max_turns"]:
-            return defender, f"The {names[defender]} kept the raiders from returning by the deadline."
+            return defender, _deadline_reason(s, v, raiders, names[defender])
         return None, None
+
+
+def _returned(s, v, raiders):
+    """Men of the effective ``raiders`` within ``return_radius`` of
+    ``return_hex``, and the captives those men hold (status ``held``)."""
+    home = [u for u in raiders if grid.distance(u["pos"], v["return_hex"]) <= v["return_radius"]]
+    ids = {u["id"] for u in home}
+    held = sum(k["count"] for k in s.get("captives", ()) if k["status"] == "held" and k["holder_id"] in ids)
+    return sum(u["strength"] for u in home), held
+
+
+def _deadline_reason(s, v, raiders, defender):
+    """Why: the deadline reason must name the condition the raid missed.
+    What: reads the counters ``score`` reads: no raid, no man home (the
+    poc-13 text), a raid made only at the deadline interval, too few men
+    home, or too few captives held.
+    Test: `test_the_deadline_reason_names_the_unmet_condition`,
+    `test_the_deadline_reason_names_the_unmet_condition_on_the_entry`,
+    `test_raid_and_return_scores_the_entrys_raid`."""
+    # Architect 2026-11-07 14:47Z: name the unmet win conditions, not "kept from returning" alone.
+    if v["raided_turn"] is None:
+        return f"The {defender} kept the raiders from reaching the {v['objective_name']} by the deadline."
+    men, held = _returned(s, v, raiders)
+    needed, wanted = v["return_needed"], v["min_captives"]
+    short = wanted is not None and held < wanted
+    if men == 0:
+        return f"The {defender} kept the raiders from returning by the deadline."
+    if men >= needed and not short:  # The raid was made at the deadline interval; no later interval to return in.
+        return f"The raiders reached the {v['objective_name']} only at the deadline."
+    captives = f"they brought back {held} captives against the {wanted} required"
+    if men >= needed:
+        return (f"The raiders reached the {v['objective_name']} and {men} of them came back by the deadline, "
+                f"but {captives}.")
+    return (f"The raiders reached the {v['objective_name']}, but only {men} of them came back by the deadline "
+            f"against the {needed} needed" + (f", and {captives}." if short else "."))
 
 
 def _needed(entry, force):

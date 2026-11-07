@@ -58,7 +58,7 @@ The entry is in `poc-13` (`RULES_VERSION`), the edition these rules need.
 | Facing | All four German groups face 45° (north-east, down the valley toward the American attack), arc 120°, turn 1 interval | Sourced as posture: S40 (guns "masked and the muzzles pointed down into the valley", "rapidly turning them around"); S57 p. 60 ("quickly reversed their guns") |
 | Surrender (G1, `D1` only) | Reach 3, odds 50 %, support within 1 hex, rear only | Inferred: S57 p. 60 ("supposing" a large American force); 59 §1 mapping |
 | Departure order | `A1` starts with a move order to the ravine beside the shack, already received | Reconstruction: S57 p. 60, S58 (Parson); 56 §6, intent set at departure |
-| Return | `exploit`, trigger `arrival`, press to the post hex, recall binding, loss limit 100 % | Reconstruction: S57 p. 61-62, S40 diary (the prisoners brought back) |
+| Return | `exploit`, trigger `arrival`, press to the post hex, recall binding, loss limit 100 %, `resume_after_withdrawal` true | Reconstruction: S57 p. 61-62, S40 diary (the prisoners brought back); the resume is per D7b ruling 2026-11-07 |
 | Victory | `raid-and-return`: within 1 hex of the shack for 1 interval, then 5 men (25 % of 17, rounded up) within 1 hex of the post holding at least 1 captive, by 10:30 | 56 §5; the thresholds are authored; no count is scored against S57 (doc 37) |
 | Command | Succession `AHQ` to `A2` to `A3`; no German successor | Authored; S57 p. 61 names none |
 
@@ -83,36 +83,41 @@ The entry is in `poc-13` (`RULES_VERSION`), the edition these rules need.
 
 ## 5. Results (model results)
 
-All 12 runs: German win at the deadline, 10:30:00 (interval 450), reason "The German kept the raiders from returning by the deadline." Every replay is `identical`. Interval *t* is 06:45 plus *t* × 30 s.
+Run on EVO at commit `08e7ef2` (run directory `bt05o-08e7ef2`; artifacts in `apps/poc/artifacts/hill223-d7b-08e7ef2/`), after the D7b ruling 2026-11-07: the entry declares `resume_after_withdrawal` (§7 row 5; 60 §2), so the patrol's press home pauses at a withdrawal and resumes when it clears. Before D7b (run `bt05e-0b636d5`) all 12 runs were German wins: the patrol took 75 captives and never returned, because the exploit stopped for good at the first withdrawal, at interval 13.
 
-| Run | `D1` yields (turn, to, count) | Raid made | Gun turns (unit: start→ready) | Patrol first struck / first volley (return fire) | Return press: start, stop | Patrol at end | US / German losses |
-|---|---|---|---|---|---|---|---|
-| default | 9, A1, 75 | 9 | D2 9→10, 13→14; D4 13→14 | 10 / 10 (yes) | 10, 13 `shaken` | 10 men at (4, 12), 75 captives | 7 / 76 |
-| `valley-narrow` | as default | 9 | as default | as default | as default | as default | 7 / 76 |
-| `valley-wide` | as default | 9 | as default | as default | as default | as default | 7 / 76 |
-| `surrender-on-threat` | none | 9 | D2 9→10 | never / never | 10, 10 `shaken` | 17 men at (0, 15), 0 captives | 0 / 0 |
-| `surrender-on-surprise` | as default | 9 | as default | as default | as default | as default | 7 / 76 |
-| `gun-turn-delay-1` | as default | 9 | as default | as default | as default | as default | 7 / 76 |
-| `gun-turn-delay-2` | 9, A1, 75 | 9 | D2 9→11 | 11 / 11 (yes) | 10, 11 `shaken` | 14 men at (0, 13), 75 captives | 3 / 75 |
-| `gun-turn-delay-4` | 9, A1, 75 | 9 | D2 9→13 | 13 / 13 (yes) | 10, 11 `shaken` | 16 men at (0, 13), 75 captives | 1 / 75 |
-| `observation-2` | 9, A1, 75 | 9 | D2 9→10, 13→14 | 10 / 10 (yes) | 10, 13 `shaken` | 11 men at (4, 12), 75 captives | 6 / 76 |
-| `observation-4` | 9, A1, 75 | 9 | D2 6→7 | 9 / 9 (yes) | 10, 10 `shaken` | 7 men at (0, 13), 75 captives | 10 / 76 |
-| `company-reinforces` | as default | 9 | as default | as default | as default | as default | 7 / 76 |
-| `no-shield` | as default | 9 | as default | as default | as default | as default | 7 / 76 |
+All 12 replays are `identical`. `return_on_approach_route` is false in all 12. Eleven runs are American wins: the raiders reached the German command post and returned by the deadline with 75 captives. `surrender-on-threat` is a German win at the deadline, 10:30:00 (interval 450), with no captives held. The earlier run at 679b637 (`bt05n-679b637`) recorded the reason "The German kept the raiders from returning by the deadline", which is wrong: the patrol was home. After the code fix (Architect ruling 2026-11-07 14:47Z) the run at 08e7ef2 records the reason "The raiders reached the German command post and 12 of them came back by the deadline, but they brought back 0 captives against the 1 required." Winners, end turns and every other field equal the 679b637 run. Interval *t* is 06:45 plus *t* × 30 s.
 
-`D1` also starts a turn at 8 (ready 9) in every run. German losses count the 75 captives. No captives escaped in any run, and no unit routed. In `company-reinforces`, `A3` received its order (sent at 60), reached the patrol's start hex at 80 and held there, out of sight of everyone.
+Note on replay: the 679b637 `surrender-on-threat` replay no longer verifies under ec1be7b and later, because its stored reason is the old text. It is waived per the Architect ruling of 2026-11-07 14:55Z (doc 60 §5). It verifies under its 679b637 tarball, and the run `bt05o-08e7ef2` at 08e7ef2 is the replacement record. The 12 pre-D7b games of `bt05e-0b636d5` replay `identical` under 08e7ef2. The Gergovia (14 entries) and Pegasus (25 entries) runs at 08e7ef2 equal those at c733662 in every game field (only wall-clock seconds differ), which confirms D7b is opt-in.
 
-**How the default runs** (one trace, turns 8 to 22). At the start of interval 9 the patrol is at (0, 13), two hexes due south of the shack, in `D1`'s rear arc. `D1`'s first estimate of it (quality 20) is 1 to 60 men. The high end, 60, is at least 50 % of `D1`'s 75 plus `D2`'s 40 (6,000 against 5,750), so `D1` yields at 9. The patrol enters (0, 12) the same interval, and the raid is made at 9. The press home starts at 10. `D2`, turned since 10, fires on the patrol from 10 to 14 and causes 7 losses. The patrol returns fire on `D2`. At 13 its own withdrawal trigger holds ("credible sightings indicate a much stronger enemy"): it estimates `D2` at 10 to 50 men, a mean of 30, against 11 men × 2.5 = 27.5. An exploit that stops for a withdrawal stops for good (60 §2), so the press ends. The patrol withdraws to (4, 12), on the east face, where it reports no enemy within effective range. Its move order was completed, so it holds there to 10:30, and no order can reach it.
+| Run | `D1` yields (turn, to, count) | Raid made | Gun turns (unit: start→ready) | Patrol first struck / first volley (return fire) | Exploit: started, paused (withdrawal), resumed | Patrol at end | US / German losses | Result, end turn |
+|---|---|---|---|---|---|---|---|---|
+| default | 9, A1, 75 | 9 | D1 8→9; D2 9→10, 13→14; D4 13→14 | 10 / 10 (yes) | 10; 13; 16 | 10 men at (14, 10), 75 captives | 7 / 76 | American, 27 |
+| `valley-narrow` | as default | 9 | as default | as default | as default | 10 men at (9, 10), 75 captives | 7 / 76 | American, 21 |
+| `valley-wide` | as default | 9 | as default | as default | as default | 10 men at (22, 10), 75 captives | 7 / 76 | American, 36 |
+| `surrender-on-threat` | none | 9 | D1 8→9; D2 9→10, 18→19 | 15 / 15 (yes) | 10; 10, 18; 14, 21 (stopped at 34, `reached`) | 12 men at (15, 10), 0 captives | 5 / 0 | German, 450 |
+| `surrender-on-surprise` | as default | 9 | as default | as default | as default | as default | 7 / 76 | American, 27 |
+| `gun-turn-delay-1` | as default | 9 | as default | as default | as default | as default | 7 / 76 | American, 27 |
+| `gun-turn-delay-2` | 9, A1, 75 | 9 | D1 8→9; D2 9→11, 18→20; D4 18→20 | 11 / 11 (yes) | 10; 11, 18; 15, 22 | 9 men at (14, 10), 75 captives | 8 / 76 | American, 33 |
+| `gun-turn-delay-4` | 9, A1, 75 | 9 | D1 8→9; D2 9→13, 18→22; D4 18→22 | 13 / 13 (yes) | 10; 11, 18; 15, 22 | 11 men at (14, 10), 75 captives | 6 / 76 | American, 33 |
+| `observation-2` | 9, A1, 75 | 9 | D1 8→9; D2 9→10, 13→14 | 10 / 10 (yes) | 10; 13; 16 | 11 men at (14, 10), 75 captives | 6 / 76 | American, 27 |
+| `observation-4` | 9, A1, 75 | 9 | D2 6→7; D1 8→9; D4 14→15, 21→22 | 9 / 9 (yes) | 10; 10, 14; 13, 18 | 7 men at (14, 10), 75 captives | 10 / 76 | American, 28 |
+| `company-reinforces` | as default | 9 | as default | as default | as default | as default | 7 / 76 | American, 27 |
+| `no-shield` | as default | 9 | as default | as default | as default | as default | 7 / 76 | American, 27 |
+
+German losses count the 75 captives. No captive escaped in any run, and no unit routed.
+
+**How the default runs** (events at turns 8 to 27). At the start of interval 9 the patrol is at (0, 13), two hexes due south of the shack, in `D1`'s rear arc. `D1`'s first estimate of it (quality 20) is 1 to 60 men. The high end, 60, is at least 50 % of `D1`'s 75 plus `D2`'s 40 (6,000 against 5,750), so `D1` yields at 9. The patrol enters (0, 12) the same interval, and the raid is made at 9. The press home starts at 10. `D2`, turned since 10, fires on the patrol from 10 to 14 and causes 7 losses. At 13 the patrol's own withdrawal trigger holds ("credible sightings indicate a much stronger enemy"): it estimates `D2` at 10 to 50 men, a mean of 30, against 11 men × 2.5 = 27.5. The press pauses. It resumes at 16, and the patrol ends turn 27 at (14, 10) with 10 men and 75 captives. The log records the pause and the resume but not why the withdrawal cleared at 16.
 
 ## 6. Reading the results
 
-- **What decides every run is the stop of the return press.** In each run with a surrender, the patrol takes 75 prisoners within 5 minutes of the start. A withdrawal decision then ends its return for good, and it holds where the withdrawal leaves it. That rule is in 60 §2. It was built for Gergovia's exploiting legions, not for a patrol bringing prisoners home. The model result follows from that reuse. It does not follow from the historical record (§9).
-- **The valley width changes nothing,** because the patrol never reaches the valley. The three valley runs differ only in event counts (11,093, 11,097 and 11,088).
-- **G2 never yields.** At interval 9 the patrol is 2 hexes off, beyond reach 1. At 10 it is adjacent, but `D1` has now watched it for a second interval: the estimate's quality is 26 and its high end has fallen to 30 (3,000 against 5,750). The patrol's own trigger (`D1` estimated at 50 to 90, `D2` at 20 to 100) ends the press at 10. No shot is fired in the battle. Under these rules a yield needs surprise: the first, poorest estimate.
-- **A slower gun turn costs the patrol less.** Losses are 7, 3 and 1 for turn delays of 1, 2 and 4. With a delay of 2 or 4, the patrol withdraws to the ravine edge at (0, 13) and not to the east face.
-- **Wider sight lets `D2` turn three intervals earlier** (observation 4: turn starts at 6). The patrol takes 10 losses and ends with 7 men. Narrower sight (observation 2) keeps `D4` from turning.
+- **The resume decides the result.** Before D7b the stop of the return press at the first withdrawal decided all 12 runs (German wins). With the resume, 11 runs are American wins. The press pauses once in the default and in the valley, `surrender-on-surprise`, `gun-turn-delay-1`, `observation-2`, `company-reinforces` and `no-shield` runs, and twice in `gun-turn-delay-2`, `gun-turn-delay-4`, `observation-4` and `surrender-on-threat`.
+- **`surrender-on-threat` is the one German win.** `D1` does not yield, so the patrol holds no captive. The exploit stops at turn 34 with reason `reached`, with 12 men at (15, 10). The victory rule needs at least 1 captive at the post (§3), so the run is not an American win. The unmet condition is the captive count, not the return. The reason recorded at 679b637 said the German kept the raiders from returning; after the code fix the deadline reason names each unmet condition (no raid, no man home, too few men home, too few captives), so this run reads "... 12 of them came back by the deadline, but they brought back 0 captives against the 1 required." The winner and end turn do not change.
+- **The valley width sets the end turn and the end hex.** The three valley runs end at turns 21, 27 and 36, at columns 9, 14 and 22, for valleys of 5, 10 and 18 hexes. Event counts are 664, 808 and 1,042. The patrol's losses and the exploit events are the same in all three.
+- **G2 never yields.** At interval 9 the patrol is 2 hexes off, beyond reach 1. At 10 it is adjacent, but `D1` has now watched it for a second interval: the estimate's quality is 26 and its high end has fallen to 30 (3,000 against 5,750). The patrol's own trigger (`D1` estimated at 50 to 90, `D2` at 20 to 100) pauses the press at 10. The first volley is at 15 and the patrol takes 5 losses. Under these rules a yield needs surprise: the first, poorest estimate.
+- **Gun turn delay.** Patrol losses are 7, 8 and 6 for turn delays of 1, 2 and 4. With a delay of 2 or 4, `D2` and `D4` turn again at 18, and the exploit pauses a second time at 18.
+- **Observation.** Wider sight lets `D2` turn three intervals earlier (observation 4: turn starts at 6). The patrol takes 10 losses and ends with 7 men. Narrower sight (observation 2) keeps `D4` from turning, and the patrol ends with 11 men.
 - **The surrender turns on a thin margin.** `D1` yields because 60 × 100 ≥ 50 × (75 + 40), that is 6,000 against 5,750. An odds value of 53 % or more, or a support reach that took in another group, would stop the G1 surrender in the default. That follows from the arithmetic, not from a run.
-- **Against the record (not scored).** S57 p. 60 records 6 killed and 3 wounded when the guns turned; the default gives 7 patrol losses. S57 p. 61-62 records 132 prisoners counted at the post; the model holds 75, all from `D1`, because no gun group declares surrender (§7 row 9). The record has the patrol return; no run does.
+- **Against the record (not scored).** S57 p. 60 records 6 killed and 3 wounded when the guns turned; the default gives 7 patrol losses. S57 p. 61-62 records 132 prisoners counted at the post; the model holds 75, all from `D1`, because no gun group declares surrender (§7 row 9). The record has the patrol return; 11 of 12 runs do.
 
 ## 7. Deviations from doc 56
 
@@ -122,7 +127,7 @@ All 12 runs: German win at the deadline, 10:30:00 (interval 450), reason "The Ge
 | 2 | Sight 3 in woods; 7 across the open valley | 3 everywhere | `observation_range` is one value per unit; the engine has no per-terrain sight |
 | 3 | `shield` variant | Not built | No prisoner shield in the engine (56 §10, later; 59 §7) |
 | 4 | §8 lists G1, delay 1 and no shield as variants | Registered as entries identical to the default apart from their labels | So that every §8 name validates and runs |
-| 5 | Return "by the way it came" (S1); no mechanism named | `exploit` doctrine (60 §2), trigger `arrival`; the engine's shortest path | The only engine rule that lets a unit carry an intent past its first order. `return_on_approach_route` is false in every run, since no run returns |
+| 5 | Return "by the way it came" (S1); no mechanism named | `exploit` doctrine (60 §2), trigger `arrival`, with `resume_after_withdrawal` true per D7b ruling 2026-11-07: a local withdrawal pauses the press home, which resumes once the withdrawal clears; the engine's shortest path | The only engine rule that lets a unit carry an intent past its first order. Before D7b a withdrawal ended the return for good, and no run returned. Under D7b, 11 of 12 runs return, and `return_on_approach_route` is false in all 12 (§5) |
 | 6 | Departure order not specified | A move order already received at the start (`mission_result` in the unit's overrides) | A runner order at turn 0 would leave the patrol idle for intervals it was not idle |
 | 7 | Guns face the valley | 45° (north-east) for `D1` to `D4`; `D1` also turns in 1 interval in every variant | `rear_only` needs a declared facing on `D1`; `gun-turn-delay` changes the gun groups only |
 | 8 | `valley-wide` 18 hexes | Hill 223 keeps one column | The map has 24 columns; the German hill takes 5 |
@@ -134,9 +139,9 @@ All 12 runs: German win at the deadline, 10:30:00 (interval 450), reason "The Ge
 
 ## 8. Tests
 
-`tests/test_hill_223.py` (12 tests):
+`tests/test_hill_223.py` (13 tests):
 
-- Registration and dry run: `test_entry_registers_in_the_headless_catalog_after_a_dry_run`, `test_entry_takes_the_doc_56_defaults`, `test_every_basis_carries_a_kind_and_each_open_question_cites_the_ruling`.
+- Registration and dry run: `test_entry_registers_in_the_headless_catalog_after_a_dry_run`, `test_entry_takes_the_doc_56_defaults`, `test_every_basis_carries_a_kind_and_each_open_question_cites_the_ruling`, `test_the_return_resumes_after_a_local_withdrawal_per_the_d7b_ruling` (the default and every variant declare the field; the provenance cites D7b).
 - Variants: `test_each_named_variant_differs_only_in_its_own_question`.
 - The aliasing fix: `test_a_sides_report_does_not_share_nested_unit_data` (red before the fix, §2).
 - Controls: `test_policies_are_registered_and_chosen_for_their_sides`, `test_every_order_carries_a_source_locator_or_a_label`, `test_only_the_reinforcement_variant_sends_an_order_and_only_once`.
@@ -147,8 +152,8 @@ No test asserts a winner. No run digest is pinned: `facing.bearing` rounds float
 
 ## 9. Limits and next steps
 
-- **The return.** The patrol's return ends at its first withdrawal. A return doctrine that resumes once the withdrawal trigger clears, or a commander's runner order on the captives report, would test the return. Either would change the American intent register (56 §3), so it is an owner decision.
+- **The return.** Decided by D7b ruling 2026-11-07: "Return resumes after a local withdrawal clears." The entry now declares `resume_after_withdrawal` (60 §2; §7 row 5). The commander's runner order on the captives report was not taken. A press that pauses and resumes can repeat the cycle each time the patrol comes back into sight of a stronger group. In the EVO re-run it paused once or twice per run (§6).
 - **The surrender cascade.** S57 has the commander yield his command and more prisoners taken on the north and northeast slopes. Each group yields only on its own sightings here.
-- **Map.** Authored and schematic. The valley is never entered in any run, so its width is untested by these runs.
-- **Run cost.** About 45 s per 450-interval run on the workstation (Mac), 12 runs in about 9 minutes. No run went to EVO.
-- Reproduce, from `apps/poc`: `python3 scripts/hill223_runs.py` (one JSON line per run; `--only NAME`).
+- **Map.** Authored and schematic. The valley width changes the end turn and end hex of the returns (§6).
+- **Run cost.** The 12 runs of §5 took 3 min 46 s on EVO (15:18:50Z to 15:22:36Z), after `make test-poc` (703 tests OK, exit 0). The whole job at 08e7ef2, with Gergovia, Pegasus and the baseline replay check, took 56 min 10 s.
+- Reproduce, from `apps/poc` at 08e7ef2: `python3 scripts/hill223_runs.py --dir RUNS_DIR` (one JSON line per run; `--only NAME`). The run directory is `bt05o-08e7ef2`.

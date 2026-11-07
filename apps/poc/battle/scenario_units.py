@@ -42,20 +42,25 @@ def _surrender_problems(u):
 def _exploit_problems(u):
     """docs/research/60 §2: a rule with exactly ``standing.EXPLOIT_FIELDS``: a
     ``trigger`` of ``standing.EXPLOIT_TRIGGERS``, a ``press_to`` hex on the
-    grid, a boolean ``recall_binding`` and ``max_loss_pct`` 1 to 100."""
+    grid, a boolean ``recall_binding`` and ``max_loss_pct`` 1 to 100; and at
+    most the optional boolean ``standing.EXPLOIT_OPTIONAL``
+    ``resume_after_withdrawal`` (D7b ruling 2026-11-07)."""
     from . import grid
-    from .standing import EXPLOIT_FIELDS, EXPLOIT_TRIGGERS
+    from .standing import EXPLOIT_FIELDS, EXPLOIT_OPTIONAL, EXPLOIT_TRIGGERS
 
     if "exploit" not in u.overrides:
         return []
     r = u.overrides["exploit"]
     press_to = r.get("press_to") if isinstance(r, dict) else None
-    if not (isinstance(r, dict) and tuple(sorted(r)) == EXPLOIT_FIELDS and r["trigger"] in EXPLOIT_TRIGGERS
+    if not (isinstance(r, dict) and tuple(sorted(set(r) - set(EXPLOIT_OPTIONAL))) == EXPLOIT_FIELDS
+            and r["trigger"] in EXPLOIT_TRIGGERS
             and isinstance(press_to, (list, tuple)) and len(press_to) == 2 and all(_int(v) for v in press_to)
             and grid.valid(list(press_to)) and type(r["recall_binding"]) is bool
-            and _int(r["max_loss_pct"]) and 1 <= r["max_loss_pct"] <= 100):
-        return [f"unit {u.id!r} exploit must have exactly {EXPLOIT_FIELDS}: trigger one of {EXPLOIT_TRIGGERS}, "
-                "press_to a hex on the grid, recall_binding true or false and max_loss_pct 1-100"]
+            and _int(r["max_loss_pct"]) and 1 <= r["max_loss_pct"] <= 100
+            and all(type(r[k]) is bool for k in EXPLOIT_OPTIONAL if k in r)):
+        return [f"unit {u.id!r} exploit must have exactly {EXPLOIT_FIELDS}, optionally {EXPLOIT_OPTIONAL}: "
+                f"trigger one of {EXPLOIT_TRIGGERS}, press_to a hex on the grid, recall_binding true or false, "
+                "max_loss_pct 1-100 and resume_after_withdrawal true or false"]
     return []
 
 

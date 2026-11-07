@@ -10,6 +10,7 @@ line: the winner, end turn and clock time, the reason, replay status, the
 raid turn, each surrender (turn, unit, holder, count), the captives held at
 the end, each gun turn (unit, start and ready turn), the patrol's first
 volley and whether it was return fire, the last German gun volley, the
+return press events (started, paused and resumed per D7b, stopped), the
 patrol's strength and position at the end, whether the return leg kept to
 the approach route on the German hill, losses per side and the event count.
 The engine draws no random number.
@@ -71,7 +72,7 @@ def summarise(name, entry, result, final):
         "last_gun_volley": max((e["turn"] for e in ev if e["kind"] == "volley" and e["unit_id"] in GUNS),
                                default=None),
         "exploit": [(e["kind"], e["turn"], e.get("reason")) for e in ev
-                    if e["kind"] in ("exploit_started", "exploit_stopped")],
+                    if e["kind"] in ("exploit_started", "exploit_paused", "exploit_resumed", "exploit_stopped")],
         "patrol_end": {"strength": patrol["strength"], "status": patrol["status"], "pos": patrol["pos"],
                        "leaderless": patrol.get("leaderless", False)},
         "return_on_approach_route": bool(back) and back <= out,

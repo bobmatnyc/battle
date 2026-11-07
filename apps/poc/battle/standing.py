@@ -88,6 +88,9 @@ def visible(s,side):
 
 # docs/research/60 §2: a declared exploit (unit key ``exploit``). Off unless declared.
 EXPLOIT_FIELDS=('max_loss_pct','press_to','recall_binding','trigger')
+# D7b ruling 2026-11-07: an optional boolean; absent is false, so a rule written
+# without it (every Gergovia entry, every saved poc-13 game) plays as before.
+EXPLOIT_OPTIONAL=('resume_after_withdrawal',)
 EXPLOIT_TRIGGERS=('arrival','start')
 PRESS_REASON='Local success; pressing on toward the declared ground and returning fire.'
 
@@ -110,6 +113,13 @@ def _stop(s,u,rule,decision):
     if u['status']=='routed' or decision['action'] in ('withdraw','route'):return 'shaken'
     return None
 
+def _paused(u,rule,decision,reason):
+    """D7b: True when ``reason`` is a local withdrawal that a rule with
+    ``resume_after_withdrawal`` only pauses: the unit is not routed and its own
+    decision is ``withdraw`` (``_stop`` gives ``shaken`` for both)."""
+    return (reason=='shaken' and rule.get('resume_after_withdrawal',False)
+            and u['status']!='routed' and decision['action']=='withdraw')
+
 def exploit(s,u,decision):
     """Why: troops that have won a local success may press on beyond their
     orders (docs/research/57, VII.47 and VII.52), which no standing profile did.
@@ -122,13 +132,21 @@ def exploit(s,u,decision):
     initial strength; or its own triggers make it withdraw or rout. A binding
     recall heard before the success also ends it. ``recall_binding`` false is
     the ardour reading: the unit hears the recall, takes it up as its
-    mission, and obeys it only once the press stops. Reads only the unit, its
-    own signal receipts and the decision from its own observations.
+    mission, and obeys it only once the press stops. With
+    ``resume_after_withdrawal`` (D7b ruling 2026-11-07) the withdrawal of a
+    unit that is not routed only pauses the press (state ``withdrawn``, event
+    ``exploit_paused``); it resumes (``exploit_resumed``) at the first
+    interval whose own decision is no longer ``withdraw`` while no other stop
+    holds. Any other stop, met while paused or pressing, ends it for good.
+    Reads only the unit, its own signal receipts and the decision from its
+    own observations.
     Events ``exploit_started`` and ``exploit_stopped`` (with ``reason``).
     Test: `test_after_arrival_the_unit_presses_on_to_its_declared_hex`,
     `test_a_heard_binding_recall_stops_the_press`,
     `test_ardour_keeps_pressing_after_a_heard_recall_then_obeys_it`,
-    `test_an_enemy_the_unit_cannot_see_does_not_change_the_decision`."""
+    `test_an_enemy_the_unit_cannot_see_does_not_change_the_decision`,
+    `test_a_withdrawal_pauses_the_press_and_it_resumes_once_the_withdrawal_clears`,
+    `test_a_stop_for_any_other_reason_never_resumes`."""
     from . import engine
     rule=u.get('exploit')
     if not rule or u.get('exploit_state')=='stopped' or u['strength']<=0:return decision
@@ -140,8 +158,14 @@ def exploit(s,u,decision):
         u.update(exploit_state='pressing',exploit_version=u['order_version'])
         engine.emit(s,'exploit_started',unit_id=u['id'],press_to=list(rule['press_to']))
     reason=_stop(s,u,rule,decision)
+    if _paused(u,rule,decision,reason):  # D7b: the withdrawal pauses the press; it does not end it.
+        if u['exploit_state']=='pressing':
+            u['exploit_state']='withdrawn';engine.emit(s,'exploit_paused',unit_id=u['id'],reason='withdrawal')
+        return decision
     if reason:
         u['exploit_state']='stopped';engine.emit(s,'exploit_stopped',unit_id=u['id'],reason=reason)
         return decision
+    if u['exploit_state']=='withdrawn':  # D7b: the withdrawal has cleared and no stop holds.
+        u['exploit_state']='pressing';engine.emit(s,'exploit_resumed',unit_id=u['id'],press_to=list(rule['press_to']))
     decision.update(action='press',target=list(rule['press_to']),reason=PRESS_REASON)
     return decision

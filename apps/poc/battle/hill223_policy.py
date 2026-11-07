@@ -33,7 +33,8 @@ AMERICAN_ORDERS = (
     {"id": "return", "unit": "A1", "trigger": "the entry's exploit doctrine, on arriving in the rear",
      "stance": None, "hex": None,
      "source": "S57 p. 61-62: the prisoners brought to the battalion post; S40 diary",
-     "provenance": "reconstruction: docs/research/60 §2 doctrine; the post hex is authored"},
+     "provenance": "reconstruction: docs/research/60 §2 doctrine; the post hex is authored; the return resumes "
+                   "after a local withdrawal clears, per D7b ruling 2026-11-07"},
     {"id": "line-holds", "unit": None, "trigger": "the entry's initial hold stance, not a sent order",
      "stance": "hold", "hex": None,
      "source": "S57 p. 59: G Company 'seriously impeded by heavy machine gun fire'",

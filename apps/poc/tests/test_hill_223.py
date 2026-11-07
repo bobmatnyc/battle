@@ -101,6 +101,14 @@ class Hill223EntryTests(unittest.TestCase):
         self.assertEqual({u["id"] for u in s["units"] if "facing" in u}, {"D1", "D2", "D3", "D4"})
         self.assertEqual(s["victory"]["return_needed"], 5)  # A quarter of 17, rounded up.
 
+    def test_the_return_resumes_after_a_local_withdrawal_per_the_d7b_ruling(self):
+        # D7b ruling 2026-11-07: "Return resumes after a local withdrawal clears."
+        for entry in [ENTRY] + [v.entry for v in VARIANTS.values()]:
+            with self.subTest(entry.id):
+                self.assertIs(unit(build_state(entry), "A1")["exploit"]["resume_after_withdrawal"], True)
+        self.assertIn("per D7b ruling 2026-11-07", ENTRY.provenance["return"])
+        self.assertIn("per D7b ruling 2026-11-07", next(o for o in AMERICAN_ORDERS if o["id"] == "return")["provenance"])
+
     def test_every_basis_carries_a_kind_and_each_open_question_cites_the_ruling(self):
         self.assertTrue(all(v.startswith(PROVENANCE) for v in ENTRY.provenance.values()))
         cited = " ".join(v for v in ENTRY.provenance.values() if DC0 in v)
@@ -211,6 +219,20 @@ class Hill223RulesTests(unittest.TestCase):
                                       "holder_id": "A1", "holder_side": "american", "turn": 1, "status": "held"}]
                 self.assertEqual(kind.score(s)[0] == "american", won)
         self.assertEqual(grid.distance(PATROL_TARGET, SHACK), 1)
+
+    def test_the_deadline_reason_names_the_unmet_condition_on_the_entry(self):
+        # The surrender-on-threat run at 679b637: the patrol home with 12 men and no captives at the deadline.
+        kind = victory.KINDS["raid-and-return"]
+        for pos, reason in ((post(), "The raiders reached the German command post and 12 of them came back by the "
+                                     "deadline, but they brought back 0 captives against the 1 required."),
+                            (PATROL_TARGET, "The German kept the raiders from returning by the deadline.")):
+            with self.subTest(pos=pos):
+                s = build_state(ENTRY)
+                unit(s, "A1")["pos"] = list(PATROL_TARGET)
+                kind.score(s)
+                s["turn"] = s["max_turns"]
+                unit(s, "A1").update(pos=list(pos), strength=12)
+                self.assertEqual(kind.score(s), ("german", reason))
 
 
 class Hill223RunTests(unittest.TestCase):
