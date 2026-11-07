@@ -12,14 +12,23 @@ from . import comms,grid
 
 
 def _taken(s,signal,bridge):
-    """The unit of ``signal['side']`` holding ``bridge``, or None: the lowest-id
-    live unit on its hex, the bridge not destroyed and no live enemy within
-    ``radius`` hexes."""
+    """Why: the codeword is what the holder believes and reports, so an enemy
+    it cannot observe must not change it (D2 review). The authoritative
+    capture test (``victory.SeizeAndHold``) still reads true positions.
+    What: the unit of ``signal['side']`` holding ``bridge``, or None: the
+    lowest-id live, unrouted unit on its hex, the bridge not destroyed and no
+    live enemy within ``radius`` hexes that the holder sees (``recon.sees``).
+    Test: `test_an_enemy_the_holder_cannot_observe_does_not_change_the_ham_decision`,
+    `test_an_enemy_the_holder_sees_within_the_radius_still_stops_ham`."""
+    from . import recon
     if bridge['state']=='destroyed':return None
     live=[u for u in s['units'] if u['strength']>0 and u['status'] not in ('lost','merged')]
-    if any(u['side']!=signal['side'] and grid.distance(u['pos'],bridge['pos'])<=signal['radius'] for u in live):return None
     holders=[u for u in live if u['side']==signal['side'] and u['pos']==bridge['pos'] and u['status']!='routed']
-    return min(holders,key=lambda u:u['id']) if holders else None
+    if not holders:return None
+    holder=min(holders,key=lambda u:u['id'])
+    if any(u['side']!=signal['side'] and grid.distance(u['pos'],bridge['pos'])<=signal['radius']
+           and recon.sees(s,holder,u['pos']) for u in live):return None
+    return holder
 
 
 def check(s,emit,enqueue):

@@ -54,17 +54,22 @@ def demolish(s,emit):
     §3, S51, S54); a fixed schedule cannot say which came first in a battle.
     What: for each declared demolition (``scenario_wwii.DemolitionEntry``) of
     a bridge still wired with ``charges``, at the start of the interval and
-    in this order: arm it when its trigger holds (``demolition_armed``);
+    in this order: arm it when its trigger holds, as seen by a live, unrouted
+    guard within ``reach`` (``recon.sees``): ``contact``, any enemy unit;
+    ``crossing``, an enemy unit on the bridge hex (``demolition_armed``);
     fire it once armed ``delay`` intervals ago if a live, unrouted unit of
     its side is within ``reach`` of the bridge (destroyed, cause
     ``demolished``); else count one interval of clearing for each interval
-    an enemy unit stands on the bridge hex, and at ``removal_turns`` set it
+    an enemy unit declared ``clears_charges`` (an authored unit key: it
+    carries sappers) stands on the bridge hex, and at ``removal_turns`` set it
     ``intact`` (cause ``charges_removed``). Charges due in the interval the
     clearing would end are fired first. Routed units neither fire nor clear.
     Test: `test_contact_arms_the_charges_and_the_guard_fires_them_after_the_delay`,
     `test_enemy_on_the_bridge_clears_the_charges_before_they_are_due`,
     `test_charges_due_in_the_interval_the_clearing_ends_are_fired_first`,
-    `test_crossing_trigger_waits_for_an_enemy_on_the_bridge`."""
+    `test_crossing_trigger_waits_for_an_enemy_on_the_bridge`,
+    `test_an_enemy_the_guard_cannot_observe_does_not_change_the_arming_decision`,
+    `test_a_unit_without_sappers_never_clears_the_charges`."""
     from . import recon
     features={f['id']:f for f in present(s)}
     live=_live(s)
@@ -75,17 +80,17 @@ def demolish(s,emit):
         enemies=[u for u in live if u['side']!=d['side']]
         on_bridge=[u for u in enemies if u['pos']==f['pos']]
         if d['armed_turn'] is None:
-            if d['trigger']=='contact':
-                triggered=any(recon.sees(s,g,e['pos']) for g in party for e in enemies)
-            else:
-                triggered=bool(on_bridge)
+            # D2 review: both triggers read only what a guard within reach sees.
+            seen=enemies if d['trigger']=='contact' else on_bridge
+            triggered=any(recon.sees(s,g,e['pos']) for g in party for e in seen)
             if triggered:
                 d['armed_turn']=s['turn']
                 emit(s,'demolition_armed',bridge_id=f['id'],trigger=d['trigger'],side=d['side'],
                      due_turn=s['turn']+d['delay'])
         if d['armed_turn'] is not None and s['turn']>=d['armed_turn']+d['delay'] and party:
             set_state(s,f['id'],'destroyed','demolished',emit);continue
-        if on_bridge:
+        # D2 review: only a unit declared to carry sappers (``clears_charges``) clears them.
+        if any(u.get('clears_charges') for u in on_bridge):
             d['removal']+=1
             if d['removal']>=d['removal_turns']:set_state(s,f['id'],'intact','charges_removed',emit)
 

@@ -98,7 +98,9 @@ def _men(n):
 HQ = UnitEntry("DHQ", "british", "D Company headquarters · Howard", (10, 13), _men(15))
 CANAL_PLATOONS = (  # S51 p. 1 para 3; S52 sheets 1-2 (gliders 91, 92, 93).
     UnitEntry("D25", "british", "25 Platoon · Brotheridge", (9, 11), _men(30)),
-    UnitEntry("D24", "british", "24 Platoon · Wood, with Capt Neilson RE", (10, 11), _men(30)),
+    # D2 review: the only platoon a source puts sappers with (S52 sheet 2, No. 92).
+    UnitEntry("D24", "british", "24 Platoon · Wood, with Capt Neilson RE", (10, 11),
+              {**_men(30), "clears_charges": True}),
     UnitEntry("B14", "british", "14 Platoon (B Company) · Smith", (10, 12), _men(30)),
 )
 ORNE_PLATOONS = (  # S51 p. 1 para 3; S52 sheet 3 (gliders 96 and 95).
@@ -176,7 +178,11 @@ PROVENANCE = {
     "units.reserve": "sourced: secondary, armour from the west near 02:00, infantry and self-propelled guns "
                      "from the south near 03:00 (S54; S51 'within an hour'); the two groups, their hexes "
                      "and strengths of 30 and 60 are authored and are not modelled as armour",
-    "units.placement": "reconstruction: the platoons start where they touched down (doc 52 §8 row 2): 25 "
+    "units.sappers": "sourced: only 24 Pln declares clears_charges: glider No. 92 carried 24 Pln and Capt "
+                     "Neilson RE (S52 sheet 2), and sappers 'cut wires and removed charges' at the canal "
+                     "bridge (S51 p. 1 para 3); S51 and S52 name no sappers with the other platoons, so none "
+                     "is declared. The clearing time is authored; the sappers' behaviour is not validated",
+    "units.placement":"reconstruction: the platoons start where they touched down (doc 52 §8 row 2): 25 "
                        "within 80 ft of the bridge (S51), 24 and 14 within 50 yards (S51 p. 1 para 2); "
                        "the landing order is not modelled",
     "map": "authored: illustrative layout, not surveyed; no map sheet was read (doc 52 §7)",
@@ -199,8 +205,8 @@ PROVENANCE = {
     "weapons": "authored: one 2-hex range for every unit (doc 52 §8 row 6); run at 1, 2 and 3 hexes",
     "communications": "authored: wwii-1944-radio-v1, radio 10 hexes, voice 2 (assumptions, docs/research/53)",
     "voice_profile": "authored: the 1944 British voice; no historical message is quoted",
-    "signals": "sourced: secondary, Ham (S54); the trigger is authored and reads true positions within the "
-               "holder's radius, which is under review (docs/research/54)",
+    "signals": "sourced: secondary, Ham (S54); the trigger is authored and counts only the enemies within the "
+               "holder's radius that the holder sees (docs/research/54)",
     "scripted": "reconstruction: scripted policies from S51 and S52 (British) and inferred German intent "
                 "(battle/pegasus_policy.py)",
 }
@@ -342,7 +348,7 @@ def _crossed():
             source=source.source,
             entry=_relabel(source.entry, f"guard-only+{base}", f"{base} with no demolition", bridges=guard))
     canal = PEGASUS_BRIDGE.bridges[0]
-    for delay in (8, 16, 32):
+    for delay in (8, 9, 10, 11, 12, 13, 14, 15, 16, 32):  # D2 review: bracket the measured boundary.
         name = f"delay-{delay}"
         bridge = replace(canal, demolition=replace(ON_CONTACT, delay=delay))
         out[name] = Variant(

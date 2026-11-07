@@ -28,8 +28,9 @@ from battle.scenario_wwii import RADIO_COMMUNICATIONS
 
 # sha256 of the sort-keyed JSON of the baseline headless run summary without
 # ``game_id`` and its saved final state, taken on EVO at the commit that adds
-# the entry (docs/research/54).
-BASELINE_RUN_SHA256 = "57669556853ede15caf843e964efb78f9fd91130bcf932c1d03f12f22413d3d6"
+# the entry (docs/research/54). Re-pinned in the D2 fix round: 24 Platoon's
+# unit record gained ``clears_charges``; the ee9dd07 value was 57669556....
+BASELINE_RUN_SHA256 = "3f3d755155902086f5f0ed76cfb1591b0e601721c305fa9e2c5a9ff2ca47f367"
 
 
 def run(entry, tmp, name="pegasus.sqlite"):
@@ -71,6 +72,9 @@ class PegasusEntryTests(unittest.TestCase):
                          ("seize-and-hold", RELIEF_TURN, RELIEF_TURN))
         self.assertEqual(RELIEF_TURN * 30, 3 * 3600)  # S51: about 3 hours after landing.
         self.assertEqual(s["bridge_demolition"][0]["bridge_id"], "canal-bridge")
+        # Only 24 Platoon carries sappers (S52 sheet 2); every other unit lacks the key.
+        self.assertEqual([u["id"] for u in s["units"] if u.get("clears_charges")], ["D24"])
+        self.assertTrue(ENTRY.provenance["units.sappers"].startswith("sourced:"))
 
     def test_waterways_are_impassable_except_at_the_bridges_and_each_ring_is_balanced(self):
         s = build_state(ENTRY)
@@ -89,7 +93,7 @@ class PegasusEntryTests(unittest.TestCase):
         for field in ("german.mission", "bridge", "demolition", "alarm"):
             self.assertTrue(ENTRY.provenance[field].startswith("inferred:"), field)
         self.assertTrue(ENTRY.provenance["relief"].startswith("sourced:"))
-        self.assertIn("under review", ENTRY.provenance["signals"])
+        self.assertIn("that the holder sees", ENTRY.provenance["signals"])
         self.assertTrue(ON_CONTACT.basis.startswith("inferred:"))
 
     def test_each_named_variant_differs_in_its_own_question(self):

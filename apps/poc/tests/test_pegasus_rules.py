@@ -18,7 +18,7 @@ from battle.scenario_entry import UnitEntry, VictoryEntry, build_state, dry_run,
 from battle.scenario_wwii import DemolitionEntry
 from battle.storage import Store
 from test_gateway_push import events, unit
-from test_pegasus_engine import BRIDGE, CANAL_BRIDGE, advance, night, night_entry
+from test_pegasus_engine import BRIDGE, CANAL_BRIDGE, HAM, advance, night, night_entry
 
 # The guard stands north of the bridge, adjacent to it; B2 two hexes south of
 # it is in sight at a night range of 2. Both hold their fire, so neither fires.
@@ -26,9 +26,10 @@ GUARD = (12, 9)
 QUIET = {"fire_posture": "hold_fire"}
 UNITS = (
     UnitEntry("B1", "union", "Company headquarters", (12, 16), QUIET),
-    UnitEntry("B2", "union", "Leading platoon", (12, 11), QUIET),
+    UnitEntry("B2", "union", "Leading platoon, with sappers", (12, 11), {**QUIET, "clears_charges": True}),
     UnitEntry("G1", "confederate", "Bridge guard", GUARD, QUIET),
 )
+NO_SAPPERS = (UNITS[0], UnitEntry("B2", "union", "Leading platoon", (12, 11), QUIET), UNITS[2])
 ON_CONTACT = DemolitionEntry(side="confederate", trigger="contact", delay=2, removal_turns=2)
 
 
@@ -67,6 +68,18 @@ class DemolitionTests(unittest.TestCase):
         s = advance(s, 6)
         self.assertEqual(changes(s), [(2, "charges", "intact", "charges_removed")])
         self.assertEqual(s["cells"][grid.key(list(BRIDGE))]["bridge_state"], "intact")
+
+    def test_a_unit_without_sappers_never_clears_the_charges(self):
+        s = wired(dataclasses.replace(ON_CONTACT, delay=40), units=NO_SAPPERS)
+        unit(s, "B2")["pos"] = list(BRIDGE)
+        s = advance(s, 8)
+        self.assertEqual(changes(s), [])
+        self.assertEqual(s["bridge_demolition"][0]["removal"], 0)
+
+    def test_registration_refuses_a_non_boolean_sapper_key(self):
+        units = (UNITS[0], UnitEntry("B2", "union", "Leading platoon", (12, 11), {"clears_charges": "yes"}), UNITS[2])
+        with self.assertRaisesRegex(ValueError, "clears_charges"):
+            validate(night_entry(bridges=(CANAL_BRIDGE,), units=units))
 
     def test_charges_due_in_the_interval_the_clearing_ends_are_fired_first(self):
         s = wired(dataclasses.replace(ON_CONTACT, delay=1))
@@ -114,6 +127,66 @@ class DemolitionTests(unittest.TestCase):
                 s = n
             self.assertEqual(changes(s), [(3, "charges", "destroyed", "demolished")])
             self.assertEqual(runtime.verify_replay(store, gid)["status"], "identical")
+
+
+# Two hexes north of the bridge: within a 2-hex firing reach, outside a 1-hex sight.
+FAR_GUARD = (12, 8)
+
+
+def crossing_state(guard=GUARD, guard_sight=None, enemy_on_bridge=True, reach=1):
+    """A crossing-trigger bridge with the guard at ``guard`` and B2 on the
+    bridge (or far off). ``guard_sight`` overrides the guard's night range."""
+    sight = {} if guard_sight is None else {"observation_range": guard_sight}
+    units = UNITS[:2] + (UnitEntry("G1", "confederate", "Bridge guard", guard, {**QUIET, **sight}),)
+    s = wired(dataclasses.replace(ON_CONTACT, trigger="crossing", reach=reach, removal_turns=9), units=units)
+    unit(s, "B2")["pos"] = list(BRIDGE) if enemy_on_bridge else [2, 18]
+    return s
+
+
+class CrossingSightTests(unittest.TestCase):
+    """The crossing trigger arms only when a guard within reach sees the enemy on the bridge."""
+
+    def test_crossing_with_no_guard_within_reach_arms_nothing(self):
+        s = advance(crossing_state(guard=(12, 4)), 3)
+        self.assertEqual(events(s, "demolition_armed"), [])
+
+    def test_crossing_the_guard_cannot_see_arms_nothing(self):
+        s = advance(crossing_state(guard=FAR_GUARD, guard_sight=1, reach=2), 3)
+        self.assertEqual(events(s, "demolition_armed"), [])
+        seen = advance(crossing_state(guard=FAR_GUARD, guard_sight=2, reach=2))  # Control: in sight, it arms.
+        self.assertEqual([e["turn"] for e in events(seen, "demolition_armed")], [1])
+
+    def test_an_enemy_the_guard_cannot_observe_does_not_change_the_arming_decision(self):
+        decisions = []
+        for on_bridge in (True, False):
+            s = advance(crossing_state(guard=FAR_GUARD, guard_sight=1, reach=2, enemy_on_bridge=on_bridge), 3)
+            decisions.append(([e["turn"] for e in events(s, "demolition_armed")], s["bridge_demolition"][0]["armed_turn"]))
+        self.assertEqual(decisions[0], decisions[1])
+
+
+def ham_state(enemy_near, sight):
+    """B2 holds the bridge; G1, holding fire, stands 2 hexes north (within the
+    signal's 2-hex radius) or far off. Every unit sees ``sight`` hexes."""
+    units = (UnitEntry("B1", "union", "Company headquarters", (12, 16), QUIET),
+             UnitEntry("B2", "union", "Leading platoon", BRIDGE, QUIET),
+             UnitEntry("G1", "confederate", "Guard", FAR_GUARD if enemy_near else (20, 2), QUIET))
+    return night(bridges=(CANAL_BRIDGE,), signals=(dataclasses.replace(HAM, radius=2),), units=units,
+                 observation_range=sight)
+
+
+def ham_sent(s):
+    return [(e["sender_id"], e["sent_turn"]) for e in events(advance(s), "signal_sent")]
+
+
+class HamSightTests(unittest.TestCase):
+    """The holder's codeword decision counts only the enemies it sees."""
+
+    def test_an_enemy_the_holder_cannot_observe_does_not_change_the_ham_decision(self):
+        self.assertEqual(ham_sent(ham_state(enemy_near=True, sight=1)), ham_sent(ham_state(enemy_near=False, sight=1)))
+        self.assertEqual(ham_sent(ham_state(enemy_near=True, sight=1)), [("B2", 1)])
+
+    def test_an_enemy_the_holder_sees_within_the_radius_still_stops_ham(self):
+        self.assertEqual(ham_sent(ham_state(enemy_near=True, sight=2)), [])
 
 
 SEIZE = VictoryEntry(kind="seize-and-hold", objective=BRIDGE, deadline_turns=20, radius=1, hold_turns=2,

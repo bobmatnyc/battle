@@ -30,13 +30,14 @@ class DemolitionEntry:
 
     The charges are armed at the first interval start when ``trigger`` holds:
     ``contact``, a live, unrouted unit of ``side`` within ``reach`` hexes of the
-    bridge sees an enemy unit (``recon.sees``); ``crossing``, an enemy unit
-    stands on the bridge hex. ``delay`` intervals after arming, at the first
+    bridge sees an enemy unit (``recon.sees``); ``crossing``, such a unit sees
+    an enemy unit on the bridge hex. ``delay`` intervals after arming, at the first
     interval start when a live, unrouted unit of ``side`` is still within
     ``reach`` (the firing party), the bridge is destroyed. Enemy units on the
-    bridge hex clear the charges after ``removal_turns`` intervals there in
-    all (the sappers' work); a cleared bridge is ``intact`` and cannot be
-    fired. Authored sensitivity values, labelled by ``basis``.
+    bridge hex that declare ``clears_charges`` (a unit override: the unit
+    carries sappers; off unless declared) clear the charges after
+    ``removal_turns`` intervals there in all; a cleared bridge is ``intact``
+    and cannot be fired. Authored sensitivity values, labelled by ``basis``.
     """
 
     side: str
@@ -134,6 +135,9 @@ def problems(entry):
     for b in bridges:
         found.extend(_schedule_problems(b))
         found.extend(_demolition_problems(entry, b))
+    for u in entry.units:  # D2 review: the sapper capability is a declared boolean.
+        if "clears_charges" in u.overrides and type(u.overrides["clears_charges"]) is not bool:
+            found.append(f"unit {u.id!r} clears_charges must be true or false")
     for x in entry.signals or ():
         if (x.side not in entry.sides or x.bridge not in ids or x.condition not in SIGNAL_CONDITIONS
                 or type(x.radius) is not int or x.radius < 0 or not x.codeword):
