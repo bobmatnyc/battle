@@ -13,6 +13,7 @@ import unittest
 
 from battle import engine, victory
 from battle.scenario_entry import UnitEntry, VictoryEntry, build_state, dry_run, validate
+from scenario_fixtures import DUEL
 from test_gateway_push import unit
 from test_pegasus_engine import advance, night_entry
 
@@ -136,6 +137,18 @@ class RaidValidationTests(unittest.TestCase):
                         kind=kind, objective=OBJECTIVE, deadline_turns=12, objective_name="gun position", **fields))
                     with self.assertRaisesRegex(ValueError, "raid-and-return"):
                         validate(entry)
+
+    def test_an_edition_before_poc_13_refuses_the_poc_13_victory_kinds(self):
+        seize = VictoryEntry(kind="seize-and-hold", objective=OBJECTIVE, deadline_turns=12,
+                             objective_name="gun position")
+        for victory_entry in (RAID, seize):
+            with self.subTest(kind=victory_entry.kind):
+                entry = dataclasses.replace(DUEL, victory=victory_entry, units=UNITS,
+                                            labels={"poc-12": "test-duel-v5", "poc-13": "test-duel-v6"})
+                validate(entry)
+                with self.assertRaisesRegex(ValueError, f"poc-12 has no .*{victory_entry.kind}"):
+                    build_state(entry, rules="poc-12")
+                self.assertEqual(build_state(entry, rules="poc-13")["victory"]["kind"], victory_entry.kind)
 
     def test_a_valid_raid_builds_its_parameters_into_the_snapshot(self):
         v = raid_state(min_captives=3)["victory"]

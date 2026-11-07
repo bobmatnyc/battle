@@ -94,6 +94,14 @@ def problems(entry):
     return found
 
 
+# Victory kinds only poc-13 scores (docs/research/54, 59); engine_v12 must never see one.
+POC13_VICTORY_KINDS = ("seize-and-hold", "raid-and-return")
+
+
 def declares(entry):
-    """True when any unit of ``entry`` declares one of ``KEYS``."""
-    return any(key in u.overrides for u in entry.units for key in KEYS)
+    """True when any unit of ``entry`` declares one of ``KEYS``, or its victory
+    kind is one of ``POC13_VICTORY_KINDS``; ``build_state`` then refuses an
+    edition before ``poc-13``.
+    Test: `test_an_edition_before_poc_13_refuses_the_poc_13_victory_kinds`."""
+    return (entry.victory.kind in POC13_VICTORY_KINDS
+            or any(key in u.overrides for u in entry.units for key in KEYS))

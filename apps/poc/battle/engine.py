@@ -226,18 +226,20 @@ def fired_upon(s,u,turn):
         if e['turn']==turn and e['kind']==kind and e.get('unit_id')==u['id']:return True
     return False
 
+def in_reach(s,u):
+    """The live enemies ``u`` sees within its fire reach (docs/research/53: within
+    its ``observation_range``; poc-13B: a weapon table shortens the reach)."""
+    weapon=s.get('weapon_rules',{}).get(u.get('weapon_class'))
+    reach=min(standing.profile(u)['fire_range'],weapon['range_hexes'] if weapon else 5)
+    return [e for e in s['units'] if e['side']!=u['side'] and e['strength']>0
+            and grid.distance(u['pos'],e['pos'])<=min(5,reach) and recon.sees(s,u,e['pos'])]
+
 def volley(s,u,damage,suppression):
     """One unit's volley at the nearest visible enemy in range, from the
     pre-damage snapshot; adds to ``damage`` and ``suppression``. A volley by
-    a unit holding fire is marked ``returning_fire`` (poc-13). docs/research/53:
-    a unit fires only at what it sees, within its ``observation_range``."""
-    enemies=[e for e in s['units'] if e['side']!=u['side'] and e['strength']>0
-             and grid.distance(u['pos'],e['pos'])<=5 and recon.sees(s,u,e['pos'])]
-    # poc-13B: a weapon table (smoothbore, 1775) shortens the range and the effect.
+    a unit holding fire is marked ``returning_fire`` (poc-13)."""
+    enemies=facing.targets(u,in_reach(s,u))  # docs/research/59: a declared arc and turning delay.
     weapon=s.get('weapon_rules',{}).get(u.get('weapon_class'))
-    reach=min(standing.profile(u)['fire_range'],weapon['range_hexes'] if weapon else 5)
-    enemies=[e for e in enemies if grid.distance(u['pos'],e['pos'])<=reach]
-    enemies=facing.targets(s,u,enemies,emit)  # docs/research/59: a declared arc and turning delay.
     if not enemies: return
     target=min(enemies,key=lambda e:(grid.distance(u['pos'],e['pos']),e['id']))
     d=grid.distance(u['pos'],target['pos']); cover=s['cells'][grid.key(target['pos'])]['cover']
@@ -365,6 +367,8 @@ def advance(s):
         emit(s,'unit_moved',unit_id=u['id'],origin=old,destination=p,decision_seq=u['local_decision_seq'])
         if p==u['target'] and u['stance'] not in ('resupply','recon'):
             order_rules.complete(s,u,'Assigned position reached.')
+    for u in sorted(s['units'],key=lambda x:x['id']):  # docs/research/59: guns turn whatever their posture.
+        if 'facing' in u and u['strength']>0 and u['status']!='routed':facing.progress(s,u,in_reach(s,u),emit)
     damage={u['id']:0 for u in s['units']}; suppression={u['id']:0 for u in s['units']}
     holding=[]
     by_command=s['fire_rules'].get('release_by','unit')=='command'

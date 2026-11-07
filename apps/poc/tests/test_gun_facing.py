@@ -92,6 +92,38 @@ class FacingFireTests(unittest.TestCase):
         self.assertEqual(unit(s, "G1")["facing"], 180)
 
 
+class HeldGunTests(unittest.TestCase):
+    """A gun holding its fire still turns toward a rear party it sees; turning
+    never fires and never releases it. B1 fires on G1 only when ``b1_fires``."""
+
+    def held(self, b1_fires=False):
+        b1 = {"fire_posture": "hold_fire", "ammo": 0} if not b1_fires else {}
+        units = (UnitEntry("B1", "union", "Patrol", NORTH, b1),
+                 UnitEntry("G1", "confederate", "Gun group", GUN, {**SOUTHWARD, "fire_posture": "hold_fire"}))
+        return night(units=units)
+
+    def test_a_held_gun_turns_while_holding_its_fire(self):
+        s = advance(self.held(), 3)
+        self.assertEqual([(e["turn"], e["ready_turn"]) for e in events(s, "gun_reorienting")], [(1, 3)])
+        self.assertEqual([e["turn"] for e in events(s, "gun_reoriented")], [3])
+        self.assertEqual(unit(s, "G1")["facing"], 0)
+        self.assertEqual(unit(s, "G1")["fire_posture"], "hold_fire")
+        self.assertEqual(volley_turns(s), [])
+
+    def test_a_held_gun_released_after_the_delay_fires_at_once(self):
+        s = advance(self.held(), 3)  # Turned at turn 3, still holding.
+        engine.find_unit(s, "B1").update(fire_posture="open_fire", ammo=1600)
+        s = advance(s, 2)  # B1 fires at turn 4; G1 returns fire that interval.
+        first = min(e["turn"] for e in events(s, "volley") if e["unit_id"] == "B1")
+        self.assertEqual(first, 4)
+        self.assertIn(first, volley_turns(s))
+        self.assertEqual([e["turn"] for e in events(s, "gun_reorienting")], [1])
+
+    def test_a_held_gun_does_not_fire_before_release(self):
+        s = advance(self.held(), 6)
+        self.assertEqual(volley_turns(s), [])
+
+
 class FacingValidationTests(unittest.TestCase):
     """Registration refuses a facing the rules cannot use."""
 
