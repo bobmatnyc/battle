@@ -489,7 +489,7 @@ def build_state(entry, rules=None):
     if not _at_least(rules, 'poc-13') and scenario_wwii.declares(entry):
         raise ValueError(f"{rules} has no bridge state, radio, signals or night range; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_units.declares(entry):
-        raise ValueError(f"{rules} has no declared rout_strength or press_assault; they need poc-13.")
+        raise ValueError(f"{rules} has no declared rout_strength, press_assault or gun facing; they need poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))

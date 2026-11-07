@@ -13,8 +13,31 @@ What: the registration checks for the keys and ``declares``, which
 from .scenario_command import TACTICS_V11
 
 # Without ``rout_strength`` a unit routs below 12 men (engine.advance); without
-# ``press_assault`` tactics_v11 presses only into a gated compound.
-KEYS = ("rout_strength", "press_assault")
+# ``press_assault`` tactics_v11 presses only into a gated compound; without
+# ``facing``, ``arc`` and ``reorient_turns`` a unit fires on every side
+# (docs/research/59 §2).
+FACING_KEYS = ("facing", "arc", "reorient_turns")
+KEYS = ("rout_strength", "press_assault") + FACING_KEYS
+
+
+def _facing_problems(u):
+    """docs/research/59: all three facing keys or none; a bearing of 0 to 359,
+    an arc of 1 to 359 degrees and a non-negative whole number of intervals."""
+    declared = [k for k in FACING_KEYS if k in u.overrides]
+    if not declared:
+        return []
+    if len(declared) != len(FACING_KEYS):
+        return [f"unit {u.id!r} must declare facing, arc and reorient_turns together"]
+    o = u.overrides
+    if not (_int(o["facing"]) and 0 <= o["facing"] <= 359 and _int(o["arc"]) and 1 <= o["arc"] <= 359
+            and _int(o["reorient_turns"]) and o["reorient_turns"] >= 0):
+        return [f"unit {u.id!r} facing must be an integer bearing of 0 to 359, arc an integer of 1 to 359 "
+                "degrees and reorient_turns an integer of 0 or more"]
+    return []
+
+
+def _int(value):
+    return type(value) is int
 
 
 def _starting_strength(u):
@@ -29,12 +52,14 @@ def problems(entry):
     or more and below the unit's starting strength, so the unit does not
     rout before it has lost a man; each declared ``press_assault`` is a
     boolean on an entry that selects tactics_v11, the only tactics edition
-    that reads it.
+    that reads it; a facing is declared whole (``_facing_problems``).
     Test: `test_registration_refuses_a_bad_rout_strength`,
     `test_the_threshold_is_compared_with_the_default_strength_when_none_is_set`,
-    `test_refused_on_a_tactics_v10_entry`, `test_refused_unless_a_boolean`."""
+    `test_refused_on_a_tactics_v10_entry`, `test_refused_unless_a_boolean`,
+    `test_registration_refuses_bad_facing_values`, `test_the_three_keys_are_declared_together`."""
     found = []
     for u in entry.units:
+        found.extend(_facing_problems(u))
         if "press_assault" in u.overrides and (type(u.overrides["press_assault"]) is not bool
                                                or entry.tactics != TACTICS_V11):
             found.append(f"unit {u.id!r} press_assault must be true or false, on an entry that selects "

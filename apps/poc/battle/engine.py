@@ -1,7 +1,7 @@
 """Pure deterministic state transitions. Models never adjudicate effects."""
 from copy import deepcopy
 from . import grid,recon,tactics,comms,command,formations,features,gates,recommendations,standing,victory
-from . import bridges,signals
+from . import bridges,signals,facing
 from . import orders as order_rules
 from .scenario import SIDES
 from .scenario_entry import LEGACY_ROLES
@@ -237,6 +237,7 @@ def volley(s,u,damage,suppression):
     weapon=s.get('weapon_rules',{}).get(u.get('weapon_class'))
     reach=min(standing.profile(u)['fire_range'],weapon['range_hexes'] if weapon else 5)
     enemies=[e for e in enemies if grid.distance(u['pos'],e['pos'])<=reach]
+    enemies=facing.targets(s,u,enemies,emit)  # docs/research/59: a declared arc and turning delay.
     if not enemies: return
     target=min(enemies,key=lambda e:(grid.distance(u['pos'],e['pos']),e['id']))
     d=grid.distance(u['pos'],target['pos']); cover=s['cells'][grid.key(target['pos'])]['cover']
