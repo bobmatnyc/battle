@@ -14,3 +14,9 @@ export function readBattleCursor(input: unknown): BattleCursor {
   }
   return {game_id: input.game_id, revision: input.revision};
 }
+
+// docs/research/67: views, replay, history and the order body, checked against
+// fixtures recorded from the Python app (packages/contracts/fixtures).
+export * from "./check.ts";
+export * from "./views.ts";
+export * from "./api.ts";

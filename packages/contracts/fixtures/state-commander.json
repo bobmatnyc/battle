@@ -1,0 +1,1139 @@
+{
+ "analysis": {
+  "basis": "Headquarters reports and direct observation of the command detachment. Totals combine reports of different ages; they are not current battlefield truth.",
+  "command_operational": true,
+  "contacts": [
+   {
+    "age_seconds": 120,
+    "confidence": "moderate",
+    "id": "C1",
+    "strength_range": [
+     10,
+     50
+    ]
+   },
+   {
+    "age_seconds": 90,
+    "confidence": "low",
+    "id": "C2",
+    "strength_range": [
+     1,
+     60
+    ]
+   },
+   {
+    "age_seconds": 120,
+    "confidence": "low",
+    "id": "C3",
+    "strength_range": [
+     20,
+     100
+    ]
+   }
+  ],
+  "limitations": "Authored readiness heuristics, not a historical combat rating or victory prediction. Enemy sightings may overlap or be stale; unseen troops are unknown.",
+  "revision": 14,
+  "side": "union",
+  "standing_templates": [
+   {
+    "enemy_ratio": 2.5,
+    "fire_range": 5,
+    "id": "balanced",
+    "intent": "Carry out the mission, use cover and fall back when the detachment is in serious danger.",
+    "label": "Balanced",
+    "message_key": "standing.template.balanced",
+    "morale_floor": 45,
+    "reserve_volleys": 1,
+    "suppression_limit": 70,
+    "version": "standing-orders-v1"
+   },
+   {
+    "enemy_ratio": 1.5,
+    "fire_range": 5,
+    "id": "cautious",
+    "intent": "Avoid costly engagements. Fall back earlier when pressed, low on cartridges or shaken.",
+    "label": "Preserve the force",
+    "message_key": "standing.template.cautious",
+    "morale_floor": 60,
+    "reserve_volleys": 3,
+    "suppression_limit": 50,
+    "version": "standing-orders-v1"
+   },
+   {
+    "enemy_ratio": 3.5,
+    "fire_range": 5,
+    "id": "firm",
+    "intent": "Accept greater pressure to hold the ground. Seek cover; withdraw if the formation can no longer stand.",
+    "label": "Hold ground firmly",
+    "message_key": "standing.template.firm",
+    "morale_floor": 35,
+    "reserve_volleys": 1,
+    "suppression_limit": 85,
+    "version": "standing-orders-v1"
+   },
+   {
+    "enemy_ratio": 1.0,
+    "fire_range": 3,
+    "id": "screen",
+    "intent": "Watch and report; avoid equal or stronger opposition. Reserve fire for close threats within three hexes.",
+    "label": "Observe and screen",
+    "message_key": "standing.template.screen",
+    "morale_floor": 60,
+    "reserve_volleys": 3,
+    "suppression_limit": 50,
+    "version": "standing-orders-v1"
+   }
+  ],
+  "summary": {
+   "assigned_strength": 120,
+   "available_formations": 3,
+   "formations": 3,
+   "oldest_report_seconds": 120,
+   "reported_ammo": 4529,
+   "reported_strength": 114
+  },
+  "turn": 12,
+  "units": [
+   {
+    "age_seconds": 90,
+    "ammo": 1409,
+    "concerns": [
+     "This report is 90 seconds old; conditions may have changed."
+    ],
+    "fatigue": 0,
+    "id": "U1",
+    "initial": 40,
+    "mission": "hold",
+    "morale": 66,
+    "name": "20th Maine \u00b7 A",
+    "observed_turn": 9,
+    "pending_standing": [],
+    "received_turn": 12,
+    "recommendation": {
+     "profile_id": "balanced",
+     "reason": "General, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable."
+    },
+    "role": "line",
+    "skill": 70,
+    "standing_profile": "balanced",
+    "standing_version": 0,
+    "status": "ready",
+    "strength": 34,
+    "suppression": 43,
+    "target": null,
+    "volleys": 41,
+    "weapons": "rifled muskets"
+   },
+   {
+    "age_seconds": 0,
+    "ammo": 1600,
+    "concerns": [],
+    "fatigue": 0,
+    "id": "U2",
+    "initial": 40,
+    "mission": "hold",
+    "morale": 90,
+    "name": "20th Maine \u00b7 B",
+    "observed_turn": 12,
+    "pending_standing": [],
+    "received_turn": 12,
+    "recommendation": {
+     "profile_id": "balanced",
+     "reason": "General, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable."
+    },
+    "role": "line",
+    "skill": 70,
+    "standing_profile": "balanced",
+    "standing_version": 0,
+    "status": "ready",
+    "strength": 40,
+    "suppression": 0,
+    "target": null,
+    "volleys": 40,
+    "weapons": "rifled muskets"
+   },
+   {
+    "age_seconds": 120,
+    "ammo": 1520,
+    "concerns": [
+     "This report is 120 seconds old; conditions may have changed."
+    ],
+    "fatigue": 0,
+    "id": "U3",
+    "initial": 40,
+    "mission": "hold",
+    "morale": 90,
+    "name": "20th Maine \u00b7 C",
+    "observed_turn": 8,
+    "pending_standing": [],
+    "received_turn": 12,
+    "recommendation": {
+     "profile_id": "screen",
+     "reason": "General, this detachment is assigned to observation. Let it report the enemy and avoid a costly engagement."
+    },
+    "role": "scout",
+    "skill": 70,
+    "standing_profile": "balanced",
+    "standing_version": 0,
+    "status": "ready",
+    "strength": 40,
+    "suppression": 0,
+    "target": null,
+    "volleys": 38,
+    "weapons": "rifled muskets"
+   }
+  ],
+  "version": "troop-assessment-v1"
+ },
+ "clock": {
+  "error": null,
+  "inflight": false,
+  "remaining_seconds": 30.0,
+  "running": false,
+  "speed": 10,
+  "speeds": [
+   0.5,
+   1,
+   2,
+   5,
+   10,
+   30,
+   60
+  ]
+ },
+ "command": {
+  "communications": "civil-war-courier-v1",
+  "controller_id": "union-commander",
+  "operational": true,
+  "pos": [
+   13,
+   15
+  ],
+  "profile": {
+   "cost_per_turn": 200,
+   "expiry_turns": 20,
+   "id": "civil-war-courier-v1",
+   "label": "1863 \u00b7 voice / foot courier",
+   "methods": [
+    "voice",
+    "courier"
+   ]
+  },
+  "status": "ready",
+  "unit_id": "U2"
+ },
+ "contacts": [
+  {
+   "age": 4,
+   "composition": {
+    "type": "infantry",
+    "weapons": "not established"
+   },
+   "confidence": "moderate",
+   "estimate": "10\u201350 troops \u00b7 infantry",
+   "exposure_intervals": 3,
+   "id": "C1",
+   "identification": {
+    "type": {
+     "observed_turn": 8,
+     "observer_id": "U3",
+     "observer_role": "scout",
+     "quality": 42,
+     "value": "infantry"
+    }
+   },
+   "observed_turn": 8,
+   "observer_id": "U3",
+   "observer_role": "scout",
+   "phase": "2_after_actions",
+   "pos": [
+    7,
+    17
+   ],
+   "quality": 42,
+   "received_turn": 12,
+   "side": "confederate",
+   "status": "observed",
+   "strength_range": [
+    10,
+    50
+   ]
+  },
+  {
+   "age": 3,
+   "composition": {
+    "type": "unidentified troops",
+    "weapons": "not established"
+   },
+   "confidence": "low",
+   "estimate": "1\u201360 troops \u00b7 unidentified troops",
+   "exposure_intervals": 5,
+   "id": "C2",
+   "identification": {},
+   "observed_turn": 9,
+   "observer_id": "U1",
+   "observer_role": "line",
+   "phase": "2_after_actions",
+   "pos": [
+    11,
+    18
+   ],
+   "quality": 20,
+   "received_turn": 12,
+   "side": "confederate",
+   "status": "observed",
+   "strength_range": [
+    1,
+    60
+   ]
+  },
+  {
+   "age": 4,
+   "composition": {
+    "type": "unidentified troops",
+    "weapons": "not established"
+   },
+   "confidence": "low",
+   "estimate": "20\u2013100 troops \u00b7 unidentified troops",
+   "exposure_intervals": 1,
+   "id": "C3",
+   "identification": {},
+   "observed_turn": 8,
+   "observer_id": "U1",
+   "observer_role": "line",
+   "phase": "2_after_actions",
+   "pos": [
+    6,
+    18
+   ],
+   "quality": 5,
+   "received_turn": 11,
+   "side": "confederate",
+   "status": "observed",
+   "strength_range": [
+    20,
+    100
+   ]
+  }
+ ],
+ "dispatches": [
+  {
+   "display_text": "To U1: Instructions to hold position are on their way by runner. Delivery expected in 90 seconds.",
+   "kind": "order",
+   "message_args": {
+    "seconds": "90",
+    "stance": "hold",
+    "unit": "U1"
+   },
+   "message_key": "order.hold.sent",
+   "observed_turn": 0,
+   "text": "U1: hold order dispatched by runner. Expected delivery in 90 seconds.",
+   "turn": 0
+  },
+  {
+   "display_text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "kind": "recommendation",
+   "observed_turn": 2,
+   "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "turn": 2
+  },
+  {
+   "display_text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "kind": "recommendation",
+   "observed_turn": 2,
+   "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "turn": 5
+  },
+  {
+   "display_text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "kind": "recommendation",
+   "observed_turn": 2,
+   "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "turn": 6
+  },
+  {
+   "display_text": "U1 to headquarters: Order O1 received.",
+   "kind": "ack",
+   "message_args": {
+    "order": "O1",
+    "status": "delivered",
+    "unit": "U1"
+   },
+   "message_key": "order.delivered",
+   "observed_turn": 3,
+   "text": "U1: order O1 delivered.",
+   "turn": 6
+  },
+  {
+   "display_text": "General, enemy near map reference 6,18: 20\u2013100 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "kind": "contact",
+   "observed_turn": 5,
+   "text": "General, enemy near map reference 6,18: 20\u2013100 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "turn": 8
+  },
+  {
+   "display_text": "General, enemy near map reference 11,18: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "kind": "contact",
+   "observed_turn": 5,
+   "text": "General, enemy near map reference 11,18: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "turn": 8
+  },
+  {
+   "display_text": "U1 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "kind": "reaction",
+   "observed_turn": 6,
+   "text": "U1 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "turn": 9
+  },
+  {
+   "display_text": "General, enemy near map reference 11,18: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "kind": "contact",
+   "observed_turn": 6,
+   "text": "General, enemy near map reference 11,18: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "turn": 9
+  },
+  {
+   "display_text": "General, enemy near map reference 6,17: 30\u201370 troops \u00b7 infantry; moderate confidence. Report from U3 (scout).",
+   "kind": "contact",
+   "observed_turn": 6,
+   "text": "General, enemy near map reference 6,17: 30\u201370 troops \u00b7 infantry; moderate confidence. Report from U3 (scout).",
+   "turn": 10
+  },
+  {
+   "display_text": "General, enemy near map reference 11,18: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "kind": "contact",
+   "observed_turn": 7,
+   "text": "General, enemy near map reference 11,18: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "turn": 10
+  },
+  {
+   "display_text": "U3 to headquarters: Enemy sighted beyond effective range; observe, report and maintain mission.",
+   "kind": "reaction",
+   "observed_turn": 7,
+   "text": "U3 to headquarters: Enemy sighted beyond effective range; observe, report and maintain mission.",
+   "turn": 11
+  },
+  {
+   "display_text": "General, enemy near map reference 7,17: 30\u201370 troops \u00b7 infantry; moderate confidence. Report from U3 (scout).",
+   "kind": "contact",
+   "observed_turn": 7,
+   "text": "General, enemy near map reference 7,17: 30\u201370 troops \u00b7 infantry; moderate confidence. Report from U3 (scout).",
+   "turn": 11
+  },
+  {
+   "display_text": "General, enemy near map reference 6,18: 20\u2013100 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "kind": "contact",
+   "observed_turn": 8,
+   "text": "General, enemy near map reference 6,18: 20\u2013100 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
+   "turn": 11
+  },
+  {
+   "display_text": "U3 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "kind": "reaction",
+   "observed_turn": 8,
+   "text": "U3 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "turn": 12
+  },
+  {
+   "display_text": "General, enemy near map reference 7,17: 10\u201350 troops \u00b7 infantry; moderate confidence. Report from U3 (scout).",
+   "kind": "contact",
+   "observed_turn": 8,
+   "text": "General, enemy near map reference 7,17: 10\u201350 troops \u00b7 infantry; moderate confidence. Report from U3 (scout).",
+   "turn": 12
+  }
+ ],
+ "display_locale": "en",
+ "formation_ops": [],
+ "game_id": "9ae0fbb0ce0241c5",
+ "hq": [
+  13,
+  15
+ ],
+ "inference_available": false,
+ "last_commander_source": "scripted",
+ "last_fallback_reason": null,
+ "map_features": [
+  {
+   "briefed": true,
+   "cover": 40,
+   "height": 6,
+   "id": "barn",
+   "kind": "building",
+   "name": "Barn",
+   "observed_turn": 0,
+   "pos": [
+    17,
+    8
+   ],
+   "provenance": "authored-poc",
+   "received_turn": 0
+  },
+  {
+   "briefed": true,
+   "cover": 45,
+   "height": 8,
+   "id": "farmstead",
+   "kind": "building",
+   "name": "Farmstead",
+   "observed_turn": 0,
+   "pos": [
+    7,
+    3
+   ],
+   "provenance": "authored-poc",
+   "received_turn": 0
+  },
+  {
+   "briefed": true,
+   "hexes": [
+    [
+     3,
+     2
+    ],
+    [
+     4,
+     2
+    ],
+    [
+     4,
+     3
+    ],
+    [
+     5,
+     3
+    ],
+    [
+     6,
+     4
+    ],
+    [
+     7,
+     4
+    ],
+    [
+     8,
+     4
+    ],
+    [
+     8,
+     5
+    ],
+    [
+     9,
+     5
+    ],
+    [
+     10,
+     6
+    ],
+    [
+     11,
+     6
+    ],
+    [
+     12,
+     6
+    ],
+    [
+     12,
+     7
+    ],
+    [
+     13,
+     8
+    ],
+    [
+     14,
+     8
+    ],
+    [
+     15,
+     8
+    ],
+    [
+     16,
+     8
+    ],
+    [
+     16,
+     9
+    ],
+    [
+     17,
+     9
+    ],
+    [
+     18,
+     9
+    ],
+    [
+     19,
+     9
+    ],
+    [
+     20,
+     10
+    ],
+    [
+     21,
+     10
+    ],
+    [
+     22,
+     10
+    ]
+   ],
+   "id": "north-lane",
+   "kind": "road",
+   "name": "North farm lane",
+   "observed_turn": 0,
+   "points": [
+    [
+     3,
+     2
+    ],
+    [
+     7,
+     4
+    ],
+    [
+     11,
+     6
+    ],
+    [
+     14,
+     8
+    ],
+    [
+     18,
+     9
+    ],
+    [
+     22,
+     10
+    ]
+   ],
+   "provenance": "authored-poc",
+   "received_turn": 0
+  },
+  {
+   "briefed": true,
+   "cover": 60,
+   "effort": 400,
+   "id": "prepared-works",
+   "kind": "fortification",
+   "name": "Prepared breastwork",
+   "observed_turn": 0,
+   "pos": [
+    11,
+    13
+   ],
+   "progress": 100,
+   "provenance": "authored-poc",
+   "received_turn": 0,
+   "required": 400,
+   "updated_turn": 0
+  },
+  {
+   "briefed": true,
+   "hexes": [
+    [
+     1,
+     19
+    ],
+    [
+     2,
+     19
+    ],
+    [
+     3,
+     18
+    ],
+    [
+     4,
+     18
+    ],
+    [
+     5,
+     18
+    ],
+    [
+     6,
+     18
+    ],
+    [
+     6,
+     17
+    ],
+    [
+     7,
+     17
+    ],
+    [
+     8,
+     16
+    ],
+    [
+     9,
+     16
+    ]
+   ],
+   "id": "south-track",
+   "kind": "road",
+   "name": "Southern track",
+   "observed_turn": 0,
+   "points": [
+    [
+     1,
+     19
+    ],
+    [
+     4,
+     18
+    ],
+    [
+     7,
+     17
+    ],
+    [
+     9,
+     16
+    ]
+   ],
+   "provenance": "authored-poc",
+   "received_turn": 0
+  }
+ ],
+ "max_turns": 60,
+ "messages": [
+  {
+   "content": "Report the state of the command.",
+   "game_id": "9ae0fbb0ce0241c5",
+   "id": 1,
+   "proposals": [],
+   "role": "user",
+   "source": "human",
+   "turn": 0
+  },
+  {
+   "content": "General, our command comprises 3 detachments, with 0 enemy sightings reported to headquarters. Our charge is to hold the marked summit until five o'clock. Send your instructions by runner; the latest reports may already be out of date.",
+   "game_id": "9ae0fbb0ce0241c5",
+   "id": 2,
+   "proposals": [],
+   "role": "assistant",
+   "source": "scripted",
+   "turn": 0
+  }
+ ],
+ "mode": "scripted",
+ "model": "openai/gpt-4.1-mini",
+ "objective": [
+  11,
+  15
+ ],
+ "order_templates": [
+  {
+   "destination": "none",
+   "effect": "Maintain position until relieved. Local commanders may seek cover or withdraw if overwhelmed.",
+   "id": "hold",
+   "intent": "Hold your present ground; defend the position and report enemy contact.",
+   "label": "Hold and defend",
+   "message_key": "order.template.hold",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "hex",
+   "effect": "Travel over terrain. Contact can interrupt movement; the destination remains your mission.",
+   "id": "move",
+   "intent": "Proceed to the appointed map reference, then hold and report your arrival.",
+   "label": "Move to position",
+   "message_key": "order.template.move",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "none",
+   "effect": "Recover fatigue while clear of contact. Finish at zero fatigue. No replacement troops or ammunition.",
+   "id": "rest",
+   "intent": "Halt the detachment and rest the men. Keep watch; defend yourselves if attacked.",
+   "label": "Rest and recover",
+   "message_key": "order.template.rest",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "hex",
+   "effect": "Withdraw toward the selected hex. Avoid closing with observed threats; defend if the way is blocked.",
+   "id": "retreat",
+   "intent": "Fall back to the appointed position, preserving the detachment; report when established.",
+   "label": "Retreat to position",
+   "message_key": "order.template.retreat",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "supply",
+   "effect": "Use the nearest friendly ammunition point. Load from finite stocks only while adjacent and clear of contact.",
+   "id": "resupply",
+   "intent": "Proceed to our ammunition point and replenish your cartridge boxes. Report shortages.",
+   "label": "Replenish ammunition",
+   "message_key": "order.template.resupply",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "hex",
+   "effect": "Move cautiously to the selected hex, then maintain observation. Does not confer scout skill or reveal hidden troops.",
+   "id": "recon",
+   "intent": "Examine the appointed ground, observe the enemy and send word. Avoid a close engagement.",
+   "label": "Reconnoiter position",
+   "message_key": "order.template.recon",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "none",
+   "effect": "Work takes time and increases fatigue. Tools and ground determine progress; fire interrupts construction. Cover remains on this hex when the unit leaves.",
+   "id": "dig_in",
+   "intent": "Strengthen your present position with hasty fieldworks. Keep watch and report when ready.",
+   "label": "Dig in",
+   "message_key": "order.template.dig_in",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "none",
+   "effect": "The detachment does not open fire; it returns fire once enemy fire strikes it. Its mission is unchanged.",
+   "id": "hold_fire",
+   "intent": "Do not fire unless fired upon. Keep your present instructions.",
+   "label": "Hold fire",
+   "message_key": "order.template.hold_fire",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "none",
+   "effect": "The detachment fires on the nearest enemy in range. Its mission is unchanged.",
+   "id": "open_fire",
+   "intent": "Engage the enemy within range. Keep your present instructions.",
+   "label": "Open fire",
+   "message_key": "order.template.open_fire",
+   "version": "common-orders-v5"
+  }
+ ],
+ "orders": [
+  {
+   "arrival_turn": 3,
+   "destination": null,
+   "id": "O1",
+   "sent_turn": 0,
+   "side": "union",
+   "source": "human",
+   "stance": "hold",
+   "status": "delivered",
+   "unit_id": "U1",
+   "version": 1
+  }
+ ],
+ "reason": null,
+ "recommendations": [
+  {
+   "created_turn": 2,
+   "evidence": {
+    "ammo": 1600,
+    "contact_ids": [],
+    "fatigue": 0,
+    "local_action": "hold",
+    "morale": 87,
+    "pos": [
+     11,
+     14
+    ],
+    "strength": 40
+   },
+   "expires_turn": 14,
+   "id": "A3",
+   "mission_version": 0,
+   "policy": "commander-advice-v1",
+   "proposal": {
+    "destination": null,
+    "stance": "dig_in",
+    "unit_id": "U1"
+   },
+   "received_turn": 5,
+   "side": "union",
+   "status": "superseded",
+   "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "unit_id": "U1"
+  },
+  {
+   "created_turn": 2,
+   "evidence": {
+    "ammo": 1600,
+    "contact_ids": [],
+    "fatigue": 0,
+    "local_action": "hold",
+    "morale": 87,
+    "pos": [
+     13,
+     15
+    ],
+    "strength": 40
+   },
+   "expires_turn": 14,
+   "id": "A4",
+   "mission_version": 0,
+   "policy": "commander-advice-v1",
+   "proposal": {
+    "destination": null,
+    "stance": "dig_in",
+    "unit_id": "U2"
+   },
+   "received_turn": 2,
+   "side": "union",
+   "status": "delivered",
+   "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "unit_id": "U2"
+  },
+  {
+   "created_turn": 2,
+   "evidence": {
+    "ammo": 1600,
+    "contact_ids": [],
+    "fatigue": 0,
+    "local_action": "hold",
+    "morale": 87,
+    "pos": [
+     10,
+     13
+    ],
+    "strength": 40
+   },
+   "expires_turn": 14,
+   "id": "A5",
+   "mission_version": 0,
+   "policy": "commander-advice-v1",
+   "proposal": {
+    "destination": null,
+    "stance": "dig_in",
+    "unit_id": "U3"
+   },
+   "received_turn": 6,
+   "side": "union",
+   "status": "delivered",
+   "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "unit_id": "U3"
+  }
+ ],
+ "revision": 14,
+ "rules": "poc-13",
+ "scenario_brief": {
+  "campaign": "GETTYSBURG \u00b7 2 JULY 1863",
+  "conditions": "SUMMER \u00b7 DRY \u00b7 CLEAR",
+  "id": "little-round-top",
+  "kicker": "THE UNION LEFT FLANK",
+  "mission": {
+   "text": "Keep an effective formation in the summit hex or the six hexes around it (the dashed ring) until **17:00**. If Confederate troops hold that ground for 90 seconds with no effective Union formation there, the battle ends at once in their favor, even before 17:00.",
+   "title": "Defend the summit"
+  },
+  "objective": {
+   "key": "SUMMIT",
+   "label": "SUMMIT OBJECTIVE",
+   "place": "Little Round Top",
+   "ring": true
+  },
+  "opponent": {
+   "id": "confederate",
+   "name": "Confederate"
+  },
+  "outcomes": {
+   "draw": "The battle ends in a draw.",
+   "loss": "The summit is lost.",
+   "win": "The line holds."
+  },
+  "side": {
+   "id": "union",
+   "name": "Union"
+  },
+  "subhead": "You command the Union. The computer commands the Confederate advance.",
+  "tagline": "Hold the high ground.",
+  "title": "Little Round Top",
+  "voice_profile": "civil-war-en-v1"
+ },
+ "seconds_per_turn": 30,
+ "side": "union",
+ "standing_orders": [],
+ "standing_templates": [
+  {
+   "enemy_ratio": 2.5,
+   "fire_range": 5,
+   "id": "balanced",
+   "intent": "Carry out the mission, use cover and fall back when the detachment is in serious danger.",
+   "label": "Balanced",
+   "message_key": "standing.template.balanced",
+   "morale_floor": 45,
+   "reserve_volleys": 1,
+   "suppression_limit": 70,
+   "version": "standing-orders-v1"
+  },
+  {
+   "enemy_ratio": 1.5,
+   "fire_range": 5,
+   "id": "cautious",
+   "intent": "Avoid costly engagements. Fall back earlier when pressed, low on cartridges or shaken.",
+   "label": "Preserve the force",
+   "message_key": "standing.template.cautious",
+   "morale_floor": 60,
+   "reserve_volleys": 3,
+   "suppression_limit": 50,
+   "version": "standing-orders-v1"
+  },
+  {
+   "enemy_ratio": 3.5,
+   "fire_range": 5,
+   "id": "firm",
+   "intent": "Accept greater pressure to hold the ground. Seek cover; withdraw if the formation can no longer stand.",
+   "label": "Hold ground firmly",
+   "message_key": "standing.template.firm",
+   "morale_floor": 35,
+   "reserve_volleys": 1,
+   "suppression_limit": 85,
+   "version": "standing-orders-v1"
+  },
+  {
+   "enemy_ratio": 1.0,
+   "fire_range": 3,
+   "id": "screen",
+   "intent": "Watch and report; avoid equal or stronger opposition. Reserve fire for close threats within three hexes.",
+   "label": "Observe and screen",
+   "message_key": "standing.template.screen",
+   "morale_floor": 60,
+   "reserve_volleys": 3,
+   "suppression_limit": 50,
+   "version": "standing-orders-v1"
+  }
+ ],
+ "status": "active",
+ "supply_sites": [
+  {
+   "id": "union-ammunition",
+   "name": "Union ammunition point",
+   "pos": [
+    14,
+    8
+   ],
+   "side": "union",
+   "weapon_class": "rifled muskets"
+  }
+ ],
+ "turn": 12,
+ "units": [
+  {
+   "ammo": 1409,
+   "fatigue": 0,
+   "fire_posture": "open_fire",
+   "id": "U1",
+   "initial": 40,
+   "local_action": "defend",
+   "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
+   "mission_result": {
+    "order_version": 1,
+    "reason": "Instructions received.",
+    "started_turn": 3,
+    "status": "active",
+    "template": "hold",
+    "updated_turn": 3
+   },
+   "morale": 66,
+   "name": "20th Maine \u00b7 A",
+   "observed_turn": 9,
+   "order_version": 1,
+   "pos": [
+    11,
+    14
+   ],
+   "received_turn": 12,
+   "recon_role": "line",
+   "recon_skill": 35,
+   "side": "union",
+   "skill": 70,
+   "stance": "hold",
+   "standing_profile": "balanced",
+   "standing_version": 0,
+   "status": "ready",
+   "strength": 34,
+   "supply_site": null,
+   "suppression": 43,
+   "tactical_target": null,
+   "target": null,
+   "tools": 20,
+   "unit_type": "infantry",
+   "weapon_class": "rifled muskets"
+  },
+  {
+   "ammo": 1600,
+   "fatigue": 0,
+   "fire_posture": "open_fire",
+   "id": "U2",
+   "initial": 40,
+   "local_action": "hold",
+   "local_reason": "No enemy within effective range; maintain the assigned mission.",
+   "morale": 90,
+   "name": "20th Maine \u00b7 B",
+   "observed_turn": 12,
+   "order_version": 0,
+   "pos": [
+    13,
+    15
+   ],
+   "received_turn": 12,
+   "recon_role": "line",
+   "recon_skill": 35,
+   "side": "union",
+   "skill": 70,
+   "stance": "hold",
+   "standing_profile": "balanced",
+   "standing_version": 0,
+   "status": "ready",
+   "strength": 40,
+   "suppression": 0,
+   "tactical_target": null,
+   "target": null,
+   "tools": 20,
+   "unit_type": "infantry",
+   "weapon_class": "rifled muskets"
+  },
+  {
+   "ammo": 1520,
+   "fatigue": 0,
+   "fire_posture": "open_fire",
+   "id": "U3",
+   "initial": 40,
+   "local_action": "defend",
+   "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
+   "morale": 90,
+   "name": "20th Maine \u00b7 C",
+   "observed_turn": 8,
+   "order_version": 0,
+   "pos": [
+    10,
+    13
+   ],
+   "received_turn": 12,
+   "recon_role": "scout",
+   "recon_skill": 80,
+   "side": "union",
+   "skill": 70,
+   "stance": "hold",
+   "standing_profile": "balanced",
+   "standing_version": 0,
+   "status": "ready",
+   "strength": 40,
+   "suppression": 0,
+   "tactical_target": null,
+   "target": null,
+   "tools": 20,
+   "unit_type": "infantry",
+   "weapon_class": "rifled muskets"
+  }
+ ],
+ "voice_profile": "civil-war-en-v1",
+ "weather": {
+  "conditions": "dry, clear (fixed POC condition)",
+  "season": "summer"
+ },
+ "winner": null
+}
