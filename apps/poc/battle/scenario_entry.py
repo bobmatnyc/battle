@@ -133,7 +133,9 @@ class VictoryEntry:
     reads ``raiders`` (attacker unit ids), ``return_hex``,
     ``return_radius``, one of ``return_strength`` (men) or ``return_pct``
     (per cent of the raiders' starting strength) and ``min_captives``
-    (None: captives are not counted)."""
+    (None: captives are not counted). ``recover-force`` (docs/research/60)
+    alone reads ``recover_units`` (attacker unit ids), ``rally_hex``,
+    ``rally_radius`` and one of ``recover_strength`` or ``recover_pct``."""
 
     kind: str
     objective: tuple[int, int]
@@ -149,6 +151,11 @@ class VictoryEntry:
     return_strength: int | None = None
     return_pct: int | None = None
     min_captives: int | None = None
+    recover_units: tuple[str, ...] = ()
+    rally_hex: tuple[int, int] | None = None
+    rally_radius: int = 0
+    recover_strength: int | None = None
+    recover_pct: int | None = None
 
 
 @dataclass(frozen=True)
@@ -418,7 +425,7 @@ def build_state(entry, rules=None):
     if not _at_least(rules, 'poc-13') and scenario_wwii.declares(entry):
         raise ValueError(f"{rules} has no bridge state, radio, signals or night range; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_units.declares(entry):
-        raise ValueError(f"{rules} has no declared rout_strength, press_assault, gun facing, surrender, exploit, seize-and-hold or raid-and-return; they need poc-13.")
+        raise ValueError(f"{rules} has no declared rout_strength, press_assault, gun facing, surrender, exploit, seize-and-hold, raid-and-return or recover-force; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_broadcast.declares(entry):
         raise ValueError(f"{rules} has no broadcast signals; they need poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]

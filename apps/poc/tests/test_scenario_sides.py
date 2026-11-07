@@ -233,7 +233,8 @@ class VictoryKindTests(unittest.TestCase):
             with self.subTest(problem=problem):
                 with self.assertRaisesRegex(ValueError, problem):
                     ScenarioRegistry([dataclasses.replace(DUEL, **change)])
-        self.assertEqual(tuple(victory.KINDS), ("hold-objective", "hold-compound", "seize-and-hold", "raid-and-return"))
+        self.assertEqual(tuple(victory.KINDS), ("hold-objective", "hold-compound", "seize-and-hold", "raid-and-return",
+                                               "recover-force"))
 
     def test_hold_objective_parameters_come_from_the_entry(self):
         entry = dataclasses.replace(

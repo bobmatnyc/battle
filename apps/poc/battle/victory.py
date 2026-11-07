@@ -20,7 +20,7 @@ poc-13 under docs/research/53's rule: only the new Pegasus entry names it,
 so no saved snapshot holds it and every earlier battle scores as before
 (docs/research/54). ``raid-and-return`` stays in poc-13 the same way: only an
 entry that names it writes its fields (docs/research/59), and the other kinds
-refuse them.
+refuse them. ``recover-force`` (docs/research/60) stays in poc-13 the same way.
 Test: `test_victory_kinds_refuse_unknown_kinds_and_bad_roles`,
 `test_little_round_top_poc9_plays_identically_to_poc8`.
 """
@@ -215,6 +215,18 @@ def _raid_only_problems(entry):
     v = entry.victory
     if v.kind != RaidAndReturn.kind and any(getattr(v, name) != empty for name, empty in RAID_FIELDS):
         return [f"{v.kind} does not read {', '.join(name for name, _ in RAID_FIELDS)}; use raid-and-return"]
+    return _recover_only_problems(entry)
+
+
+RECOVER_FIELDS = (("recover_units", ()), ("rally_hex", None), ("rally_radius", 0), ("recover_strength", None),
+                  ("recover_pct", None))
+
+
+def _recover_only_problems(entry):
+    """docs/research/60: the recovery fields belong to recover-force."""
+    v = entry.victory
+    if v.kind != RecoverForce.kind and any(getattr(v, name) != empty for name, empty in RECOVER_FIELDS):
+        return [f"{v.kind} does not read {', '.join(name for name, _ in RECOVER_FIELDS)}; use recover-force"]
     return []
 
 
@@ -358,7 +370,7 @@ class RaidAndReturn:
             problems.append("raid-and-return min_captives must be None or a positive integer")
         if v.relief_turn is not None or tuple(v.more_objectives):
             problems.append("raid-and-return does not read relief_turn and more_objectives; use seize-and-hold")
-        return problems
+        return problems + _recover_only_problems(entry)
 
     def setup(self, entry):
         v = entry.victory
@@ -408,7 +420,92 @@ class RaidAndReturn:
         return None, None
 
 
-KINDS = {kind.kind: kind for kind in (HoldObjective(), HoldCompound(), SeizeAndHold(), RaidAndReturn())}
+def _needed(entry, force):
+    v = entry.victory
+    return v.recover_strength if v.recover_strength is not None else -(-force * v.recover_pct // 100)
+
+
+class RecoverForce:
+    """Bring a declared share of a forward force back to a rally area
+    (docs/research/57 §5, 60 §3).
+
+    The attacker wins at the first interval at which the effective formations
+    of ``recover_units`` within ``rally_radius`` of ``rally_hex`` number at
+    least ``recover_needed`` men: ``recover_strength``, or ``recover_pct``
+    per cent (rounded up) of the force's starting strength (``force``). The
+    defender wins when the force's effective men fall below that number, or
+    at the deadline. Registration refuses a force that would already be
+    recovered at the start. The score reads the truth; ``s['victory']`` is in
+    neither side's view. The attacker's win reads "force recovered", not a
+    historical result.
+    Test: `test_bringing_the_force_back_wins_for_the_attacker`,
+    `test_too_few_returning_men_do_not_win`,
+    `test_the_defender_wins_when_the_force_can_no_longer_bring_back_enough`,
+    `test_nothing_of_the_recovery_state_reaches_either_view`.
+    """
+
+    kind = "recover-force"
+
+    def problems(self, entry):
+        problems = HoldObjective().ring_problems(entry)
+        v = entry.victory
+        units = {u.id: u for u in entry.units}
+        attacker = next((side for side, spec in entry.sides.items() if spec.role == "attacker"), None)
+        ids = tuple(v.recover_units)
+        if not ids or len(set(ids)) != len(ids) or any(units.get(r) is None or units[r].side != attacker for r in ids):
+            return problems + ["recover-force recover_units must be distinct attacker unit ids, at least one"]
+        if v.rally_hex is None or not grid.valid(list(v.rally_hex)):
+            return problems + ["recover-force rally_hex must be a hex on the grid"]
+        if type(v.rally_radius) is not int or v.rally_radius < 0:
+            problems.append("recover-force rally_radius must be an integer of 0 or more")
+        force = sum(_starting_strength(entry, r) for r in ids)
+        by_count = v.recover_strength is not None
+        if by_count == (v.recover_pct is not None):
+            problems.append("recover-force needs exactly one of recover_strength and recover_pct")
+        elif by_count and not (type(v.recover_strength) is int and 1 <= v.recover_strength <= force):
+            problems.append(f"recover-force recover_strength must be an integer of 1 to the force's {force}")
+        elif not by_count and not (type(v.recover_pct) is int and 1 <= v.recover_pct <= 100):
+            problems.append("recover-force recover_pct must be an integer of 1 to 100")
+        elif type(v.rally_radius) is int:
+            home = sum(_starting_strength(entry, r) for r in ids
+                       if grid.distance(list(units[r].pos), list(v.rally_hex)) <= v.rally_radius)
+            if home >= _needed(entry, force):
+                problems.append("recover-force force already stands recovered at the start")
+        return problems + _seize_only_problems(entry)
+
+    def setup(self, entry):
+        v = entry.victory
+        force = sum(_starting_strength(entry, r) for r in v.recover_units)
+        return {
+            "kind": self.kind,
+            "objective_name": v.objective_name,
+            "recover_units": list(v.recover_units),
+            "force": force,
+            "rally_hex": list(v.rally_hex),
+            "rally_radius": v.rally_radius,
+            "recover_needed": _needed(entry, force),
+            "recovered_turn": None,
+        }
+
+    def score(self, s):
+        v = s["victory"]
+        defender = _side_with_role(s, "defender")
+        attacker = _side_with_role(s, "attacker")
+        force = [u for u in s["units"] if u["id"] in v["recover_units"]
+                 and u["status"] not in INEFFECTIVE and u["strength"] > 0]
+        men = sum(u["strength"] for u in force if grid.distance(u["pos"], v["rally_hex"]) <= v["rally_radius"])
+        if men >= v["recover_needed"]:
+            v["recovered_turn"] = s["turn"]
+            return attacker, f"The commander brought {men} of the forward force back to the rally point by the deadline."
+        if sum(u["strength"] for u in force) < v["recover_needed"]:
+            return defender, "The forward force can no longer bring back the men required."
+        if s["turn"] >= s["max_turns"]:
+            return defender, "The forward force was not brought back to the rally point by the deadline."
+        return None, None
+
+
+KINDS = {kind.kind: kind for kind in (HoldObjective(), HoldCompound(), SeizeAndHold(), RaidAndReturn(),
+                                     RecoverForce())}
 
 
 def score(s):

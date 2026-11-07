@@ -116,8 +116,8 @@ def problems(entry):
     return found
 
 
-# Victory kinds only poc-13 scores (docs/research/54, 59); engine_v12 must never see one.
-POC13_VICTORY_KINDS = ("seize-and-hold", "raid-and-return")
+# Victory kinds only poc-13 scores (docs/research/54, 59, 60); engine_v12 must never see one.
+POC13_VICTORY_KINDS = ("seize-and-hold", "raid-and-return", "recover-force")  # docs/research/60
 
 
 def declares(entry):
