@@ -22,6 +22,9 @@ MAX_FIRE_RANGE = 5  # engine.volley never fires beyond 5 hexes.
 DEFAULT_WEAPON_CLASS = "rifled muskets"  # scenario_entry.unit()'s class.
 # docs/research/55: the one tactics edition an entry may select; None is tactics_v10.
 TACTICS_V11 = "tactics_v11"
+# recon.estimate's labels for a weapon not made out; tactics_v11.contact_range
+# takes such a contact at the table's longest range, so no class may use them.
+OBSERVER_WEAPON_LABELS = ("long arms", "not established")
 
 
 @dataclass(frozen=True)
@@ -144,7 +147,7 @@ def weapon_problems(entry):
     reads a unit's own range, not the enemy's (docs/research/48 §1, 53);
     ``tactics_v11`` reads the observed enemy's range (docs/research/55).
     What: ``entry.tactics`` is None or ``TACTICS_V11``; ``entry.weapons``:
-    each class has an integer range of 1 to 5 hexes, an integer effect of 1
+    no class is named by an ``OBSERVER_WEAPON_LABELS`` label; each class has an integer range of 1 to 5 hexes, an integer effect of 1
     to 100 per cent and a basis; every unit's class is in the table (a class
     outside it fires at the 5-hex baseline, and tactics_v11 takes an
     unidentified contact at the table's longest range); and, on tactics_v10
@@ -154,11 +157,14 @@ def weapon_problems(entry):
     `test_mixed_ranges_are_refused_on_tactics_v10`,
     `test_mixed_ranges_are_accepted_on_tactics_v11`,
     `test_tactics_v11_still_refuses_a_unit_outside_the_table`,
-    `test_an_unknown_tactics_edition_is_refused`."""
+    `test_an_unknown_tactics_edition_is_refused`,
+    `test_an_observer_weapon_label_is_refused_as_a_class_name`."""
     problems = []
     if entry.tactics not in (None, TACTICS_V11):
         problems.append(f"tactics must be None (tactics_v10) or {TACTICS_V11!r}, not {entry.tactics!r}")
     for name, w in (entry.weapons or {}).items():
+        if name in OBSERVER_WEAPON_LABELS:  # bt-T02: these name an unidentified contact (recon.estimate).
+            problems.append(f"weapon class {name!r} is the observer's label for an unidentified weapon; use another name")
         if not (type(w.range_hexes) is int and 1 <= w.range_hexes <= MAX_FIRE_RANGE
                 and type(w.effect_pct) is int and 1 <= w.effect_pct <= 100 and w.basis):
             problems.append(f"weapon {name!r} needs range_hexes 1-{MAX_FIRE_RANGE}, effect_pct 1-100 and a basis")

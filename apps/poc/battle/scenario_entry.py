@@ -366,8 +366,10 @@ def dry_run(entry):
     What: builds ``entry`` once in its own edition and raises ValueError unless
     the build succeeds, the terrain has exactly one cell per grid hex with the
     fields movement and fire read, and every feature position, road point and
-    road hex lies on the grid. Returns ``entry``.
-    Test: `test_registry_dry_run_refuses_terrain_gaps_and_off_grid_features`.
+    road hex lies on the grid, and every exploit ``press_to`` hex is passable.
+    Returns ``entry``.
+    Test: `test_registry_dry_run_refuses_terrain_gaps_and_off_grid_features`,
+    `test_dry_run_refuses_an_impassable_press_to_hex`.
     """
     problems = scenario_checks.feature_problems(entry.map.features)
     if not problems:
@@ -379,6 +381,7 @@ def dry_run(entry):
             problems.extend(scenario_roster.terrain_problems(state["cells"]))
             problems.extend(scenario_checks.water_problems(entry, state["cells"]))
             problems.extend(scenario_wwii.bridge_cell_problems(entry, state["cells"]))
+            problems.extend(scenario_units.exploit_cell_problems(entry, state["cells"]))
             for f in state.get("map_features", []):
                 hexes = ([f["pos"]] if "pos" in f else []) + list(f.get("hexes", []))
                 if not all(grid.valid(list(p)) for p in hexes):

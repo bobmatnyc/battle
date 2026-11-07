@@ -113,6 +113,12 @@ class SelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "tactics_v11"):
             build_state(dataclasses.replace(DUEL, tactics=TACTICS_V11), rules="poc-12")
 
+    def test_a_snapshot_with_an_unknown_tactics_edition_is_refused_at_execution(self):
+        s = duel()
+        s["tactics"] = "tactics_v9"
+        with self.assertRaisesRegex(ValueError, "Unsupported tactics edition 'tactics_v9'"):
+            advance(s)
+
     def test_an_unknown_tactics_edition_is_refused(self):
         with self.assertRaisesRegex(ValueError, "tactics"):
             validate(night_entry(tactics="tactics_v9"))
@@ -131,6 +137,13 @@ class MixedRangeGuardTests(unittest.TestCase):
     def test_mixed_ranges_are_accepted_on_tactics_v11(self):
         entry = validate(night_entry(units=self.UNITS, weapons=MIXED, tactics=TACTICS_V11))
         self.assertEqual(sorted(w["range_hexes"] for w in build_state(entry)["weapon_rules"].values()), [1, 2, 3])
+
+    def test_an_observer_weapon_label_is_refused_as_a_class_name(self):
+        for label in ("long arms", "not established"):
+            units = (self.UNITS[0], UnitEntry("G1", "confederate", "Grey", (5, 2), {"weapon_class": label}))
+            weapons = {"short rifles": SHORT, label: LONG}
+            with self.subTest(label=label), self.assertRaisesRegex(ValueError, "observer's label"):
+                validate(night_entry(units=units, weapons=weapons, tactics=TACTICS_V11))
 
     def test_tactics_v11_still_refuses_a_unit_outside_the_table(self):
         units = self.UNITS[:1] + (UnitEntry("G1", "confederate", "Grey", (5, 2)),)

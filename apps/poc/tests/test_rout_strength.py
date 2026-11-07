@@ -113,6 +113,30 @@ class RoutFormationTests(unittest.TestCase):
         self.assertEqual(op["status"], "refused")
         self.assertIn("rout_strength", op["reason"])
 
+    def test_split_or_combine_queued_before_any_fixed_key_is_refused_at_execution(self):
+        # bt-T02: each key formations.declares_rout reads, given after the request was accepted.
+        keys = {
+            "rout_strength": {"rout_strength": 4},
+            "facing": {"facing": 0, "arc": 180, "reorient_turns": 0},
+            "surrender": {"surrender": {"odds_pct": 100, "reach": 1, "rear_only": False, "support_reach": 0}},
+            "captives": {"captives": 5},
+            "exploit": {"exploit": {"trigger": "arrival", "press_to": [2, 8], "recall_binding": True,
+                                    "max_loss_pct": 50}},
+        }
+        requests = {"split": SPLIT, "combine": {"kind": "combine", "unit_id": "U2", "partner_id": "U1"}}
+        for key, fields in keys.items():
+            for kind, request in requests.items():
+                with self.subTest(key=key, kind=kind):
+                    s = formation_fixture()
+                    formations.request(s, "union", request)  # Valid when queued: U1 declares nothing yet.
+                    engine.find_unit(s, "U1").update(fields)
+                    for _ in range(3):
+                        engine.advance(s)
+                    op = s["formation_ops"][0]
+                    self.assertEqual((op["status"], op["reason"]), ("refused", formations.ROUT_REFUSAL))
+                    self.assertFalse(events(s, "unit_split") or events(s, "units_combined"))
+                    self.assertNotEqual(engine.find_unit(s, "U1")["status"], "merged")
+
 
 if __name__ == "__main__":
     unittest.main()

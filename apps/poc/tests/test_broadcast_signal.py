@@ -129,6 +129,18 @@ class AudibilityTests(unittest.TestCase):
         self.assertIsNone(s["broadcasts"][0]["sounded_turn"])
         self.assertEqual(receipts(s), {})
 
+    def test_a_due_signal_waiting_on_a_disrupted_command_emits_one_event(self):
+        s = advance(signal_state(), 1)
+        self.assertNotIn("waiting_turn", s["broadcasts"][0])
+        unit(s, "B1")["status"] = "routed"
+        s = advance(s, 3)
+        waits = events(s, "signal_waiting")
+        self.assertEqual([(e["turn"], e["signal_id"], e["reason"]) for e in waits],
+                         [(2, "recall", "command_disrupted")])
+        self.assertEqual(s["broadcasts"][0]["waiting_turn"], 2)
+        sounded = advance(signal_state(), 3)  # A signal that never waits keeps its snapshot keys.
+        self.assertEqual((events(sounded, "signal_waiting"), "waiting_turn" in sounded["broadcasts"][0]), ([], False))
+
     def test_runs_are_deterministic(self):
         self.assertEqual(advance(signal_state(), 4), advance(signal_state(), 4))
 

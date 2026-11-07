@@ -59,6 +59,23 @@ def _exploit_problems(u):
     return []
 
 
+def exploit_cell_problems(entry, cells):
+    """bt-T02: a unit's exploit ``press_to`` hex must be passable on the built
+    terrain (``grid.passable``), or the unit presses toward ground it can never
+    reach. Read by ``scenario_entry.dry_run``.
+    Test: `test_dry_run_refuses_an_impassable_press_to_hex`."""
+    from . import grid
+
+    found = []
+    for u in entry.units:
+        rule = u.overrides.get("exploit")
+        if not isinstance(rule, dict) or not grid.valid(list(rule.get("press_to") or ())):
+            continue  # _exploit_problems already refused a malformed rule at registration.
+        if not grid.passable(cells[grid.key(list(rule["press_to"]))]):
+            found.append(f"unit {u.id!r} exploit press_to {list(rule['press_to'])} is not a passable hex")
+    return found
+
+
 def _facing_problems(u):
     """docs/research/59: all three facing keys or none; a bearing of 0 to 359,
     an arc of 1 to 359 degrees and a non-negative whole number of intervals."""

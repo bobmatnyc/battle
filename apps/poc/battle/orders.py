@@ -125,6 +125,8 @@ def decide(s,u,contacts):
     # docs/research/55: a poc-13 entry may select tactics_v11 (``s['tactics']``),
     # which halts at the observed enemy's weapon range; no other snapshot has the key.
     if s.get('rules')=='poc-13' and s.get('tactics')=='tactics_v11':policy=tactics_v11
+    # bt-T02: an unknown edition is refused, as an unsupported rules edition is, not run as v10.
+    elif s.get('tactics') is not None:raise ValueError(f"Unsupported tactics edition {s.get('tactics')!r}.")
     decision=policy.decide(s,u,contacts)
     decision['policy']=VERSION
     stance=u['stance']

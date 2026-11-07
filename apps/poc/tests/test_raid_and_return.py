@@ -28,18 +28,21 @@ UNITS = (UnitEntry("B1", "union", "Company post", (12, 16), HOLD),
          # rout_strength 0: a party cut down by hand must not rout before scoring.
          UnitEntry("G2", "confederate", "Raiding party", HOME,
                    {"strength": 20, "initial": 20, "rout_strength": 0, **HOLD}))
+# min_captives needs a defender that can yield; B1's reach-1 rule never fires here (no one comes near).
+YIELDING = (dataclasses.replace(UNITS[0], overrides={**HOLD, "surrender": {
+    "odds_pct": 100, "reach": 1, "rear_only": False, "support_reach": 0}}),) + UNITS[1:]
 
 
-def with_victory(victory):
-    return dataclasses.replace(night_entry(units=UNITS), victory=victory)
+def with_victory(victory, units=UNITS):
+    return dataclasses.replace(night_entry(units=units), victory=victory)
 
 
-def raid(**fields):
-    return with_victory(dataclasses.replace(RAID, **fields))
+def raid(units=UNITS, **fields):
+    return with_victory(dataclasses.replace(RAID, **fields), units)
 
 
-def raid_state(**fields):
-    return build_state(dry_run(validate(raid(**fields))))
+def raid_state(units=UNITS, **fields):
+    return build_state(dry_run(validate(raid(units, **fields))))
 
 
 def step(s, pos=None, **changes):
@@ -90,7 +93,7 @@ class RaidScoringTests(unittest.TestCase):
     def test_min_captives_counts_captives_held_by_the_returning_raiders(self):
         for held, won in ((None, False), ("G1", False), ("G2", True)):
             with self.subTest(holder=held):
-                s = step(raid_state(min_captives=5), OBJECTIVE)
+                s = step(raid_state(YIELDING, min_captives=5), OBJECTIVE)
                 if held:
                     s["captives"] = [{"id": "K1", "count": 5, "from_unit": "B9", "from_side": "union",
                                       "holder_id": held, "holder_side": "confederate", "turn": 1, "status": "held"}]
@@ -98,7 +101,7 @@ class RaidScoringTests(unittest.TestCase):
                 self.assertEqual(s["winner"] == "confederate", won)
 
     def test_escaped_captives_do_not_count(self):
-        s = step(raid_state(min_captives=5), OBJECTIVE)
+        s = step(raid_state(YIELDING, min_captives=5), OBJECTIVE)
         s["captives"] = [{"id": "K1", "count": 5, "from_unit": "B9", "from_side": "union", "holder_id": "G2",
                           "holder_side": "confederate", "turn": 1, "status": "escaped"}]
         self.assertEqual(step(s, HOME)["status"], "active")
@@ -128,6 +131,14 @@ class RaidValidationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "raid-and-return|seize-and-hold"):
                     validate(raid(**fields))
 
+    def test_min_captives_is_refused_when_no_defender_declares_surrender(self):
+        with self.assertRaisesRegex(ValueError, "min_captives needs a defending unit that declares surrender"):
+            validate(raid(min_captives=1))
+        attacker_yields = (UNITS[0], dataclasses.replace(UNITS[1], overrides=YIELDING[0].overrides), UNITS[2])
+        with self.assertRaisesRegex(ValueError, "declares surrender"):  # An attacker that yields does not count.
+            validate(raid(attacker_yields, min_captives=1))
+        validate(raid(YIELDING, min_captives=1))
+
     def test_other_kinds_refuse_the_raid_fields(self):
         for kind in ("hold-objective", "seize-and-hold"):
             for fields in ({"raiders": ("G2",)}, {"return_hex": HOME}, {"return_pct": 50}, {"return_strength": 5},
@@ -153,7 +164,7 @@ class RaidValidationTests(unittest.TestCase):
                 self.assertEqual(build_state(entry, rules="poc-13")["victory"]["kind"], victory_entry.kind)
 
     def test_a_valid_raid_builds_its_parameters_into_the_snapshot(self):
-        v = raid_state(min_captives=3)["victory"]
+        v = raid_state(YIELDING, min_captives=3)["victory"]
         self.assertEqual(v, {"kind": "raid-and-return", "objective": list(OBJECTIVE), "radius": 1, "hold_turns": 1,
                              "objective_name": "gun position", "raiders": ["G2"], "force": 20,
                              "return_hex": list(HOME), "return_radius": 1, "return_needed": 10,

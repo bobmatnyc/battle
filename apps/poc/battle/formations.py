@@ -37,6 +37,7 @@ def declares_rout(units):
     """True when any of ``units`` declares one of ``FIXED_KEYS`` or holds captives.
     Test: `test_split_of_a_declaring_unit_is_refused_at_request`,
     `test_split_applied_after_the_unit_declared_is_refused_at_execution`,
+    `test_split_or_combine_queued_before_any_fixed_key_is_refused_at_execution`,
     `test_a_facing_unit_neither_splits_nor_combines`,
     `test_a_unit_holding_captives_neither_splits_nor_combines`."""
     return any(u is not None and (any(k in u for k in FIXED_KEYS) or u.get('captives')) for u in units)

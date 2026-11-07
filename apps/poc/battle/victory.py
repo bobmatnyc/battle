@@ -341,6 +341,7 @@ class RaidAndReturn:
     Test: `test_raid_then_return_wins_for_the_attacker`,
     `test_too_few_returning_men_do_not_win`,
     `test_min_captives_counts_captives_held_by_the_returning_raiders`,
+    `test_min_captives_is_refused_when_no_defender_declares_surrender`,
     `test_nothing_of_the_raid_state_reaches_either_view`.
     """
 
@@ -368,6 +369,10 @@ class RaidAndReturn:
             problems.append("raid-and-return return_pct must be an integer of 1 to 100")
         if v.min_captives is not None and not (type(v.min_captives) is int and v.min_captives >= 1):
             problems.append("raid-and-return min_captives must be None or a positive integer")
+        # bt-T02: captives come only from units that declare surrender (captives.check).
+        elif v.min_captives is not None and not any(
+                u.side != attacker and "surrender" in u.overrides for u in entry.units):
+            problems.append("raid-and-return min_captives needs a defending unit that declares surrender")
         if v.relief_turn is not None or tuple(v.more_objectives):
             problems.append("raid-and-return does not read relief_turn and more_objectives; use seize-and-hold")
         return problems + _recover_only_problems(entry)

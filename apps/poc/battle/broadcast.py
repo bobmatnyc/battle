@@ -62,16 +62,23 @@ def progress(s,emit,message):
     What: at the start of an interval, sounds each due signal (its ``turn``
     reached, or ordered last interval) from the side's command detachment
     when it is operational; a disrupted command sounds nothing and the
-    signal waits. Each live unit of the side other than the sounder gets a
+    signal waits: the first interval it waits sets ``waiting_turn`` and emits
+    ``signal_waiting`` once (a signal that never waits has no such key). Each live unit of the side other than the sounder gets a
     receipt (``heard``, ``reason``, ``turn``, ``obeyed``) and an event
     ``signal_heard`` or ``signal_not_heard``. A hearing unit that is not
     routed or leaderless takes up the signal's mission and records it in
     ``heard_signals``; any other unit keeps its mission and learns nothing.
     Test: `test_a_unit_that_hears_takes_up_the_signal_and_one_that_does_not_keeps_its_mission`,
     `test_an_unheard_signal_does_not_change_the_units_decision`,
-    `test_a_disrupted_command_does_not_sound_the_signal`."""
+    `test_a_disrupted_command_does_not_sound_the_signal`,
+    `test_a_due_signal_waiting_on_a_disrupted_command_emits_one_event`."""
     for signal in s.get('broadcasts',()):
-        if not _due(s,signal) or not comms.operational(s,signal['side']):continue
+        if not _due(s,signal):continue
+        if not comms.operational(s,signal['side']):
+            if 'waiting_turn' not in signal:  # bt-T02: the wait is recorded once, when it begins.
+                signal['waiting_turn']=s['turn']
+                emit(s,'signal_waiting',signal_id=signal['id'],side=signal['side'],reason='command_disrupted')
+            continue
         sounder=comms.command_unit(s,signal['side'])
         signal.update(sounded_turn=s['turn'],sounder_id=sounder['id'])
         emit(s,'signal_sounded',signal_id=signal['id'],side=signal['side'],sounder_id=sounder['id'],pos=list(sounder['pos']))
