@@ -442,7 +442,9 @@ def build_state(entry, rules=None):
          'seconds_per_turn': entry.seconds_per_turn, 'units': units,
          'cells': entry.map.terrain(), 'orders': [], 'reports': [],
          'contacts': {x: {} for x in sides},
-         'friendly_reports': {side: {u['id']: dict(u, observed_turn=0, received_turn=0)
+         # docs/research/61: a deep copy, so a nested override (a departure order)
+         # changes in the truth without changing the side's report.
+         'friendly_reports': {side: {u['id']: dict(deepcopy(u), observed_turn=0, received_turn=0)
                                      for u in units if u['side'] == side} for side in sides},
          'dispatches': {x: [] for x in sides}, 'events': [], 'decisions': [],
          'weather': dict(entry.weather),
