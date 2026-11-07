@@ -12,7 +12,11 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from . import grid, scenario_broadcast, scenario_checks, scenario_command, scenario_roster, scenario_units, scenario_wwii
+from . import (
+    grid, scenario_army, scenario_broadcast, scenario_checks, scenario_command, scenario_roster, scenario_units,
+    scenario_wwii,
+)
+from .scenario_army import ArmyEntry
 from .scenario_broadcast import BroadcastEntry
 from .scenario_command import CommandEntry, WeaponEntry
 from .scenario_wwii import BridgeEntry, SignalEntry
@@ -22,7 +26,7 @@ SIDES = ("union", "confederate")
 LEGACY_ROLES = {"union": "defender", "confederate": "attacker"}
 RULES_VERSION = "poc-13"
 EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9", "poc-10", "poc-11", "poc-12", "poc-13")
-SECONDS_PER_TURN = 30  # engine.issue states delays as turns * 30 seconds.
+SECONDS_PER_TURN = 30  # The company scale; engine.estimate reads the snapshot's own (docs/research/68).
 ORDER_CATALOG = ("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in")
 # poc-10: an entry whose map declares a gate offers Close the gate as well.
 GATE_ORDER_CATALOG = ORDER_CATALOG + ("close_gate",)
@@ -32,7 +36,8 @@ PROVENANCE = ("sourced:", "reconstruction:", "authored:", "inferred:")
 # poc-13B: the 1775 profile adds a voice reach (scenario_command).
 COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1", scenario_command.COLONIAL_COMMUNICATIONS,
                   scenario_wwii.RADIO_COMMUNICATIONS, scenario_command.WWI_COMMUNICATIONS,
-                  scenario_command.ROMAN_COMMUNICATIONS)
+                  scenario_command.ROMAN_COMMUNICATIONS, scenario_command.ROMAN_216_COMMUNICATIONS,
+                  scenario_command.CARTHAGE_216_COMMUNICATIONS)
 
 
 def unit(uid, side, name, pos):
@@ -109,6 +114,8 @@ class SideEntry:
     headquarters: tuple[int, int]
     supply: SupplyEntry | None = None
     brief: SideBrief | None = None
+    # docs/research/68: this side's own profile; None is the entry's ``communications``.
+    communications: str | None = None
 
 
 @dataclass(frozen=True)
@@ -135,7 +142,9 @@ class VictoryEntry:
     (per cent of the raiders' starting strength) and ``min_captives``
     (None: captives are not counted). ``recover-force`` (docs/research/60)
     alone reads ``recover_units`` (attacker unit ids), ``rally_hex``,
-    ``rally_radius`` and one of ``recover_strength`` or ``recover_pct``."""
+    ``rally_radius`` and one of ``recover_strength`` or ``recover_pct``.
+    ``encircle`` (docs/research/68) alone reads ``exits``, ``pocket_units``,
+    ``centre_units``, ``zoc``, ``min_enclosed_pct`` and ``centre_break``."""
 
     kind: str
     objective: tuple[int, int]
@@ -156,6 +165,13 @@ class VictoryEntry:
     rally_radius: int = 0
     recover_strength: int | None = None
     recover_pct: int | None = None
+    # docs/research/68: ``encircle`` alone reads these (victory_encircle).
+    exits: tuple[tuple[int, int], ...] = ()
+    pocket_units: tuple[str, ...] = ()
+    centre_units: tuple[str, ...] = ()
+    zoc: int | None = None
+    min_enclosed_pct: int | None = None
+    centre_break: int | None = None
 
 
 @dataclass(frozen=True)
@@ -273,6 +289,7 @@ class ScenarioEntry:
     observation_range: int | None = None  # None: each unit's own (7 hexes).
     voice_reach: int | None = None  # docs/research/59: read only by the 1918 and Roman profiles.
     broadcasts: tuple[BroadcastEntry, ...] | None = None  # docs/research/60: signals; None: none.
+    army: ArmyEntry | None = None  # docs/research/68: army-scale rules and scale; None: company scale.
     # Side id -> scripted control id (command_policy.SCRIPTED_POLICIES) for an
     # entry with its own controls (Concord); None: the gate or fallback rule.
     scripted: Mapping[str, str] | None = None
@@ -318,11 +335,10 @@ def validate(entry):
     victory = entry.victory
     if not grid.valid(list(victory.objective)) or victory.deadline_turns <= 0:
         problems.append("victory objective or deadline is invalid")
-    shape = (entry.map.cols, entry.map.rows, entry.map.metres_per_hex)
-    if shape != (grid.COLS, grid.ROWS, grid.METRES_PER_HEX):
-        problems.append(f"map must be {grid.COLS}x{grid.ROWS} hexes of {grid.METRES_PER_HEX} m")
-    if entry.seconds_per_turn != SECONDS_PER_TURN:
-        problems.append(f"turns must be {SECONDS_PER_TURN} seconds")
+    if (entry.map.cols, entry.map.rows) != (grid.COLS, grid.ROWS):
+        problems.append(f"map must be {grid.COLS}x{grid.ROWS} hexes")
+    # docs/research/68: a scale other than 50 m and 30 s needs army rules (scenario_army).
+    problems.extend(scenario_army.problems(entry))
     catalog = GATE_ORDER_CATALOG if _has_gates(entry) else ORDER_CATALOG
     if tuple(entry.order_catalog) != catalog:
         problems.append(f"order catalog must be {catalog}")
@@ -347,6 +363,7 @@ def validate(entry):
     problems.extend(scenario_roster.scripted_problems(entry))
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
+    problems.extend(scenario_command.side_profile_problems(entry, COMMUNICATIONS))  # docs/research/68
     if entry.voice_profile not in VOICE_PROFILES:
         problems.append(f"voice profile must be one of {tuple(VOICE_PROFILES)}")
     if not entry.prompt_version or not all(s.mission for s in entry.sides.values()):
@@ -431,6 +448,8 @@ def build_state(entry, rules=None):
         raise ValueError(f"{rules} has no declared rout_strength, press_assault, gun facing, surrender, exploit, seize-and-hold, raid-and-return or recover-force; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_broadcast.declares(entry):
         raise ValueError(f"{rules} has no broadcast signals; they need poc-13.")
+    if not _at_least(rules, 'poc-13') and scenario_army.declares(entry):
+        raise ValueError(f"{rules} has no army-scale rules; they need poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))
@@ -454,7 +473,7 @@ def build_state(entry, rules=None):
         # Staff are attached to existing aggregate detachments, not extra soldiers.
         s['commanders'] = {side: {'controller_id': side + '-commander',
                                   'unit_id': spec.command_unit,
-                                  'communications': entry.communications}
+                                  'communications': spec.communications or entry.communications}
                            for side, spec in entry.sides.items()}
         s['hq'] = {side: next(list(u['pos']) for u in units if u['id'] == c['unit_id'])
                    for side, c in s['commanders'].items()}
@@ -505,6 +524,7 @@ def build_state(entry, rules=None):
         scenario_command.setup(s, entry, units)  # poc-13B: writes nothing without the data.
         scenario_wwii.setup(s, entry, units)  # docs/research/53: nor does the 1944 data.
         scenario_broadcast.setup(s, entry)  # docs/research/60: nor do signals.
+        scenario_army.setup(s, entry, units)  # docs/research/68: nor do army-scale rules.
     return s
 
 

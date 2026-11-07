@@ -1,7 +1,7 @@
 """Pure deterministic state transitions. Models never adjudicate effects."""
 from copy import deepcopy
 from . import grid,recon,tactics,comms,command,formations,features,gates,recommendations,standing,victory
-from . import bridges,signals,facing,captives,broadcast
+from . import bridges,signals,facing,captives,broadcast,army
 from . import orders as order_rules
 from .scenario import SIDES
 from .scenario_entry import LEGACY_ROLES
@@ -113,7 +113,7 @@ def issue(s,side,order,source='human'):
 def estimate(s,arrival_turn):
     """Headquarters' delivery estimate in words; unknown without a known route."""
     if arrival_turn is None:return 'Expected delivery time unknown; no known route.'
-    return f'Expected delivery in {(arrival_turn-s["turn"])*30} seconds.'
+    return f'Expected delivery in {(arrival_turn-s["turn"])*s["seconds_per_turn"]} seconds.'  # docs/research/68
 
 def summary(u):
     result={k:deepcopy(u[k]) for k in ('id','side','name','pos','initial','strength','ammo','morale','suppression','fatigue','status','target','stance','order_version')}
@@ -234,15 +234,17 @@ def in_reach(s,u):
     return [e for e in s['units'] if e['side']!=u['side'] and e['strength']>0
             and grid.distance(u['pos'],e['pos'])<=min(5,reach) and recon.sees(s,u,e['pos'])]
 
-def volley(s,u,damage,suppression):
+def volley(s,u,damage,suppression,strain=None):
     """One unit's volley at the nearest visible enemy in range, from the
     pre-damage snapshot; adds to ``damage`` and ``suppression``. A volley by
-    a unit holding fire is marked ``returning_fire`` (poc-13)."""
+    a unit holding fire is marked ``returning_fire`` (poc-13). Under army
+    rules ``army.volley`` fires instead and adds to ``strain`` (docs/research/68)."""
     enemies=facing.targets(u,in_reach(s,u))  # docs/research/59: a declared arc and turning delay.
     weapon=s.get('weapon_rules',{}).get(u.get('weapon_class'))
     if not enemies: return
     target=min(enemies,key=lambda e:(grid.distance(u['pos'],e['pos']),e['id']))
     d=grid.distance(u['pos'],target['pos']); cover=s['cells'][grid.key(target['pos'])]['cover']
+    if army.on(s):return army.volley(s,u,target,d,cover,weapon,damage,suppression,strain,emit)
     rounds=min(u['ammo'],u['strength']); u['ammo']-=rounds
     # Integer exposure accumulation; synthetic POC coefficient, not historical ballistics.
     exposure=(8-d) if not weapon else (weapon['range_hexes']+1-d)*7//weapon['range_hexes']
@@ -253,6 +255,35 @@ def volley(s,u,damage,suppression):
     suppression[target['id']]+=max(2,rounds//4)
     extra={'returning_fire':True} if u.get('fire_posture')=='hold_fire' else {}
     emit(s,'volley',unit_id=u['id'],target_id=target['id'],rounds=rounds,exposure=effect,**extra)
+
+def step(s,u,target,occupied,moves):
+    """Proposes ``u``'s next hex toward ``target`` into ``moves`` when its
+    credit covers the cost: over the live terrain around ``occupied`` hexes,
+    or to a shut compound's gate (poc-10)."""
+    route=grid.path(s['cells'],u['pos'],target,blocked=occupied)
+    gateway=None if route else gates.approach(s,u['pos'],target)
+    if gateway and u['pos']!=gateway:
+        # poc-10: a shut compound is approached at its gate, which is then forced.
+        route=grid.path(s['cells'],u['pos'],gateway,blocked=occupied)
+    if route:
+        nxt=route[0]; cost=grid.cost(s['cells'],u['pos'],nxt)
+        if u['move_credit']>=cost:
+            moves.append((u,nxt,cost))
+
+def relocate(s,allowed):
+    """Moves each unit of ``allowed`` (unit, hex, cost) and returns them in
+    order; reaching the ordered hex completes the order. Under army rules the
+    unit's front follows the move (``army.moved``, docs/research/68)."""
+    moved=[]
+    for u,p,cost in allowed:
+        u.pop('contest_wait',None)
+        old=u['pos']; u['pos']=p; u['move_credit']-=cost; u['fatigue']=min(100,u['fatigue']+3)
+        emit(s,'unit_moved',unit_id=u['id'],origin=old,destination=p,decision_seq=u['local_decision_seq'])
+        if army.on(s):army.moved(s,u,old,p,emit)
+        if p==u['target'] and u['stance'] not in ('resupply','recon'):
+            order_rules.complete(s,u,'Assigned position reached.')
+        moved.append(u)
+    return moved
 
 def advance(s):
     """Mutates only supplied state; all fire uses the same pre-damage snapshot."""
@@ -331,6 +362,7 @@ def advance(s):
     for u in sorted(s['units'],key=lambda x:x['id']):
         if u['strength']<=0:continue
         decision=standing.exploit(s,u,order_rules.decide(s,u,local_sightings.get(u['id'],[])))  # docs/research/60
+        if army.on(s):decision=army.doctrine(s,u,decision,local_sightings.get(u['id'],[]),emit)  # docs/research/68
         changed=(u.get('local_action'),u.get('local_reason'))!=(decision['action'],decision['reason'])
         if decision['action']=='withdraw' and u.get('local_action')!='withdraw':u['withdraw_until']=s['turn']+3
         u.update(local_action=decision['action'],local_reason=decision['reason'],tactical_target=decision['target'])
@@ -347,30 +379,27 @@ def advance(s):
         if u['status']=='routed': u['target']=s['rally_points'][u['side']]
         move_target=(u['target'] if u['local_action'] in ('continue','route') else u.get('tactical_target'))
         if move_target is not None and u['pos']!=move_target:
-            u['move_credit']=min(400,u['move_credit']+max(45,115-u['fatigue']//3-u['suppression']//2))
-            route=grid.path(s['cells'],u['pos'],move_target,blocked=occupied)
-            gateway=None if route else gates.approach(s,u['pos'],move_target)
-            if gateway and u['pos']!=gateway:
-                # poc-10: a shut compound is approached at its gate, which is then forced.
-                route=grid.path(s['cells'],u['pos'],gateway,blocked=occupied)
-            if route:
-                nxt=route[0]; cost=grid.cost(s['cells'],u['pos'],nxt)
-                if u['move_credit']>=cost:
-                    moves.append((u,nxt,cost))
+            rate=army.rate(u)  # docs/research/68: 1 unless the unit declares move_rate.
+            u['move_credit']=min(400*rate,u['move_credit']+max(45,115-u['fatigue']//3-u['suppression']//2)*rate)
+            step(s,u,move_target,occupied,moves)
         elif u['stance'] not in ('rest','dig_in') and u['local_action'] in ('hold','observe') and s['turn']-u.get('last_attacked_turn',-99)>1:
             u['fatigue']=max(0,u['fatigue']-2)
             if u['status']!='routed': u['morale']=min(90,u['morale']+1)
     # A conservative occupancy rule: no swaps or stacking. poc-12: one of the
     # units wanting a free hex enters it (contest); the others wait.
-    for u,p,cost in contest(s,moves,occupied):
-        u.pop('contest_wait',None)
-        old=u['pos']; u['pos']=p; u['move_credit']-=cost; u['fatigue']=min(100,u['fatigue']+3)
-        emit(s,'unit_moved',unit_id=u['id'],origin=old,destination=p,decision_seq=u['local_decision_seq'])
-        if p==u['target'] and u['stance'] not in ('resupply','recon'):
-            order_rules.complete(s,u,'Assigned position reached.')
+    moved=relocate(s,contest(s,moves,occupied))
+    for n in range(1,army.max_rate(s)):  # docs/research/68: a faster unit's further steps; none by default.
+        occupied={grid.key(u['pos']):u for u in s['units'] if u['strength']>0}
+        moves=[]
+        for u in moved:
+            target=u['target'] if u['local_action'] in ('continue','route') else u.get('tactical_target')
+            if army.rate(u)>n and u['strength']>0 and target is not None and u['pos']!=target:
+                step(s,u,target,occupied,moves)
+        moved=relocate(s,contest(s,moves,occupied))
     for u in sorted(s['units'],key=lambda x:x['id']):  # docs/research/59: guns turn whatever their posture.
         if 'facing' in u and u['strength']>0 and u['status']!='routed':facing.progress(s,u,in_reach(s,u),emit)
     damage={u['id']:0 for u in s['units']}; suppression={u['id']:0 for u in s['units']}
+    strain={u['id']:0 for u in s['units']}  # docs/research/68: the flank and rear share for morale.
     holding=[]
     by_command=s['fire_rules'].get('release_by','unit')=='command'
     if by_command:  # docs/research/50: delegated intent; the command may order fire for a unit hit last interval.
@@ -382,7 +411,7 @@ def advance(s):
         # poc-13: a unit holding fire fires only if fired upon in the previous interval ...
         if u.get('fire_posture')=='hold_fire' and not fired_upon(s,u,s['turn']-1):
             holding.append(u);continue
-        volley(s,u,damage,suppression)
+        volley(s,u,damage,suppression,strain)
     # ... or in this one. The released set is fixed before any return volley.
     warning=s['fire_rules']['warning_shots_release']
     released=[u for u in holding if suppression[u['id']]>0
@@ -390,7 +419,7 @@ def advance(s):
     if by_command:  # docs/research/50: the command may order fire before any return volley.
         opened=command.release(s,released,emit,enqueue,message,validate_order)|{u['id'] for u in released}
         released=[u for u in holding if u['id'] in opened]
-    for u in released:volley(s,u,damage,suppression)
+    for u in released:volley(s,u,damage,suppression,strain)
     for u in s['units']:
         if u['status']=='merged':continue
         if suppression[u['id']]>0:
@@ -400,7 +429,8 @@ def advance(s):
         losses=min(old,u['loss_credit']//100); u['loss_credit']%=100
         u['strength']-=losses
         u['suppression']=min(100,u['suppression']+suppression[u['id']])
-        u['morale']=max(0,u['morale']-losses*4-(2 if u['suppression']>65 else 0))
+        shaken=army.morale_loss(s,u,damage[u['id']],strain[u['id']]) if army.on(s) else losses*4  # docs/research/68
+        u['morale']=max(0,u['morale']-shaken-(2 if u['suppression']>65 else 0))
         if losses: emit(s,'casualties',unit_id=u['id'],count=losses,remaining=u['strength'])
         command.officer_losses(s,u,losses,emit,enqueue)  # poc-13B: an officer may fall.
         if u['strength']==0: u['status']='lost'

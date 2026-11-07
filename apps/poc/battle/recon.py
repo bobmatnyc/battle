@@ -56,6 +56,8 @@ def scan(s):
             contact={'id':enemy['id'],'pos':deepcopy(enemy['pos']),'side':enemy['side'],'status':'observed',
                      **estimate(enemy,quality,distance),'observer_id':observer['id'],'observer_role':role,
                      'exposure_intervals':exposure,'report_delay':observer.get('report_delay',3 if role=='spy' else 1)}
+            # docs/research/68: at army scale a broken formation in flight is seen as such; no other battle has the key.
+            if 'army_rules' in s and enemy['status']=='routed':contact['routed']=True
             own[enemy['id']]={'last_seen':s['turn'],'exposure':exposure}
             contacts.append(contact)
         sightings[observer['id']]=contacts

@@ -376,10 +376,11 @@ class SelectionTests(unittest.TestCase):
             )
             self.assertEqual(cli.returncode, 2)
             # Headless runs also offer Concord (docs/research/48), its v1 entry (docs/research/50),
-            # Pegasus Bridge (docs/research/54), Hill 223 (docs/research/61) and Gergovia (docs/research/62).
+            # Pegasus Bridge (docs/research/54), Hill 223 (docs/research/61), Gergovia (docs/research/62)
+            # and Cannae (docs/research/68).
             self.assertIn("Unknown scenario 'nope'. Known scenarios: little-round-top, hougoumont-north-gate, "
                           "concord-north-bridge, concord-north-bridge-v1, pegasus-bridge, hill-223-patrol, "
-                          "gergovia-recall.", cli.stderr)
+                          "gergovia-recall, cannae-envelopment.", cli.stderr)
             self.assertFalse(db.exists())
 
     def test_entry_build_does_not_mutate_entry_data(self):

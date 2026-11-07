@@ -227,7 +227,9 @@ def _recover_only_problems(entry):
     v = entry.victory
     if v.kind != RecoverForce.kind and any(getattr(v, name) != empty for name, empty in RECOVER_FIELDS):
         return [f"{v.kind} does not read {', '.join(name for name, _ in RECOVER_FIELDS)}; use recover-force"]
-    return []
+    from .victory_encircle import encircle_only_problems  # docs/research/68
+
+    return encircle_only_problems(entry)
 
 
 class SeizeAndHold:
@@ -542,8 +544,14 @@ class RecoverForce:
         return None, None
 
 
-KINDS = {kind.kind: kind for kind in (HoldObjective(), HoldCompound(), SeizeAndHold(), RaidAndReturn(),
-                                     RecoverForce())}
+def _kinds():
+    from .victory_encircle import Encircle  # docs/research/68; it imports this module's helpers.
+
+    return {kind.kind: kind for kind in (HoldObjective(), HoldCompound(), SeizeAndHold(), RaidAndReturn(),
+                                         RecoverForce(), Encircle())}
+
+
+KINDS = _kinds()
 
 
 def score(s):

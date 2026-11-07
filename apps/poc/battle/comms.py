@@ -29,7 +29,14 @@ WWI={**PROFILE,'id':'wwi-1918-voice-runner-v1','label':'1918 · voice / runner',
 # entry's ``voice_reach``, else by runner at the 1863 rates. Reaches are entry data.
 ROMAN={**PROFILE,'id':'roman-republic-signal-v1','label':'52 BCE · trumpet signal / voice / runner',
        'methods':['signal','voice','courier'],'voice_reach_from_entry':True,'broadcast':True}
-PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL,WWII,WWI,ROMAN)}
+# docs/research/68 (doc 63 §6, gap 8): Cannae, 216 BCE. Voice within the entry's reach
+# (1 hex, 200 m), else a mounted messenger at the 1863 rates (2 open hexes an interval,
+# expiry 20); the Roman profile also sounds the trumpet. Rates and reaches are authored.
+ROMAN_216={**PROFILE,'id':'roman-216-v1','label':'216 BCE · trumpet / voice / mounted messenger',
+           'methods':['signal','voice','courier'],'voice_reach_from_entry':True,'broadcast':True}
+CARTHAGE_216={**PROFILE,'id':'carthage-216-v1','label':'216 BCE · voice / mounted messenger',
+              'methods':['voice','courier'],'voice_reach_from_entry':True}
+PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL,WWII,WWI,ROMAN,ROMAN_216,CARTHAGE_216)}
 
 def command_unit(s,side):
     uid=s['commanders'][side]['unit_id']

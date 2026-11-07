@@ -11,6 +11,7 @@ from .config import Settings
 from .presentation import present_view
 from .scenario import LITTLE_ROUND_TOP
 from .scenario_concord import CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1
+from .scenario_cannae import CANNAE_ENVELOPMENT
 from .scenario_gergovia import GERGOVIA_RECALL
 from .scenario_hill223 import HILL_223_PATROL
 from .scenario_hougoumont import HOUGOUMONT_NORTH_GATE
@@ -28,9 +29,10 @@ PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE)
 # v1 games still open (docs/research/50), and Pegasus Bridge, whose canal the
 # desk cannot draw either (docs/research/54), Hill 223, whose ravine it
 # cannot draw (docs/research/56 §9 q6, 61), and Gergovia, whose signal and
-# valley it cannot draw (docs/research/57 §9 q7, 62).
+# valley it cannot draw (docs/research/57 §9 q7, 62), and Cannae, whose army
+# scale and river it cannot draw (docs/research/63 §9 q12, 68).
 HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1, PEGASUS_BRIDGE,
-                                         HILL_223_PATROL, GERGOVIA_RECALL)
+                                         HILL_223_PATROL, GERGOVIA_RECALL, CANNAE_ENVELOPMENT)
 
 
 def build_scenarios():

@@ -139,7 +139,7 @@ def problems(entry):
 
 
 # Victory kinds only poc-13 scores (docs/research/54, 59, 60); engine_v12 must never see one.
-POC13_VICTORY_KINDS = ("seize-and-hold", "raid-and-return", "recover-force")  # docs/research/60
+POC13_VICTORY_KINDS = ("seize-and-hold", "raid-and-return", "recover-force", "encircle")  # docs/research/60, 68
 
 
 def declares(entry):

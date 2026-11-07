@@ -18,6 +18,9 @@ COLONIAL_COMMUNICATIONS = "colonial-1775-voice-v1"
 WWI_COMMUNICATIONS = "wwi-1918-voice-runner-v1"
 # docs/research/60: Roman trumpet signal, voice and runner; the entry declares the voice reach.
 ROMAN_COMMUNICATIONS = "roman-republic-signal-v1"
+# docs/research/68 (doc 63 §6): the armies at Cannae, 216 BCE; the entry declares the voice reach.
+ROMAN_216_COMMUNICATIONS = "roman-216-v1"
+CARTHAGE_216_COMMUNICATIONS = "carthage-216-v1"
 MAX_FIRE_RANGE = 5  # engine.volley never fires beyond 5 hexes.
 DEFAULT_WEAPON_CLASS = "rifled muskets"  # scenario_entry.unit()'s class.
 # docs/research/55: the one tactics edition an entry may select; None is tactics_v10.
@@ -106,6 +109,31 @@ def _reach_problems(entry):
             f"voice_reach is read only by {WWI_COMMUNICATIONS} and {ROMAN_COMMUNICATIONS}, not {entry.communications}"]
     return [] if _count(entry.voice_reach) else [
         f"{entry.communications} needs an entry voice_reach of 0 or more hexes, not {entry.voice_reach!r}"]
+
+
+def side_profile_problems(entry, known):
+    """docs/research/68: a side's own profile (``SideEntry.communications``) is
+    one of ``known`` and takes its voice reach from the entry exactly when the
+    entry's profile does, so ``voice_reach`` means one thing; a side that
+    sounds a broadcast needs a profile that sounds one.
+    Test: `test_side_profiles_are_checked_at_registration`."""
+    from . import comms
+
+    found = []
+    for side, spec in entry.sides.items():
+        own = spec.communications
+        if own is None:
+            continue
+        if own not in known:
+            found.append(f"{side} communications must be one of {known}")
+        elif bool(comms.PROFILES[own].get("voice_reach_from_entry")) != _takes_reach(entry):
+            found.append(f"{side} profile {own} and the entry's {entry.communications} must both take, or both "
+                         "not take, the entry's voice_reach")
+    for b in entry.broadcasts or ():
+        own = getattr(entry.sides.get(b.side), "communications", None) or entry.communications
+        if not comms.PROFILES.get(own, {}).get("broadcast"):
+            found.append(f"broadcast {b.id!r} needs a {b.side} profile that sounds it, not {own}")
+    return found
 
 
 def command_problems(entry):
