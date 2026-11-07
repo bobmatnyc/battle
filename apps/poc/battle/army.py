@@ -85,21 +85,28 @@ def volley(s, u, target, distance, cover, weapon, damage, suppression, strain, e
 def morale_loss(s, u, damage, strain):
     """Morale points ``u`` loses this interval: ``morale_per_pct`` per per cent
     of its starting strength in this interval's loss (``damage``, in hundredths
-    of a man) plus the flank and rear ``strain``.
-    Test: `test_morale_falls_by_share_of_strength_not_by_man`."""
-    return (damage + strain) * s['army_rules']['morale_per_pct'] // max(1, u['initial'])
+    of a man) plus the flank and rear ``strain``. The remainder below one
+    point carries to the next interval in ``morale_credit``, as
+    ``loss_credit`` carries a fraction of a man.
+    Test: `test_morale_falls_by_share_of_strength_not_by_man`,
+    `test_the_morale_remainder_carries_across_intervals`."""
+    total = (damage + strain) * s['army_rules']['morale_per_pct'] + u.get('morale_credit', 0)
+    points, u['morale_credit'] = divmod(total, max(1, u['initial']))
+    return points
 
 
 def moved(s, u, origin, destination, emit):
     """After ``u`` moves: a step forward, an attack or a flight turns its
     ``front`` to the move's bearing; a yield counts toward its limit and keeps
-    the front (``unit_yielded``); any other step back keeps it too.
+    the front (``unit_yielded``); any other step back keeps it too, and so
+    does any move under an ordered retreat (stance ``retreat``), which
+    ``orders.decide`` reports as ``continue`` when no enemy is near.
     Test: `test_the_front_follows_movement_but_not_a_step_back`."""
     action = u.get('local_action')
     if action == 'yield':
         u['yielded'] = u.get('yielded', 0) + 1
         emit(s, 'unit_yielded', unit_id=u['id'], yielded=u['yielded'], limit=u['yield']['limit'])
-    elif action in TURNING:
+    elif action in TURNING and u.get('stance') != 'retreat':
         u['front'] = facing.bearing(origin, destination)
 
 

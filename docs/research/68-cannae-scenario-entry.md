@@ -25,7 +25,7 @@ Every rule below is read only when the snapshot carries `army_rules` (written by
 |---|---|---|
 | 1 Declared scale | The validator accepts 200 m and 180 s (`ARMY_SCALES`) for an entry with army rules; any other scale is refused. The delivery estimate reads the snapshot's `seconds_per_turn` (30 in every other battle, so its text is unchanged). The snapshot stores `metres_per_hex` only under army rules. The other readers already took the entry's values (`analysis.py`, `static/app.js`, the prompt) | `scenario_army.problems`, `engine.estimate` |
 | 2 Per-unit speed | Unit key `move_rate` (1 to 3). A unit earns its move credit times its rate and takes up to that many steps an interval; each further step has its own contest for free hexes | `engine.step`, `engine.relocate`, `army.rate` |
-| 3 Losses and morale | A volley fires `engaged_pct` of the unit's strength; a shock class (`shock_classes`) spends no ammunition; suppression grows with the engaged men as a share of the target's strength; morale falls `morale_per_pct` points per per cent of starting strength lost | `army.volley`, `army.morale_loss` |
+| 3 Losses and morale | A volley fires `engaged_pct` of the unit's strength; a shock class (`shock_classes`) spends no ammunition; suppression grows with the engaged men as a share of the target's strength; morale falls `morale_per_pct` points per per cent of starting strength lost, the remainder carried in `morale_credit`; a move under an ordered retreat keeps the front | `army.volley`, `army.morale_loss` |
 | 4 Flank and rear | Every unit has a `front` (each side's bearing at the start; a forward move, an attack or a flight turns it; a yield or other step back keeps it). A blow from 60 degrees or less is frontal, 150 or more is in the rear, the rest a flank; the loss is multiplied by `flank_pct` or `rear_pct` and the extra share counts again toward morale | `army.aspect`, `army.moved` |
 | 5 Sector commanders | **Not built** (D86: scripted orders; 63 §9 q10) | — |
 | 6 Wheel and yield | Unit keys `yield` {`limit`, `rear_step`} and `wheel` {`reach`, `front_row`, `rear_step`}, read from the unit's own sightings (§3) | `army.doctrine` |
@@ -71,7 +71,7 @@ Each is labelled in the entry's `provenance` or at its change site with the D86 
 | Value | Default | Basis |
 |---|---|---|
 | Engaged share of a volley (`engaged_pct`) | 13 per cent | A 200 m front of a block about 35 deep fights with a few ranks; two equal heavy units then lose about 1 per cent an interval, so a frontal fight lasts hours (63 gap 3's target) |
-| Morale per per cent lost (`morale_per_pct`) | 2 | A unit that loses about 28 per cent frontally reaches the rout floor (28) from 85 |
+| Morale per per cent lost (`morale_per_pct`) | 2 | From 85 a unit routs below 28, 58 points: about 29 per cent of its strength lost frontally, less any recovery between fights. The remainder below a point carries to the next interval (`morale_credit`), so small losses add up |
 | Flank and rear (`flank_pct`, `rear_pct`) | 150 and 200 per cent, in men and again in morale | Authored; S65 III.115-116 give the effect, not a ratio |
 | Aspect bounds | front within 60 degrees, rear from 150 | Two front, two flank and two rear hexes for a unit facing up or down the map |
 | Fronts | Roman 0, Carthaginian 180 | Up and down the map; no compass bearing (63 §7) |
@@ -130,7 +130,7 @@ Each interval `enclosure` blocks every hex held by a live Carthaginian unit and 
 
 ## 7. Tests
 
-`tests/test_army.py` (25 tests) covers the declared scale, the army data and unit-key checks, the side profiles, the delivery estimate, the engaged-share volley, the rear multiplier, morale by share, the front, the cavalry's three steps, the routed contact, the yield and its limit, the wheel and its trigger, the enclosure measure with `zoc` 1 and 0, the three `encircle` outcomes, headquarters knowledge, the field refusal by other kinds, and the opt-in digests. `tests/test_cannae.py` (13 tests) covers the registration, every 63 §8 default, the D86 labels, the designed yield against `no-design`, each variant's difference, the policy registration, each scripted order's locator or label, the light-troops and advance sequence, Hasdrubal's trigger, the charge, the cavalry delay, the deserters, and a 12-interval headless run with its replay check.
+`tests/test_army.py` (26 tests) covers the declared scale, the army data and unit-key checks, the side profiles, the delivery estimate, the engaged-share volley, the rear multiplier, morale by share and its carried remainder, the front, the cavalry's three steps, the routed contact, the yield and its limit, the wheel and its trigger, the enclosure measure with `zoc` 1 and 0, the three `encircle` outcomes, headquarters knowledge, the field refusal by other kinds, and the opt-in digests. `tests/test_cannae.py` (13 tests) covers the registration, every 63 §8 default, the D86 labels, the designed yield against `no-design`, each variant's difference, the policy registration, each scripted order's locator or label, the light-troops and advance sequence, Hasdrubal's trigger, the charge, the cavalry delay, the deserters, and a 12-interval headless run with its replay check.
 
 ## 8. Open questions for the owner (before the EVO runs)
 

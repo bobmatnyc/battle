@@ -142,6 +142,13 @@ class FireMoraleAndFrontTests(unittest.TestCase):
         s = advance(field(("L1", (10, 10)), ("C1", (10, 11))))
         self.assertGreater(unit(s, "C1")["morale"], 28)  # 4 a man would have routed it at once.
 
+    def test_the_morale_remainder_carries_across_intervals(self):
+        s, u = {"army_rules": {"morale_per_pct": 2}}, {"initial": 3550}
+        # 1,700 hundredths (17 men) a time is under 1 point each; 20 such hits are 340 men, 9.6 per cent.
+        total = sum(army.morale_loss(s, u, 1700, 0) for _ in range(20))
+        self.assertEqual(total, 20 * 1700 * 2 // 3550)  # 19 points, not 0.
+        self.assertEqual(u["morale_credit"], 20 * 1700 * 2 % 3550)
+
     def test_the_front_follows_movement_but_not_a_step_back(self):
         events = []
         emit = lambda s, kind, **d: events.append((kind, d))
@@ -154,6 +161,10 @@ class FireMoraleAndFrontTests(unittest.TestCase):
         u["local_action"] = "withdraw"
         army.moved({}, u, [10, 10], [11, 10], emit)
         self.assertEqual(u["front"], 150)
+        # An ordered retreat with no enemy near decides ``continue`` (orders.decide); it still keeps the front.
+        v = {"id": "V1", "front": 0, "local_action": "continue", "stance": "retreat"}
+        army.moved({}, v, [10, 10], [10, 11], emit)
+        self.assertEqual(v["front"], 0)
 
     def test_a_cavalry_unit_moves_three_hexes_an_interval(self):
         s = field(("EQ", (5, 15)), ("C1", (20, 0)))

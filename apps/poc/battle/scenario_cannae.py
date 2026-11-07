@@ -202,7 +202,7 @@ WEAPONS = {
 # loss and morale scaling to implementation: 13 per cent of a unit fights in a volley
 # (a 200 m front of a block about 35 deep, a few ranks engaged), so two equal heavy
 # units lose about 1 per cent an interval and a frontal fight lasts hours; morale
-# falls 2 points per per cent lost, so a unit that loses about 28 per cent routs
+# falls 2 points per per cent lost, so a unit that loses about 29 per cent routs
 # frontally; a flank blow costs 1.5 times, a rear blow 2 times, in men and again in
 # morale (gap 4). Basis: the authored target "the day takes hours" (doc 63 gap 3).
 ARMY = ArmyEntry(engaged_pct=13, morale_per_pct=2, flank_pct=150, rear_pct=200,
