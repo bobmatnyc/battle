@@ -15,7 +15,7 @@ Labels follow 52: **sourced** (S-id and locator; Sources S50 to S56 in [09](09-s
 | Scripted controls | `battle/pegasus_policy.py` | British S1 coup de main; German G1 guard and alarm; German G2 early alarm |
 | Demolition trigger | `bridges.demolish`, `scenario_wwii.DemolitionEntry` | New rule, off unless a bridge declares it (§3) |
 | Victory kind `seize-and-hold` | `victory.SeizeAndHold` | New kind, named only by this entry (§3) |
-| Runs | `scripts/pegasus_runs.py` | One JSON line a run |
+| Runs | `scripts/pegasus_runs.py` | One JSON line a run. Since bt-T02 each run is stored by `battle/batch_store.py` (inputs and a digest per revision, full snapshots at start and end; `--full-snapshots` for the old store); a 360-turn run fell from 1.2 GB to 26 MB, and the JSON line is byte-identical |
 | Tests | `tests/test_pegasus_rules.py`, `tests/test_pegasus.py` | §6 |
 
 ## 2. Rules-edition decision

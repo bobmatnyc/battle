@@ -66,6 +66,9 @@ class Store:
     def _records(self,db,gid,state):
         raw=encode(state)
         db.execute('INSERT INTO snapshots VALUES(?,?,?,?,?)',(gid,state['revision'],state['turn'],raw,hashlib.sha256(raw.encode()).hexdigest()))
+        self._audit(db,gid,state)
+    def _audit(self,db,gid,state):
+        # Current units, new events/decisions and chat messages: every store mode writes these.
         for u in state['units']:
             db.execute('INSERT OR REPLACE INTO units VALUES(?,?,?,?)',(gid,u['id'],u['side'],encode(u)))
         count=db.execute('SELECT COUNT(*) FROM events WHERE game_id=?',(gid,)).fetchone()[0]

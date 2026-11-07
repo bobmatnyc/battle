@@ -153,6 +153,7 @@ New code should use these interfaces and the composition root. Preserve atomic e
 | `battle/runtime.py` | Recorded transitions and deterministic replay |
 | `battle/orders.py` | Versioned order catalog, bounded missions, recovery and finite ammunition pickup |
 | `battle/storage.py` | SQLite transactions, snapshots and audit records |
+| `battle/batch_store.py` | Opt-in batch recording (`build_headless(..., keyframe_every=K)`, `scripts/pegasus_runs.py`): inputs and digests per revision, full snapshots only at the start, the end and every K-th revision; replay re-runs the inputs |
 | `battle/server.py` | Local HTTP API and static UI |
 | `static/map-view.js` | MapLibre camera, local projection, vector terrain and fallback |
 | `static/cartography.js` | Shared terrain geometry and SVG annotations/fallback |

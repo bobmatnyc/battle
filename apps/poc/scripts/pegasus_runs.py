@@ -10,6 +10,10 @@ time, the reason, replay status, each bridge's state changes with turn and
 cause, the demolition arming turn, the seize/lapse history, each codeword's
 sent and delivered turns, losses per side, the turn each reserve group first
 fires, and the event count. The engine draws no random number.
+Each run is stored by ``BatchStore`` (``battle/batch_store.py``): the recorded
+inputs and a digest per revision, full snapshots only at the start and end
+(``--keyframe-every K``: also every K-th revision), and the replay re-runs the
+inputs. ``--full-snapshots`` stores every revision as the HTTP game does.
 Usage, from apps/poc: ``python3 scripts/pegasus_runs.py [--only baseline]``.
 """
 
@@ -66,10 +70,11 @@ def summarise(name, entry, result, final):
     }
 
 
-def run(name, directory):
+def run(name, directory, keyframe_every=0):
     entry = ENTRIES[name]
     db = Path(directory) / f"pegasus-{name}.sqlite"
-    result = build_headless(db, scenario_id=entry.id, scenarios=ScenarioRegistry([entry])).run()
+    result = build_headless(db, scenario_id=entry.id, scenarios=ScenarioRegistry([entry]),
+                            keyframe_every=keyframe_every).run()
     final = build_replay(db).repository.load(result["game_id"])
     return summarise(name, entry, result, final)
 
@@ -78,11 +83,18 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--only", action="append", choices=sorted(ENTRIES))
     parser.add_argument("--dir", help="keep the databases here (default: a temporary directory)")
+    store = parser.add_mutually_exclusive_group()
+    store.add_argument("--keyframe-every", type=int, default=0, metavar="K",
+                       help="also keep a full snapshot every K revisions (default 0: start and end only)")
+    store.add_argument("--full-snapshots", action="store_true", help="store every revision's full snapshot")
     args = parser.parse_args()
+    if args.keyframe_every < 0:
+        parser.error("--keyframe-every must be 0 or more")
+    keyframe_every = None if args.full_snapshots else args.keyframe_every
     names = args.only or list(ENTRIES)
     with tempfile.TemporaryDirectory() as tmp:
         for name in names:
-            print(json.dumps(run(name, args.dir or tmp), sort_keys=True), flush=True)
+            print(json.dumps(run(name, args.dir or tmp, keyframe_every), sort_keys=True), flush=True)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 from . import analysis
+from .batch_store import BatchStore, recorded_in
 from .adapters.openrouter import OpenRouterProvider
 from .adapters.rules import RulesSimulation, ScenarioRegistry
 from .clock import SimulationClock
@@ -70,7 +71,9 @@ def build_application(db, *, offline=False, settings=None, scenario_id=None):
 
 def build_replay(db):
     # Replaying requires neither provider configuration nor clock construction.
-    return ReplayService(Store(db), RulesSimulation())
+    # A database written by a batch run (``BatchStore``) re-runs its recorded inputs.
+    store = BatchStore(db) if recorded_in(db) else Store(db)
+    return ReplayService(store, RulesSimulation())
 
 
 def build_headless(
@@ -88,6 +91,7 @@ def build_headless(
     scenario_id=None,
     scenarios=None,
     player_policy=None,
+    keyframe_every=None,
 ):
     """Why: the headless run composes its player provider here, never in services.
     What: ``scripted`` uses ``DisabledProvider``; ``openrouter`` builds the
@@ -98,9 +102,13 @@ def build_headless(
     headless catalog, the player scenarios plus Concord); an unknown id raises ``UnknownScenario`` before
     any credential is read or database opened. ``player_side`` None is the
     scenario's player side; a side the scenario lacks raises ValueError.
+    ``keyframe_every`` None stores every revision's snapshot (``Store``); a
+    whole number opts a batch run into ``BatchStore``: inputs and digests per
+    revision, full snapshots at revision 0, the end and every K-th revision.
     Test: `test_build_headless_composes_openrouter_overrides`,
     `test_build_headless_refuses_openrouter_without_credential`,
-    `test_build_headless_refuses_unknown_scenario`.
+    `test_build_headless_refuses_unknown_scenario`,
+    `test_batch_run_keeps_the_pinned_digest_and_only_the_end_snapshots`.
     """
     from .adapters.openrouter import DisabledProvider
     from .services.headless import HeadlessRunner
@@ -130,7 +138,7 @@ def build_headless(
             )
     elif provider is None:
         provider = DisabledProvider()
-    repository = Store(db)
+    repository = Store(db) if keyframe_every is None else BatchStore(db, keyframe_every)
     simulation = RulesSimulation()
     commander = CommanderService(simulation, provider, scenarios=scenarios)
     return HeadlessRunner(
