@@ -1,6 +1,6 @@
 """Recorded input transitions: replay never calls a model or wall clock."""
 from copy import deepcopy
-from . import engine,formations,recommendations,standing
+from . import broadcast,engine,formations,recommendations,standing
 
 def apply(state,action):
     """Why: one recorded action changes one snapshot, identically on replay.
@@ -37,6 +37,8 @@ def apply(state,action):
         else:recommendations.respond(s,player,action['recommendation_id'],action['response'])
     elif action['type']=='standing':
         standing.issue(s,player,action['instruction'])
+    elif action['type']=='signal':  # docs/research/60: no earlier save holds this action type.
+        broadcast.order(s,player,action.get('signal_id'))
     elif action['type']=='advance':
         decision=action.get('decision')
         if decision:record_decision(s,decision)

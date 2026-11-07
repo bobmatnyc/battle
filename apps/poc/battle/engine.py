@@ -1,7 +1,7 @@
 """Pure deterministic state transitions. Models never adjudicate effects."""
 from copy import deepcopy
 from . import grid,recon,tactics,comms,command,formations,features,gates,recommendations,standing,victory
-from . import bridges,signals,facing,captives
+from . import bridges,signals,facing,captives,broadcast
 from . import orders as order_rules
 from .scenario import SIDES
 from .scenario_entry import LEGACY_ROLES
@@ -322,6 +322,7 @@ def advance(s):
         emit(s,'order_'+o['status'],order_id=o['id'],unit_id=u['id'],version=o['version'])
         enqueue(s,o['side'],f'{u["id"]}: order {o["id"]} {o["status"]}.',data={'order_id':o['id'],'status':o['status']},kind='ack',sender=u['id'])
     standing.deliver(s)
+    broadcast.progress(s,emit,message)  # docs/research/60: a signal reaches only the units that hear it.
     formations.progress(s)
     local_sightings=recon.scan(s)
     for contacts in local_sightings.values():
@@ -492,6 +493,7 @@ def view(s,side=None):
             'supply_sites':order_rules.known_sites(s,side),
             'formation_ops':[formations.observed(s,o) for o in s['formation_ops'] if o['side']==side]}
     if 'signals' in s:result['signals']=signals.visible(s,side)  # docs/research/53: delivered codewords only.
+    if 'broadcasts' in s:result['broadcasts']=broadcast.visible(s,side)  # docs/research/60: never who heard.
     return result
 
 
@@ -507,4 +509,5 @@ def god_view(s):
     result.update(standing_orders=deepcopy(s.get('standing_orders',[])),recommendations=deepcopy(s.get('recommendations',[])),map_features=deepcopy(s.get('map_features',[])),supply_sites=deepcopy(s.get('supply_sites',[])),formation_ops=deepcopy(s.get('formation_ops',[])),retired_units=deepcopy(s.get('retired_units',[])))
     if 'signals' in s:result['signals']=deepcopy(s['signals'])  # docs/research/53: sent or not, with sender.
     if 'captives' in s:result['captives']=deepcopy(s['captives'])  # docs/research/59: the whole account.
+    if 'broadcasts' in s:result['broadcasts']=deepcopy(s['broadcasts'])  # docs/research/60: with every receipt.
     return result

@@ -12,7 +12,8 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from . import grid, scenario_checks, scenario_command, scenario_roster, scenario_units, scenario_wwii
+from . import grid, scenario_broadcast, scenario_checks, scenario_command, scenario_roster, scenario_units, scenario_wwii
+from .scenario_broadcast import BroadcastEntry
 from .scenario_command import CommandEntry, WeaponEntry
 from .scenario_wwii import BridgeEntry, SignalEntry
 
@@ -263,7 +264,8 @@ class ScenarioEntry:
     bridges: tuple[BridgeEntry, ...] | None = None
     signals: tuple[SignalEntry, ...] | None = None
     observation_range: int | None = None  # None: each unit's own (7 hexes).
-    voice_reach: int | None = None  # docs/research/59: read only by the 1918 profile.
+    voice_reach: int | None = None  # docs/research/59: read only by the 1918 and Roman profiles.
+    broadcasts: tuple[BroadcastEntry, ...] | None = None  # docs/research/60: signals; None: none.
     # Side id -> scripted control id (command_policy.SCRIPTED_POLICIES) for an
     # entry with its own controls (Concord); None: the gate or fallback rule.
     scripted: Mapping[str, str] | None = None
@@ -334,6 +336,7 @@ def validate(entry):
     problems.extend(scenario_command.weapon_problems(entry))
     problems.extend(scenario_wwii.problems(entry))  # docs/research/53
     problems.extend(scenario_units.problems(entry))  # docs/research/58
+    problems.extend(scenario_broadcast.problems(entry))  # docs/research/60
     problems.extend(scenario_roster.scripted_problems(entry))
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
@@ -416,6 +419,8 @@ def build_state(entry, rules=None):
         raise ValueError(f"{rules} has no bridge state, radio, signals or night range; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_units.declares(entry):
         raise ValueError(f"{rules} has no declared rout_strength, press_assault, gun facing, surrender, seize-and-hold or raid-and-return; they need poc-13.")
+    if not _at_least(rules, 'poc-13') and scenario_broadcast.declares(entry):
+        raise ValueError(f"{rules} has no broadcast signals; they need poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]
     for built, spec in zip(units, entry.units):
         built.update(deepcopy(dict(spec.overrides)))
@@ -487,6 +492,7 @@ def build_state(entry, rules=None):
             s['friendly_reports'][u['side']][u['id']]['fire_posture'] = u['fire_posture']
         scenario_command.setup(s, entry, units)  # poc-13B: writes nothing without the data.
         scenario_wwii.setup(s, entry, units)  # docs/research/53: nor does the 1944 data.
+        scenario_broadcast.setup(s, entry)  # docs/research/60: nor do signals.
     return s
 
 
