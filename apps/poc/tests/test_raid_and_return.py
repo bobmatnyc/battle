@@ -118,7 +118,10 @@ class RaidScoringTests(unittest.TestCase):
                   "the 10 needed, and they brought back 0 captives against the 5 required."),
                  (raid_state(YIELDING, min_captives=5), (OBJECTIVE, HOME),
                   "The raiders reached the gun position and 20 of them came back by the deadline, but they "
-                  "brought back 0 captives against the 5 required."))
+                  "brought back 0 captives against the 5 required."),
+                 # Home lies beside the objective; the raid is made at interval 12, the deadline.
+                 (raid_state(return_hex=(5, 7)), (HOME,) * 11 + (OBJECTIVE,),
+                  "The raiders reached the gun position only at the deadline."))
         for s, path, reason in cases:
             with self.subTest(reason=reason):
                 unit(s, "G2")["strength"] = 9 if "only 9" in reason else 20

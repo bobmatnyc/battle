@@ -87,6 +87,8 @@ Run on EVO at commit `679b637` (run directory `bt05n-679b637`), after the D7b ru
 
 All 12 replays are `identical`. `return_on_approach_route` is false in all 12. Eleven runs are American wins: the raiders reached the German command post and returned by the deadline with 75 captives. `surrender-on-threat` is a German win at the deadline, 10:30:00 (interval 450), with no captives held. The run at 679b637 recorded the reason "The German kept the raiders from returning by the deadline", which is wrong: the patrol was home. After the code fix (Architect ruling 2026-11-07 14:47Z) the reason is "The raiders reached the German command post and 12 of them came back by the deadline, but they brought back 0 captives against the 1 required." That text comes from the code fix and a unit test on the entry, not from a run; it is pending the EVO re-run. Interval *t* is 06:45 plus *t* × 30 s.
 
+Note on replay: the 679b637 `surrender-on-threat` replay no longer verifies under ec1be7b and later, because its stored reason is the old text. It is waived per the Architect ruling of 2026-11-07 14:55Z (doc 60 §5). It verifies under its 679b637 tarball, and the EVO re-run at the final commit replaces it.
+
 | Run | `D1` yields (turn, to, count) | Raid made | Gun turns (unit: start→ready) | Patrol first struck / first volley (return fire) | Exploit: started, paused (withdrawal), resumed | Patrol at end | US / German losses | Result, end turn |
 |---|---|---|---|---|---|---|---|---|
 | default | 9, A1, 75 | 9 | D1 8→9; D2 9→10, 13→14; D4 13→14 | 10 / 10 (yes) | 10; 13; 16 | 10 men at (14, 10), 75 captives | 7 / 76 | American, 27 |

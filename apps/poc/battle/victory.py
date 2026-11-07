@@ -435,8 +435,10 @@ def _returned(s, v, raiders):
 def _deadline_reason(s, v, raiders, defender):
     """Why: the deadline reason must name the condition the raid missed.
     What: reads the counters ``score`` reads: no raid, no man home (the
-    poc-13 text), too few men home, or too few captives held.
+    poc-13 text), a raid made only at the deadline interval, too few men
+    home, or too few captives held.
     Test: `test_the_deadline_reason_names_the_unmet_condition`,
+    `test_the_deadline_reason_names_the_unmet_condition_on_the_entry`,
     `test_raid_and_return_scores_the_entrys_raid`."""
     # Architect 2026-11-07 14:47Z: name the unmet win conditions, not "kept from returning" alone.
     if v["raided_turn"] is None:
@@ -444,8 +446,10 @@ def _deadline_reason(s, v, raiders, defender):
     men, held = _returned(s, v, raiders)
     needed, wanted = v["return_needed"], v["min_captives"]
     short = wanted is not None and held < wanted
-    if men == 0 or (men >= needed and not short):
+    if men == 0:
         return f"The {defender} kept the raiders from returning by the deadline."
+    if men >= needed and not short:  # The raid was made at the deadline interval; no later interval to return in.
+        return f"The raiders reached the {v['objective_name']} only at the deadline."
     captives = f"they brought back {held} captives against the {wanted} required"
     if men >= needed:
         return (f"The raiders reached the {v['objective_name']} and {men} of them came back by the deadline, "
