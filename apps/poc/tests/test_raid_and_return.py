@@ -141,9 +141,11 @@ class RaidValidationTests(unittest.TestCase):
     def test_an_edition_before_poc_13_refuses_the_poc_13_victory_kinds(self):
         seize = VictoryEntry(kind="seize-and-hold", objective=OBJECTIVE, deadline_turns=12,
                              objective_name="gun position")
+        # No unit declares a scenario_units key, so only the victory kind can trigger the refusal.
+        units = UNITS[:2] + (UnitEntry("G2", "confederate", "Raiding party", HOME, {"strength": 20, "initial": 20}),)
         for victory_entry in (RAID, seize):
             with self.subTest(kind=victory_entry.kind):
-                entry = dataclasses.replace(DUEL, victory=victory_entry, units=UNITS,
+                entry = dataclasses.replace(DUEL, victory=victory_entry, units=units,
                                             labels={"poc-12": "test-duel-v5", "poc-13": "test-duel-v6"})
                 validate(entry)
                 with self.assertRaisesRegex(ValueError, f"poc-12 has no .*{victory_entry.kind}"):
