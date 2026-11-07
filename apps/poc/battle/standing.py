@@ -84,3 +84,64 @@ def visible(s,side):
     return [{k:deepcopy(v) for k,v in o.items() if k not in ('status','transport')} |
             {'status':s['acknowledgements'][side].get(o['id'],{}).get('status','awaiting_ack')}
             for o in s.get('standing_orders',[]) if o['side']==side]
+
+
+# docs/research/60 §2: a declared exploit (unit key ``exploit``). Off unless declared.
+EXPLOIT_FIELDS=('max_loss_pct','press_to','recall_binding','trigger')
+EXPLOIT_TRIGGERS=('arrival','start')
+PRESS_REASON='Local success; pressing on toward the declared ground and returning fire.'
+
+def _succeeded(u,rule):
+    """The unit's own local success: at the start, or once its move order is completed."""
+    mission=u.get('mission_result') or {}
+    return rule['trigger']=='start' or (mission.get('template')=='move' and mission.get('status')=='completed')
+
+def _recalled(s,u):
+    """True when ``u`` itself heard a recall signal (its own receipt, docs/research/60 §1)."""
+    kinds={b['id']:b['kind'] for b in s.get('broadcasts',())}
+    return any(kinds.get(i)=='recall' for i in u.get('heard_signals',()))
+
+def _stop(s,u,rule,decision):
+    """The reason a pressing unit stops, or None."""
+    if list(u['pos'])==list(rule['press_to']):return 'reached'
+    if rule['recall_binding'] and _recalled(s,u):return 'recalled'
+    if rule['recall_binding'] and u['order_version']>u['exploit_version']:return 'ordered'
+    if (u['initial']-u['strength'])*100>=rule['max_loss_pct']*u['initial']:return 'losses'
+    if u['status']=='routed' or decision['action'] in ('withdraw','route'):return 'shaken'
+    return None
+
+def exploit(s,u,decision):
+    """Why: troops that have won a local success may press on beyond their
+    orders (docs/research/57, VII.47 and VII.52), which no standing profile did.
+    What: for a unit that declares ``exploit``, once its local success is
+    made (``trigger`` ``start``, or ``arrival``: its move order completed),
+    the local decision becomes ``press`` toward ``press_to`` while it returns
+    fire, whatever its mission or contacts, until it stops for good: it
+    reaches ``press_to``; with ``recall_binding``, it hears a recall or a
+    newer order reaches it; its losses reach ``max_loss_pct`` per cent of its
+    initial strength; or its own triggers make it withdraw or rout. A binding
+    recall heard before the success also ends it. ``recall_binding`` false is
+    the ardour reading: the unit hears the recall, takes it up as its
+    mission, and obeys it only once the press stops. Reads only the unit, its
+    own signal receipts and the decision from its own observations.
+    Events ``exploit_started`` and ``exploit_stopped`` (with ``reason``).
+    Test: `test_after_arrival_the_unit_presses_on_to_its_declared_hex`,
+    `test_a_heard_binding_recall_stops_the_press`,
+    `test_ardour_keeps_pressing_after_a_heard_recall_then_obeys_it`,
+    `test_an_enemy_the_unit_cannot_see_does_not_change_the_decision`."""
+    from . import engine
+    rule=u.get('exploit')
+    if not rule or u.get('exploit_state')=='stopped' or u['strength']<=0:return decision
+    if u.get('exploit_state') is None:
+        if rule['recall_binding'] and _recalled(s,u):
+            u['exploit_state']='stopped';engine.emit(s,'exploit_stopped',unit_id=u['id'],reason='recalled')
+            return decision
+        if not _succeeded(u,rule):return decision
+        u.update(exploit_state='pressing',exploit_version=u['order_version'])
+        engine.emit(s,'exploit_started',unit_id=u['id'],press_to=list(rule['press_to']))
+    reason=_stop(s,u,rule,decision)
+    if reason:
+        u['exploit_state']='stopped';engine.emit(s,'exploit_stopped',unit_id=u['id'],reason=reason)
+        return decision
+    decision.update(action='press',target=list(rule['press_to']),reason=PRESS_REASON)
+    return decision

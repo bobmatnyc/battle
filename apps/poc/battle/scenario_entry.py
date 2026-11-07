@@ -418,7 +418,7 @@ def build_state(entry, rules=None):
     if not _at_least(rules, 'poc-13') and scenario_wwii.declares(entry):
         raise ValueError(f"{rules} has no bridge state, radio, signals or night range; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_units.declares(entry):
-        raise ValueError(f"{rules} has no declared rout_strength, press_assault, gun facing, surrender, seize-and-hold or raid-and-return; they need poc-13.")
+        raise ValueError(f"{rules} has no declared rout_strength, press_assault, gun facing, surrender, exploit, seize-and-hold or raid-and-return; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_broadcast.declares(entry):
         raise ValueError(f"{rules} has no broadcast signals; they need poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]

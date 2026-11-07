@@ -27,8 +27,9 @@ def carries_sappers(units):
 # halves and a combine would keep only one, so a declaring unit does neither.
 # docs/research/59: nor does a unit with a gun facing (two facings cannot merge),
 # a surrender rule, or captives (the account names one holder).
-FIXED_KEYS=('rout_strength','facing','surrender')
-ROUT_REFUSAL=('A formation with a declared rout_strength, gun facing or surrender rule, or holding captives, '
+# docs/research/60: nor a unit with a declared exploit (one unit's own rule).
+FIXED_KEYS=('rout_strength','facing','surrender','exploit')
+ROUT_REFUSAL=('A formation with a declared rout_strength, gun facing, surrender or exploit rule, or holding captives, '
               'cannot split or combine.')
 
 

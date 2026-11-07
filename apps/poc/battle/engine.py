@@ -330,7 +330,7 @@ def advance(s):
     captives.check(s,local_sightings,emit,enqueue)  # docs/research/59: a declared surrender, on what the unit sees.
     for u in sorted(s['units'],key=lambda x:x['id']):
         if u['strength']<=0:continue
-        decision=order_rules.decide(s,u,local_sightings.get(u['id'],[]))
+        decision=standing.exploit(s,u,order_rules.decide(s,u,local_sightings.get(u['id'],[])))  # docs/research/60
         changed=(u.get('local_action'),u.get('local_reason'))!=(decision['action'],decision['reason'])
         if decision['action']=='withdraw' and u.get('local_action')!='withdraw':u['withdraw_until']=s['turn']+3
         u.update(local_action=decision['action'],local_reason=decision['reason'],tactical_target=decision['target'])

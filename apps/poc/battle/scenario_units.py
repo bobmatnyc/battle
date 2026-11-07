@@ -15,9 +15,10 @@ from .scenario_command import TACTICS_V11
 # Without ``rout_strength`` a unit routs below 12 men (engine.advance); without
 # ``press_assault`` tactics_v11 presses only into a gated compound; without
 # ``facing``, ``arc`` and ``reorient_turns`` a unit fires on every side
-# (docs/research/59 §2); without ``surrender`` a unit never yields (§1).
+# (docs/research/59 §2); without ``surrender`` a unit never yields (§1); without
+# ``exploit`` a unit never presses beyond its orders (docs/research/60 §2).
 FACING_KEYS = ("facing", "arc", "reorient_turns")
-KEYS = ("rout_strength", "press_assault", "surrender") + FACING_KEYS
+KEYS = ("rout_strength", "press_assault", "surrender", "exploit") + FACING_KEYS
 SURRENDER_FIELDS = ("odds_pct", "reach", "rear_only", "support_reach")
 
 
@@ -35,6 +36,26 @@ def _surrender_problems(u):
                 "support_reach 0-7 and rear_only true or false"]
     if r["rear_only"] and "facing" not in u.overrides:
         return [f"unit {u.id!r} surrender rear_only needs a declared facing"]
+    return []
+
+
+def _exploit_problems(u):
+    """docs/research/60 §2: a rule with exactly ``standing.EXPLOIT_FIELDS``: a
+    ``trigger`` of ``standing.EXPLOIT_TRIGGERS``, a ``press_to`` hex on the
+    grid, a boolean ``recall_binding`` and ``max_loss_pct`` 1 to 100."""
+    from . import grid
+    from .standing import EXPLOIT_FIELDS, EXPLOIT_TRIGGERS
+
+    if "exploit" not in u.overrides:
+        return []
+    r = u.overrides["exploit"]
+    press_to = r.get("press_to") if isinstance(r, dict) else None
+    if not (isinstance(r, dict) and tuple(sorted(r)) == EXPLOIT_FIELDS and r["trigger"] in EXPLOIT_TRIGGERS
+            and isinstance(press_to, (list, tuple)) and len(press_to) == 2 and all(_int(v) for v in press_to)
+            and grid.valid(list(press_to)) and type(r["recall_binding"]) is bool
+            and _int(r["max_loss_pct"]) and 1 <= r["max_loss_pct"] <= 100):
+        return [f"unit {u.id!r} exploit must have exactly {EXPLOIT_FIELDS}: trigger one of {EXPLOIT_TRIGGERS}, "
+                "press_to a hex on the grid, recall_binding true or false and max_loss_pct 1-100"]
     return []
 
 
@@ -80,6 +101,7 @@ def problems(entry):
     for u in entry.units:
         found.extend(_facing_problems(u))
         found.extend(_surrender_problems(u))
+        found.extend(_exploit_problems(u))
         if "press_assault" in u.overrides and (type(u.overrides["press_assault"]) is not bool
                                                or entry.tactics != TACTICS_V11):
             found.append(f"unit {u.id!r} press_assault must be true or false, on an entry that selects "
