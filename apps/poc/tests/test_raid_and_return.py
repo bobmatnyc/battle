@@ -106,6 +106,28 @@ class RaidScoringTests(unittest.TestCase):
                           "holder_side": "confederate", "turn": 1, "status": "escaped"}]
         self.assertEqual(step(s, HOME)["status"], "active")
 
+    def test_the_deadline_reason_names_the_unmet_condition(self):
+        far = (5, 5)  # Neither at the objective nor home.
+        cases = ((raid_state(), (), "The Blue kept the raiders from reaching the gun position by the deadline."),
+                 (raid_state(), (OBJECTIVE,), "The Blue kept the raiders from returning by the deadline."),
+                 (raid_state(), (OBJECTIVE, far), "The Blue kept the raiders from returning by the deadline."),
+                 (raid_state(), (OBJECTIVE, HOME), "The raiders reached the gun position, but only 9 of them came "
+                                                   "back by the deadline against the 10 needed."),
+                 (raid_state(YIELDING, min_captives=5), (OBJECTIVE, HOME),
+                  "The raiders reached the gun position, but only 9 of them came back by the deadline against "
+                  "the 10 needed, and they brought back 0 captives against the 5 required."),
+                 (raid_state(YIELDING, min_captives=5), (OBJECTIVE, HOME),
+                  "The raiders reached the gun position and 20 of them came back by the deadline, but they "
+                  "brought back 0 captives against the 5 required."))
+        for s, path, reason in cases:
+            with self.subTest(reason=reason):
+                unit(s, "G2")["strength"] = 9 if "only 9" in reason else 20
+                for pos in path:
+                    s = step(s, pos)
+                while s["status"] == "active":
+                    s = step(s)
+                self.assertEqual((s["winner"], s["turn"], s["reason"]), ("union", 12, reason))
+
     def test_the_defender_wins_when_no_raider_is_effective(self):
         s = step(raid_state(), OBJECTIVE, status="routed")
         self.assertEqual((s["winner"], s["reason"]), ("union", "The raiding force is no longer effective."))

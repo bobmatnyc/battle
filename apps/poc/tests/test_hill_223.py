@@ -220,6 +220,20 @@ class Hill223RulesTests(unittest.TestCase):
                 self.assertEqual(kind.score(s)[0] == "american", won)
         self.assertEqual(grid.distance(PATROL_TARGET, SHACK), 1)
 
+    def test_the_deadline_reason_names_the_unmet_condition_on_the_entry(self):
+        # The surrender-on-threat run at 679b637: the patrol home with 12 men and no captives at the deadline.
+        kind = victory.KINDS["raid-and-return"]
+        for pos, reason in ((post(), "The raiders reached the German command post and 12 of them came back by the "
+                                     "deadline, but they brought back 0 captives against the 1 required."),
+                            (PATROL_TARGET, "The German kept the raiders from returning by the deadline.")):
+            with self.subTest(pos=pos):
+                s = build_state(ENTRY)
+                unit(s, "A1")["pos"] = list(PATROL_TARGET)
+                kind.score(s)
+                s["turn"] = s["max_turns"]
+                unit(s, "A1").update(pos=list(pos), strength=12)
+                self.assertEqual(kind.score(s), ("german", reason))
+
 
 class Hill223RunTests(unittest.TestCase):
     def test_two_headless_runs_give_the_same_battle_and_replay_identically(self):
