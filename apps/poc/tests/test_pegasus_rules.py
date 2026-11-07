@@ -13,10 +13,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from battle import grid, runtime, victory
+from battle import engine, formations, grid, runtime, victory
 from battle.scenario_entry import UnitEntry, VictoryEntry, build_state, dry_run, validate
 from battle.scenario_wwii import DemolitionEntry
 from battle.storage import Store
+from test_formations import SPLIT, fixture as formation_fixture
 from test_gateway_push import events, unit
 from test_pegasus_engine import BRIDGE, CANAL_BRIDGE, HAM, advance, night, night_entry
 
@@ -187,6 +188,53 @@ class HamSightTests(unittest.TestCase):
 
     def test_an_enemy_the_holder_sees_within_the_radius_still_stops_ham(self):
         self.assertEqual(ham_sent(ham_state(enemy_near=True, sight=2)), [])
+
+
+def sapper(s, uid):
+    """Give ``uid`` the sapper key in truth and in headquarters' report."""
+    engine.find_unit(s, uid)["clears_charges"] = True
+    s["friendly_reports"]["union"][uid]["clears_charges"] = True
+
+
+class SapperFormationTests(unittest.TestCase):
+    """D2: a unit carrying sappers neither splits nor combines (docs/research/54).
+    Fixture: Little Round Top on open ground (``test_formations.fixture``);
+    U1 and U2 are adjacent, U2 is the command unit."""
+
+    def test_split_of_a_sapper_unit_is_refused_at_request(self):
+        s = formation_fixture()
+        sapper(s, "U1")
+        with self.assertRaisesRegex(ValueError, "sappers"):
+            formations.request(s, "union", SPLIT)
+        self.assertEqual(s["formation_ops"], [])
+
+    def test_combine_is_refused_at_request_whichever_unit_carries_sappers(self):
+        for carrier in ("U1", "U2"):  # U2 absorbing a sapper unit; a sapper unit absorbing U1.
+            with self.subTest(carrier=carrier):
+                s = formation_fixture()
+                sapper(s, carrier)
+                with self.assertRaisesRegex(ValueError, "sappers"):
+                    formations.request(s, "union", {"kind": "combine", "unit_id": "U2", "partner_id": "U1"})
+                self.assertEqual(s["formation_ops"], [])
+
+    def test_split_applied_after_the_unit_gained_sappers_is_refused_at_execution(self):
+        s = formation_fixture()
+        formations.request(s, "union", SPLIT)  # Valid when queued: U1 has no sappers yet.
+        engine.find_unit(s, "U1")["clears_charges"] = True  # A path that skips request validation.
+        for _ in range(3):
+            engine.advance(s)
+        op = s["formation_ops"][0]
+        self.assertFalse([e for e in s["events"] if e["kind"] == "unit_split"])
+        self.assertIsNone(next((u for u in s["units"] if u["id"] == "UD1"), None))
+        self.assertEqual(op["status"], "refused")
+        self.assertIn("sappers", op["reason"])
+
+    def test_units_without_sappers_still_split(self):
+        s = formation_fixture()
+        formations.request(s, "union", SPLIT)
+        for _ in range(3):
+            engine.advance(s)
+        self.assertEqual(s["formation_ops"][0]["status"], "completed")
 
 
 SEIZE = VictoryEntry(kind="seize-and-hold", objective=BRIDGE, deadline_turns=20, radius=1, hold_turns=2,

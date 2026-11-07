@@ -10,6 +10,20 @@ PROFILE=('unit_type','weapon_class','skill','recon_role','recon_skill')
 def compatible(a,b):
     return all(a.get(k)==b.get(k) for k in PROFILE)
 
+# D2 review (docs/research/54): a split would copy the sapper capability to both
+# halves and a combine could drop it, so neither is allowed until attachments
+# can be allocated. Units without ``clears_charges`` reorganize as before.
+SAPPER_REFUSAL=('A formation carrying sappers (clears_charges) cannot split or combine until attachments '
+                'can be allocated.')
+
+
+def carries_sappers(units):
+    """True when any of ``units`` declares the ``clears_charges`` capability.
+    Test: `test_split_of_a_sapper_unit_is_refused_at_request`,
+    `test_split_applied_after_the_unit_gained_sappers_is_refused_at_execution`."""
+    return any(u is not None and u.get('clears_charges') for u in units)
+
+
 def validate(s,side,request):
     from . import engine
     if s.get('rules') not in ('poc-8','poc-9','poc-10','poc-11','poc-12','poc-13'):raise ValueError('Use Reset to start a battle with split/combine rules.')
@@ -22,6 +36,7 @@ def validate(s,side,request):
     for uid in ids:
         engine.validate_order(s,side,{'unit_id':uid,'stance':'hold','destination':None})
         if uid not in units:raise ValueError('That formation has not reported to headquarters.')
+    if carries_sappers([engine.find_unit(s,uid) for uid in ids]):raise ValueError(SAPPER_REFUSAL)
     a=units[ids[0]]
     cells=gates.known_cells(s,side)  # poc-10: walls as headquarters knows them; None without gates.
     if kind=='split':
@@ -102,6 +117,7 @@ def progress(s):
             op.update(status='regrouping',ready_turn=s['turn']+SETUP_TURNS)
             engine.emit(s,'formation_regrouping',operation_id=op['id'],ready_turn=op['ready_turn'])
         if s['turn']<op['ready_turn']:continue
+        if carries_sappers(units):finish(s,op,'refused',SAPPER_REFUSAL,units);continue  # D2: at execution too.
         a=units[0]
         if op['kind']=='split':
             n=op['count'];p=op['destination']
