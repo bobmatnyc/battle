@@ -102,6 +102,19 @@ class ReconTests(unittest.TestCase):
         for c in engine.view(s)['contacts']:
             for key in ('strength','ammo','morale','skill','name','target'):self.assertNotIn(key,c)
             self.assertIn('strength_range',c)
+    def test_sight_line_leaving_the_grid_at_an_edge_column_is_skipped(self):
+        # Architect ruling 2026-11-07, option (c): off-grid points are open.
+        s=fixture();cells=s['cells']
+        cols={int(k.split(',')[0]) for k in cells};rows={int(k.split(',')[1]) for k in cells}
+        for col in (min(cols),max(cols)):
+            pairs=[([col,r1],[col,r2]) for r1 in rows for r2 in rows
+                   if 1<grid.distance([col,r1],[col,r2])<=7
+                   and any(grid.key(p) not in cells for p in grid.line([col,r1],[col,r2]))]
+            self.assertTrue(pairs,f'no sight line leaves the grid at column {col}')
+            for a,b in pairs:
+                with self.subTest(col=col,a=a,b=b):
+                    self.assertIs(grid.visible(cells,a,b),True)
+                    self.assertTrue(recon.sees(s,{'pos':a},b))
 
 class StandingPolicyTests(unittest.TestCase):
     def test_no_orders_defends_and_returns_fire(self):

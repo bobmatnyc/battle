@@ -95,7 +95,9 @@ def visible(cells, a, b):
     ah, bh = cells[key(a)]['elevation']+2, cells[key(b)]['elevation']+2
     woods = 0
     for i,p in enumerate(ray[1:-1],1):
-        terrain = cells[key(p)]
+        terrain = cells.get(key(p))
+        if terrain is None:  # off-grid points on a sight line are skipped (Architect ruling 2026-11-07, option c)
+            continue
         if terrain['elevation']+terrain.get('obstacle_height',0) > ah+(bh-ah)*i/d+2:
             return False
         woods += terrain['terrain'] == 'woods'
