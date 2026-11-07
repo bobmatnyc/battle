@@ -75,10 +75,27 @@ Never invent a messenger, sighting or event merely for atmosphere. These voice
 instructions apply only to prose, never to JSON keys, IDs or legal order values.
 The current demo's output locale is English; localization is a product requirement.'''
 
+# docs/research/60: the Roman voice, Caesar's army in Gaul in 52 BCE. Authored
+# register in the manner of a Latin field report put into plain English; it
+# quotes no ancient text. The address "Imperator" is authored (docs/research/57 §6).
+ROMAN_VOICE_PROFILE = 'republic-en-v1'
+ROMAN_VOICE_INSTRUCTION = '''Write the human-readable text as a concise report to Caesar
+appropriate to a Roman army of the late Republic in Gaul in 52 BCE. Address the player as Imperator;
+never as General. Use plain, readable phrasing in the register of a Latin field report put into
+English, such as legion, cohort, century, legate, tribune, centurion, the standards, the trumpet,
+the camp, the rampart, missiles, runner, and orders. Word goes by trumpet signal, by voice or by
+runner; there is no radio, telegraph or written relay. Avoid modern idioms such as copy that,
+roger, ten-four, affirmative, and modern slang. Do not use caricatured dialect, Latin tags the
+reader must translate, invented historical quotations, or theatrical archaism.
+Keep every reported fact, uncertainty, map reference and delivery limitation intact.
+Never invent a messenger, sighting or event merely for atmosphere. These voice
+instructions apply only to prose, never to JSON keys, IDs or legal order values.
+The current demo's output locale is English; localization is a product requirement.'''
+
 # Voice profile id -> prose instruction. A scenario entry names one of these.
 VOICE_PROFILES = {VOICE_PROFILE: VOICE_INSTRUCTION, NAPOLEONIC_VOICE_PROFILE: NAPOLEONIC_VOICE_INSTRUCTION,
                   COLONIAL_VOICE_PROFILE: COLONIAL_VOICE_INSTRUCTION, WWII_VOICE_PROFILE: WWII_VOICE_INSTRUCTION,
-                  WWI_VOICE_PROFILE: WWI_VOICE_INSTRUCTION}
+                  WWI_VOICE_PROFILE: WWI_VOICE_INSTRUCTION, ROMAN_VOICE_PROFILE: ROMAN_VOICE_INSTRUCTION}
 
 EN_DISPATCH = {
     'order.move.sent': 'To {unit}: Instructions to change position are on their way by runner. Delivery expected in {seconds} seconds.',
@@ -170,23 +187,49 @@ WWI_DISPATCH = {
     'unit.routed': '{unit} to headquarters: We are being driven back and are falling back.',
     'captives.taken': '{unit} to headquarters: We have taken {count} prisoners from {source}.',
 }
+# docs/research/60: Roman order text, display only like the 1918 text. Authored
+# phrasing; it quotes no ancient order.
+ROMAN_ORDER_WORDS = {
+    'hold': 'Stand your ground', 'move': 'Advance to the place appointed', 'rest': 'Rest the men',
+    'retreat': 'Withdraw', 'resupply': 'Draw fresh missiles', 'recon': 'Scout the ground',
+    'dig_in': 'Entrench', 'close_gate': 'Close the gate',
+    'hold_fire': 'Hold your missiles unless attacked', 'open_fire': 'Loose missiles',
+}
+ROMAN_PATTERNS = [
+    (r'(?P<unit>\w+): (?P<stance>\w+) order dispatched by voice\. (?P<estimate>.*)', 'order.spoken'),
+    (r'(?P<unit>\w+): (?P<stance>\w+) order dispatched by runner\. (?P<estimate>.*)', 'order.carried'),
+    (r'(?P<unit>\w+): signal (?P<signal>[\w-]+) sounded\. (?P<meaning>.*)', 'signal.sounded'),
+]
+ROMAN_DISPATCH = {
+    'order.spoken': 'To {unit}: {words}. Given by word of mouth. {estimate}',
+    'order.carried': 'To {unit}: {words}. A runner carries the word. {estimate}',
+    'order.delivered': '{unit} to Caesar: Your order {order} is received.',
+    'order.superseded': '{unit} to Caesar: Order {order} is set aside for later orders.',
+    'order.refused': '{unit} to Caesar: We cannot carry out order {order}.',
+    'unit.arrived': '{unit} to Caesar: We stand at the place appointed.',
+    'unit.routed': '{unit} to Caesar: The men are giving way and fall back.',
+    'signal.sounded': 'The trumpets sound from {unit}: {meaning}',
+}
 # Voice id -> (patterns tried first, dispatch text, order words).
 VOICE_DISPATCH = {COLONIAL_VOICE_PROFILE: (COLONIAL_PATTERNS, COLONIAL_DISPATCH, COLONIAL_ORDER_WORDS),
                   WWII_VOICE_PROFILE: (WWII_PATTERNS, WWII_DISPATCH, WWII_ORDER_WORDS),
-                  WWI_VOICE_PROFILE: (WWI_PATTERNS, WWI_DISPATCH, WWI_ORDER_WORDS)}
+                  WWI_VOICE_PROFILE: (WWI_PATTERNS, WWI_DISPATCH, WWI_ORDER_WORDS),
+                  ROMAN_VOICE_PROFILE: (ROMAN_PATTERNS, ROMAN_DISPATCH, ROMAN_ORDER_WORDS)}
 
 # Text of a scripted decision record, by voice; other voices keep the 1863 line.
 SCRIPTED_TEXT = 'General, we shall proceed according to our standing orders.'
 SCRIPTED_TEXTS = {COLONIAL_VOICE_PROFILE: 'Colonel, the companies will proceed according to their standing orders.',
                   WWII_VOICE_PROFILE: 'Major, the platoons will carry on under their standing orders.',
-                  WWI_VOICE_PROFILE: 'Sir, the men will carry on under their standing orders.'}
+                  WWI_VOICE_PROFILE: 'Sir, the men will carry on under their standing orders.',
+                  ROMAN_VOICE_PROFILE: 'Imperator, the cohorts will carry on under their standing orders.'}
 
 
 # poc-13B review: how staff address the player, by voice. Standing-order,
 # recommendation and staff-assessment text is stored as "General, ..."; a voice
 # listed here shows it with its own title. Other voices add no display field.
 # docs/research/53: the 1944 player commands a company, as a Major (S51).
-VOICE_ADDRESS = {COLONIAL_VOICE_PROFILE: 'Colonel', WWII_VOICE_PROFILE: 'Major', WWI_VOICE_PROFILE: 'Sir'}
+VOICE_ADDRESS = {COLONIAL_VOICE_PROFILE: 'Colonel', WWII_VOICE_PROFILE: 'Major', WWI_VOICE_PROFILE: 'Sir',
+                 ROMAN_VOICE_PROFILE: 'Imperator'}
 
 
 def _address(text, title):

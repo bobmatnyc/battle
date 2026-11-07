@@ -24,7 +24,12 @@ WWII={**PROFILE,'id':'wwii-1944-radio-v1','label':'1944 · radio / voice / runne
 # reach: the entry declares ``voice_reach`` (scenario_command), written to each
 # side's ``s['commanders']`` entry, which ``command.voice_reach`` reads first.
 WWI={**PROFILE,'id':'wwi-1918-voice-runner-v1','label':'1918 · voice / runner','voice_reach_from_entry':True}
-PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL,WWII,WWI)}
+# docs/research/60: Roman army, 52 BCE. A trumpet signal (``broadcast``) reaches every
+# unit of the side in earshot (``battle/broadcast.py``); orders go by voice within the
+# entry's ``voice_reach``, else by runner at the 1863 rates. Reaches are entry data.
+ROMAN={**PROFILE,'id':'roman-republic-signal-v1','label':'52 BCE · trumpet signal / voice / runner',
+       'methods':['signal','voice','courier'],'voice_reach_from_entry':True,'broadcast':True}
+PROFILES={p['id']:p for p in (PROFILE,{**PROFILE,'id':'napoleonic-courier-v1','label':'1815 · voice / foot runner'},COLONIAL,WWII,WWI,ROMAN)}
 
 def command_unit(s,side):
     uid=s['commanders'][side]['unit_id']

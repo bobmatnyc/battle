@@ -30,7 +30,8 @@ PROVENANCE = ("sourced:", "reconstruction:", "authored:", "inferred:")
 # comms.PROFILES ids; the Napoleonic profile shares the 1863 transport rates.
 # poc-13B: the 1775 profile adds a voice reach (scenario_command).
 COMMUNICATIONS = ("civil-war-courier-v1", "napoleonic-courier-v1", scenario_command.COLONIAL_COMMUNICATIONS,
-                  scenario_wwii.RADIO_COMMUNICATIONS, scenario_command.WWI_COMMUNICATIONS)
+                  scenario_wwii.RADIO_COMMUNICATIONS, scenario_command.WWI_COMMUNICATIONS,
+                  scenario_command.ROMAN_COMMUNICATIONS)
 
 
 def unit(uid, side, name, pos):

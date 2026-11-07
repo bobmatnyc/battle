@@ -304,8 +304,12 @@ def _transport(scenario):
         return (f"Orders reach units within {reach} hexes of your command detachment by voice and units "
                 f"within {radio} hexes of your command detachment by radio; farther units, and a unit that "
                 "moves out of range before the word reaches it, get them by runner.")
-    return (f"Orders reach units within {reach} hexes of your command detachment by voice; "
-            "farther units, and a unit that moves out of earshot before the word reaches it, get them by runner.")
+    spoken = (f"Orders reach units within {reach} hexes of your command detachment by voice; "
+              "farther units, and a unit that moves out of earshot before the word reaches it, get them by runner.")
+    if PROFILES[scenario.communications].get("broadcast"):  # docs/research/60: the Roman profile.
+        spoken += (" A trumpet signal sounded from your command detachment reaches only the units that hear it;"
+                   " a unit that does not hear it keeps its orders.")
+    return spoken
 
 
 def _common(scenario):
