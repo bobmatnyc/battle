@@ -8,7 +8,7 @@ from . import grid
 
 PROFILES={'line':35,'scout':80,'spy':95}
 # Intervals a delivered contact stays in the commander view and, from poc-13,
-# in the assault check of tactics_v10.
+# in the assault check of tactics_v10 and tactics_v11.
 CONTACT_MAX_AGE=6
 
 def estimate(enemy, quality, distance):

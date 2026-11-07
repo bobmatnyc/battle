@@ -252,6 +252,7 @@ class ScenarioEntry:
     fire: FireEntry | None = None  # poc-13; None means FireEntry().
     command: CommandEntry | None = None  # poc-13B succession; None: none.
     weapons: Mapping[str, WeaponEntry] | None = None  # poc-13B; None: rifle baseline.
+    tactics: str | None = None  # docs/research/55: "tactics_v11"; None: tactics_v10.
     # docs/research/53 (1944): bridge state, codeword signals, night observation.
     bridges: tuple[BridgeEntry, ...] | None = None
     signals: tuple[SignalEntry, ...] | None = None
@@ -483,7 +484,7 @@ def build_state(entry, rules=None):
     if not _at_least(rules, 'poc-13') and scenario_checks.has_water(entry):
         raise ValueError(f"{rules} has no impassable water; a river needs poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_command.declares(entry):
-        raise ValueError(f"{rules} has no succession, voice reach or weapon table; they need poc-13.")
+        raise ValueError(f"{rules} has no succession, voice reach, weapon table or tactics_v11; they need poc-13.")
     if not _at_least(rules, 'poc-13') and scenario_wwii.declares(entry):
         raise ValueError(f"{rules} has no bridge state, radio, signals or night range; they need poc-13.")
     units = [unit(u.id, u.side, u.name, list(u.pos)) for u in entry.units]

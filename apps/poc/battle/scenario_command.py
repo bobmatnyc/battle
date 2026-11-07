@@ -16,6 +16,8 @@ from typing import Mapping
 COLONIAL_COMMUNICATIONS = "colonial-1775-voice-v1"
 MAX_FIRE_RANGE = 5  # engine.volley never fires beyond 5 hexes.
 DEFAULT_WEAPON_CLASS = "rifled muskets"  # scenario_entry.unit()'s class.
+# docs/research/55: the one tactics edition an entry may select; None is tactics_v10.
+TACTICS_V11 = "tactics_v11"
 
 
 @dataclass(frozen=True)
@@ -108,14 +110,23 @@ def command_problems(entry):
 
 def weapon_problems(entry):
     """Why: mixed weapon ranges are blocked while ``tactics_v10.threat_range``
-    reads a unit's own range, not the enemy's (docs/research/48 §1, 53).
-    What: ``entry.weapons``: each class has an integer range of 1 to 5 hexes,
-    an integer effect of 1 to 100 per cent and a basis; and the scenario has
-    a single weapon range: every class shares one ``range_hexes`` and every
-    unit's class is in the table (a class outside it fires at the 5-hex baseline).
+    reads a unit's own range, not the enemy's (docs/research/48 §1, 53);
+    ``tactics_v11`` reads the observed enemy's range (docs/research/55).
+    What: ``entry.tactics`` is None or ``TACTICS_V11``; ``entry.weapons``:
+    each class has an integer range of 1 to 5 hexes, an integer effect of 1
+    to 100 per cent and a basis; every unit's class is in the table (a class
+    outside it fires at the 5-hex baseline, and tactics_v11 takes an
+    unidentified contact at the table's longest range); and, on tactics_v10
+    only, every class shares one ``range_hexes``.
     Test: `test_a_second_different_range_is_refused_at_validation`,
-    `test_a_unit_outside_the_table_is_a_second_range_and_is_refused`."""
+    `test_a_unit_outside_the_table_is_a_second_range_and_is_refused`,
+    `test_mixed_ranges_are_refused_on_tactics_v10`,
+    `test_mixed_ranges_are_accepted_on_tactics_v11`,
+    `test_tactics_v11_still_refuses_a_unit_outside_the_table`,
+    `test_an_unknown_tactics_edition_is_refused`."""
     problems = []
+    if entry.tactics not in (None, TACTICS_V11):
+        problems.append(f"tactics must be None (tactics_v10) or {TACTICS_V11!r}, not {entry.tactics!r}")
     for name, w in (entry.weapons or {}).items():
         if not (type(w.range_hexes) is int and 1 <= w.range_hexes <= MAX_FIRE_RANGE
                 and type(w.effect_pct) is int and 1 <= w.effect_pct <= 100 and w.basis):
@@ -124,7 +135,10 @@ def weapon_problems(entry):
         return problems
     ranges = sorted({w.range_hexes for w in entry.weapons.values()})
     outside = [u.id for u in entry.units if u.overrides.get("weapon_class", DEFAULT_WEAPON_CLASS) not in entry.weapons]
-    if len(ranges) > 1 or outside:
+    if entry.tactics == TACTICS_V11:  # docs/research/55: mixed ranges allowed.
+        if outside:
+            problems.append(f"under {TACTICS_V11} every unit needs a weapon entry; units {outside} have none")
+    elif len(ranges) > 1 or outside:
         problems.append(
             f"a scenario declares a single weapon range (mixed ranges are blocked until threat_range reads "
             f"the enemy's range, docs/research/48): weapon table ranges {ranges}"
@@ -133,16 +147,17 @@ def weapon_problems(entry):
 
 
 def declares(entry):
-    """True when ``entry`` uses any poc-13B rule data."""
+    """True when ``entry`` uses any poc-13B rule data or selects tactics_v11."""
     from . import comms
 
     reach = comms.PROFILES.get(entry.communications, {}).get("voice_reach")
-    return bool(entry.command or entry.weapons or reach)
+    return bool(entry.command or entry.weapons or entry.tactics or reach)
 
 
 def setup(s, entry, units):
     """Store the entry's poc-13B rules in snapshot ``s``: ``command_rules``
-    with each unit's ``officers`` and ``officer_step``, and ``weapon_rules``.
+    with each unit's ``officers`` and ``officer_step``, ``weapon_rules`` and
+    the selected ``tactics`` edition.
     Nothing is written for an entry without them, so earlier battles keep
     their snapshots."""
     if entry.command:
@@ -156,3 +171,5 @@ def setup(s, entry, units):
             s["friendly_reports"][u["side"]][u["id"]].update(officers=u["officers"])
     if entry.weapons:
         s["weapon_rules"] = {name: asdict(w) for name, w in entry.weapons.items()}
+    if entry.tactics:  # docs/research/55: only a selecting entry writes the key.
+        s["tactics"] = entry.tactics

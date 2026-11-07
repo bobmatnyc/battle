@@ -1,7 +1,7 @@
 """Common mission templates. All rates are authored, uncalibrated POC rules."""
 from copy import deepcopy
 from . import grid,features,gates,recon,bridges
-from . import tactics_v8 as tactics,tactics_v9,tactics_v10
+from . import tactics_v8 as tactics,tactics_v9,tactics_v10,tactics_v11
 from .engine_v2 import InvalidOrder
 
 VERSION='common-orders-v3'
@@ -122,6 +122,9 @@ def decide(s,u,contacts):
     # poc-12: assaults on a gated compound press on within 5 hexes (tactics_v9).
     # poc-13: tactics_v10 also ages out stale contacts and keeps off water.
     policy={'poc-12':tactics_v9,'poc-13':tactics_v10}.get(s.get('rules'),tactics)
+    # docs/research/55: a poc-13 entry may select tactics_v11 (``s['tactics']``),
+    # which halts at the observed enemy's weapon range; no other snapshot has the key.
+    if s.get('rules')=='poc-13' and s.get('tactics')=='tactics_v11':policy=tactics_v11
     decision=policy.decide(s,u,contacts)
     decision['policy']=VERSION
     stance=u['stance']
