@@ -67,7 +67,7 @@ class GergoviaEntryTests(unittest.TestCase):
         self.assertEqual((s["max_turns"], DEADLINE * 30), (240, 120 * 60))  # 120 minutes.
         signal = s["broadcasts"][0]
         self.assertEqual((signal["turn"], signal["reach"], signal["stance"], signal["destination"]),
-                         (1, 8, "retreat", list(RALLY)))  # D85 (Bob 2026-11-07 13:10Z): earlier recall.
+                         (20, 8, "retreat", list(RALLY)))  # D85 earlier recall; Architect reading, option b.
         self.assertEqual(signal["block_hexes"], [list(p) for p in VALLEY])
         self.assertEqual((ENTRY.communications, ENTRY.voice_profile, ENTRY.tactics),
                          (ROMAN_COMMUNICATIONS, ROMAN_VOICE_PROFILE, TACTICS_V11))
@@ -154,16 +154,17 @@ class GergoviaSignalTests(unittest.TestCase):
         self.assertEqual((ENTRY.broadcasts[0].turn, RECALL_REACH), (RECALL_TURN, 8))
 
     def test_the_default_recall_sounds_before_the_forward_force_breaks(self):
-        # D85 (Bob 2026-11-07 13:10Z): earlier recall. At interval 40 the default
-        # battle ended at 36, before the recall (doc 62 §5); now it sounds first.
+        # D85 (Bob 2026-11-07 13:10Z): earlier recall; Architect reading 16:38Z,
+        # option b: during the fight, after gate contact and before the break (36).
         s = build_state(ENTRY)
         while s["status"] == "active" and s["broadcasts"][0]["sounded_turn"] is None and s["turn"] < DEADLINE:
             s = advance(s)
         signal = s["broadcasts"][0]
         self.assertEqual((s["status"], signal["sounded_turn"], signal["sounder_id"]), ("active", RECALL_TURN, "RX"))
-        self.assertLess(RECALL_TURN, 19)  # VII.47: the recall precedes the pursuit's arrival at the gate (19).
-        got = {uid: (r["heard"], r["reason"]) for uid, r in receipts(s).items() if uid in FORWARD}
-        self.assertEqual(got, {"R8a": (False, "blocked"), **{u: (False, "out_of_reach") for u in FORWARD[1:]}})
+        gate = [e["turn"] for e in s["events"] if e["kind"] == "exploit_stopped" and e["reason"] == "reached"]
+        self.assertTrue(gate and gate[0] < RECALL_TURN, gate)  # A group already stands at the gate.
+        self.assertFalse([e for e in s["events"] if e["kind"] == "unit_routed"])  # No group has broken yet.
+        self.assertFalse(any(r["heard"] for uid, r in receipts(s).items() if uid in FORWARD))
         audible = advance(build_state(VARIANTS["recall-audible"].entry), RECALL_TURN)
         self.assertEqual((audible["status"], {receipts(audible)[u]["obeyed"] for u in FORWARD}), ("active", {True}))
 

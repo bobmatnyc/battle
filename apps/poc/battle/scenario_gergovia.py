@@ -9,10 +9,11 @@ doc 58 the declared rout threshold.
 What: ``gergovia_entry`` builds one ``ScenarioEntry``; ``GERGOVIA_RECALL`` is
 doc 57 §8's default (trumpet recall, reach 8 hexes, a valley block, Roman
 S1, Gallic G1), accepted with every other doc 57 §9 default by the Dc0 ruling
-of 2026-11-07; the recall sounds at interval 1, not 40, per D85 (doc 62 §3).
+of 2026-11-07; the recall sounds at interval 20, not 40, per D85 (doc 62 §3).
 ``VARIANTS`` holds doc 57 §8's named variants that the engine can build,
-each with its question and source. The map is authored and schematic. Every field's basis is in the entry's ``provenance``;
-the runs are docs/research/62.
+each with its question and source. The map is authored and schematic.
+Every field's basis is in the entry's ``provenance``; the runs are
+docs/research/62.
 Test: `test_entry_registers_in_the_headless_catalog_after_a_dry_run`,
 `test_each_named_variant_differs_only_in_its_own_question`.
 """
@@ -45,11 +46,11 @@ UNDER_WALL = {"GR": (9, 2), "GC": (13, 2)}  # VII.48: the returning Gauls gather
 PUSH_TO = (11, 18)  # VII.51: the Gauls drive down to the stone wall, then go back.
 TURNS_PER_HOUR = 120  # 30-second intervals.
 DEADLINE = 2 * TURNS_PER_HOUR  # Doc 57 §2: 120 minutes, authored; VII.48 says only a "long continuation".
-# D85 (Bob 2026-11-07 13:10Z): earlier recall. Doc 57 §8 put it at interval 40
-# (12:20), after the default force broke at 36 (doc 62 §5). VII.47: Caesar has
-# the retreat sounded once his object is gained, and the entry starts with the
-# camps taken (12:00), so it sounds at the first interval, 12:00:30 (inferred).
-RECALL_TURN = 1
+# D85 (Bob 2026-11-07 13:10Z): earlier recall; the value is the Architect's
+# reading (2026-11-07 16:38Z, option b): during the fight, after gate contact,
+# before the break. Doc 57 §8 had 40 (12:20), after the break at 36. bt05p run
+# timeline: R8a reached the gate at 19, the first rout at 23 (doc 62 §3).
+RECALL_TURN = 20  # 12:10:00
 RECALL_REACH = 8  # Doc 57 §8: 8 hexes (400 m), authored.
 RETURN_TURN = 40  # The Gallic masses are ordered back (VII.47-48 order; authored); D85 moved only the recall.
 SEXTIUS_TURN = 60  # Doc 57 §8 sextius-cover: Sextius is ordered out at interval 60 (12:30), authored.
@@ -182,8 +183,8 @@ def recall(reach=RECALL_REACH, block=VALLEY):
         meaning="The trumpet sounds the retreat: fall back to the Tenth's line.", turn=RECALL_TURN,
         block_hexes=tuple(block),
         basis=f"sourced: Caesar sounds the retreat and the legions across 'a very large valley' do not hear it "
-              f"(S60 VII.47); the interval {RECALL_TURN} is inferred from VII.47 (sounded once the camps are "
-              f"taken, D85); the {reach}-hex reach and the block hexes are authored (doc 57 §8)")
+              f"(S60 VII.47); the interval {RECALL_TURN} is the Architect's reading of D85 (after gate contact, "
+              f"before the break, doc 62 §3); the {reach}-hex reach and the block hexes are authored (doc 57 §8)")
 
 
 ROMAN_MISSION = (
@@ -249,8 +250,9 @@ PROVENANCE = {
     "units.aedui": f"authored: the Aedui (S60 VII.45, VII.50) are left out of the default and appear only in "
                    f"aedui-misread; {DC0} (doc 57 §9 q6)",
     "signal": f"sourced: the trumpet recall (S60 VII.47), which the Tenth heard and the legions across the valley "
-              f"did not; interval {RECALL_TURN} is inferred from VII.47 (D85 ruling 2026-11-07: sounded once "
-              f"the camps are taken), reach 8 and the valley block are authored (doc 57 §8); {DC0} (doc 57 §9 q3: "
+              f"did not; interval {RECALL_TURN} is authored, the Architect's reading of D85 'Earlier recall' "
+              f"(2026-11-07 16:38Z, option b: after gate contact, before the break); reach 8 and the valley block "
+              f"are authored (doc 57 §8); {DC0} (doc 57 §9 q3: "
               f"signal failure and ardour are separate variants, neither the default truth)",
     "restraint": "reconstruction: Roman S1 (doc 57 §3): the forward groups pursue from the taken camps toward "
                  "the gate (S60 VII.47: they pursued to the wall and gates); a group that hears the recall stops and "
