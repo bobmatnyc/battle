@@ -8,12 +8,11 @@ initial snapshot for a rules edition; ``validate`` refuses an entry the current
 rules cannot run. Format: ``docs/research/38-scenario-catalog.md``.
 """
 
-import re
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from . import grid, scenario_checks, scenario_command, scenario_units, scenario_wwii
+from . import grid, scenario_checks, scenario_command, scenario_roster, scenario_units, scenario_wwii
 from .scenario_command import CommandEntry, WeaponEntry
 from .scenario_wwii import BridgeEntry, SignalEntry
 
@@ -22,10 +21,6 @@ SIDES = ("union", "confederate")
 LEGACY_ROLES = {"union": "defender", "confederate": "attacker"}
 RULES_VERSION = "poc-13"
 EDITIONS = ("poc-1", "poc-2", "poc-3", "poc-4", "poc-5", "poc-6", "poc-7", "poc-8", "poc-9", "poc-10", "poc-11", "poc-12", "poc-13")
-# poc-9 takes side ids, names, roles, the player side and the victory kind from
-# the entry (stored in the snapshot); these remain fixed by the rules.
-ROLES = ("defender", "attacker")
-SIDE_ID = re.compile(r"[a-z][a-z0-9_]{0,31}")
 SECONDS_PER_TURN = 30  # engine.issue states delays as turns * 30 seconds.
 ORDER_CATALOG = ("hold", "move", "rest", "retreat", "resupply", "recon", "dig_in")
 # poc-10: an entry whose map declares a gate offers Close the gate as well.
@@ -309,7 +304,7 @@ def validate(entry):
         problems.append(f"rules {entry.rules!r} is not the current edition {RULES_VERSION!r}")
     if entry.rules not in entry.labels:
         problems.append(f"no snapshot label for {entry.rules!r}")
-    problems.extend(_side_problems(entry))
+    problems.extend(scenario_roster.side_problems(entry))
     victory = entry.victory
     if not grid.valid(list(victory.objective)) or victory.deadline_turns <= 0:
         problems.append("victory objective or deadline is invalid")
@@ -338,82 +333,20 @@ def validate(entry):
     problems.extend(scenario_command.weapon_problems(entry))
     problems.extend(scenario_wwii.problems(entry))  # docs/research/53
     problems.extend(scenario_units.problems(entry))  # docs/research/58
-    problems.extend(_scripted_problems(entry))
+    problems.extend(scenario_roster.scripted_problems(entry))
     if entry.communications not in COMMUNICATIONS:
         problems.append(f"communications must be one of {COMMUNICATIONS}")
     if entry.voice_profile not in VOICE_PROFILES:
         problems.append(f"voice profile must be one of {tuple(VOICE_PROFILES)}")
     if not entry.prompt_version or not all(s.mission for s in entry.sides.values()):
         problems.append("prompt version and every side's mission are required")
-    problems.extend(_roster_problems(entry))
+    problems.extend(scenario_roster.roster_problems(entry))
     unlabelled = [k for k, v in entry.provenance.items() if not str(v).startswith(PROVENANCE)]
     if unlabelled:
         problems.append(f"provenance of {', '.join(unlabelled)} must start with one of {PROVENANCE}")
     if problems:
         raise ValueError(f"Scenario {entry.id!r} cannot run: " + "; ".join(problems))
     return entry
-
-
-def _scripted_problems(entry):
-    """An entry's own scripted controls name its sides and known controls."""
-    from .command_policy import SCRIPTED_POLICIES
-
-    return [f"scripted control for {side!r} must be a scenario side and one of {SCRIPTED_POLICIES}"
-            for side, policy in (entry.scripted or {}).items()
-            if side not in entry.sides or policy not in SCRIPTED_POLICIES]
-
-
-def _side_problems(entry):
-    from . import victory
-
-    problems = []
-    if len(entry.sides) < 2:
-        problems.append("a scenario needs at least two sides")
-    for side, spec in entry.sides.items():
-        if not isinstance(side, str) or not SIDE_ID.fullmatch(side):
-            problems.append(f"side id {side!r} must be lower-case letters, digits or _")
-        if not spec.name:
-            problems.append(f"side {side!r} needs a display name")
-        if spec.role not in ROLES:
-            problems.append(f"side {side!r} role must be one of {ROLES}")
-    if entry.player not in entry.sides:
-        problems.append(f"player side {entry.player!r} is not a scenario side")
-    kind = victory.KINDS.get(entry.victory.kind)
-    if kind is None:
-        problems.append(f"victory kind {entry.victory.kind!r} is not one of {tuple(victory.KINDS)}")
-    else:
-        problems.extend(kind.problems(entry))
-    return problems
-
-
-# Fields a unit override may not replace: the roster and command attachment
-# are checked against them, so an override would bypass those checks.
-FIXED_UNIT_FIELDS = ("id", "side", "pos")
-
-
-def _roster_problems(entry):
-    ids = [u.id for u in entry.units]
-    positions = [tuple(u.pos) for u in entry.units]
-    problems = []
-    if len(set(ids)) != len(ids) or len(set(positions)) != len(positions):
-        problems.append("unit ids and starting hexes must be unique")
-    for u in entry.units:
-        if u.side not in entry.sides or not grid.valid(list(u.pos)):
-            problems.append(f"unit {u.id} has an unknown side or invalid hex")
-        fixed = [name for name in FIXED_UNIT_FIELDS if name in u.overrides]
-        if fixed:
-            problems.append(f"unit {u.id} overrides may not set {', '.join(fixed)}")
-    for side, spec in entry.sides.items():
-        if not grid.valid(list(spec.headquarters)):
-            problems.append(f"{side} headquarters {spec.headquarters} is off the grid")
-        if spec.supply and not grid.valid(list(spec.supply.pos)):
-            problems.append(f"{side} supply point {spec.supply.pos} is off the grid")
-    by_id = {u.id: u for u in entry.units}
-    for side, spec in entry.sides.items():
-        attached = by_id.get(spec.command_unit)
-        if attached is None or attached.side != side:
-            problems.append(f"{side} command unit {spec.command_unit!r} is not a {side} unit")
-    return problems
 
 
 def dry_run(entry):
@@ -432,7 +365,7 @@ def dry_run(entry):
         except Exception as exc:
             problems.append(f"build_state failed: {type(exc).__name__}: {exc}")
         else:
-            problems.extend(_terrain_problems(state["cells"]))
+            problems.extend(scenario_roster.terrain_problems(state["cells"]))
             problems.extend(scenario_checks.water_problems(entry, state["cells"]))
             problems.extend(scenario_wwii.bridge_cell_problems(entry, state["cells"]))
             for f in state.get("map_features", []):
@@ -442,25 +375,6 @@ def dry_run(entry):
     if problems:
         raise ValueError(f"Scenario {entry.id!r} cannot run: " + "; ".join(problems))
     return entry
-
-
-CELL_FIELDS = ("pos", "elevation", "terrain", "move_cost", "cover")
-
-
-def _terrain_problems(cells):
-    expected = {grid.key([c, r]) for r in range(grid.ROWS) for c in range(grid.COLS)}
-    problems = []
-    missing, extra = expected - set(cells), set(cells) - expected
-    if missing:
-        problems.append(f"terrain misses {len(missing)} grid hexes, e.g. {sorted(missing)[0]}")
-    if extra:
-        problems.append(f"terrain has {len(extra)} cells off the grid, e.g. {sorted(extra)[0]}")
-    for k in sorted(expected & set(cells)):
-        cell = cells[k]
-        if any(name not in cell for name in CELL_FIELDS) or grid.key(cell["pos"]) != k:
-            problems.append(f"terrain cell {k} lacks {', '.join(CELL_FIELDS)} or names another hex")
-            break
-    return problems
 
 
 def _has_gates(entry):
