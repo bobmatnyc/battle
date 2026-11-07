@@ -130,6 +130,7 @@ All 12 runs: German win at the deadline, 10:30:00 (interval 450), reason "The Ge
 | 10 | AHQ 6 men | `rout_strength` 0 | Without it the post routed in interval 1 under the 12-man default (a defect of the first run; the patrol's metrics were the same before and after) |
 | 11 | `company-reinforces` turn and party not set | `A3`, interval 60, to the patrol's start hex | Authored |
 | 12 | min strength and min captives not set | 25 % (5 men) and 1 captive | Authored; doc 37 keeps counts out of pass criteria |
+| 13 | `D2`, the gun and rifle group, has rifles and pistols and machine guns (56 §6) | Machine guns only | The engine allows one `weapon_class` per unit. `D2` is the group that causes every patrol loss in the default run (§5), at machine-gun range 5 and effect 100; rifles would give range 3 and effect 67 |
 
 ## 8. Tests
 
