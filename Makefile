@@ -14,6 +14,7 @@ test-poc:
 	cd apps/poc && $(PYTHON) -m unittest discover -s tests -q
 	cd apps/poc && $(NODE) scripts/smoke_ui.mjs
 	cd apps/poc && $(NODE) scripts/check_map_geometry.mjs
+	cd apps/poc && $(NODE) scripts/check_map_features.mjs
 
 smoke-poc:
 	cd apps/poc && $(PYTHON) scripts/smoke_http.py

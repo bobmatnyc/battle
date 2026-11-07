@@ -40,7 +40,7 @@ const context=vm.createContext({document:{getElementById:element},window:{matchM
     const catalog={default:'little-round-top',scenarios:[{id:'little-round-top',title:'Little Round Top'},{id:'hougoumont-north-gate',title:'Hougoumont: the north gate'}]};
     return {ok:true,json:async()=>path==='/api/map'?{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}:path==='/api/scenarios'?catalog:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:initial};}});
 vm.runInContext(readFileSync(new URL('../static/cartography.js',import.meta.url),'utf8'),context);
-for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
+for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
 vm.runInContext(readFileSync(new URL('../static/app.js',import.meta.url),'utf8'),context);
 await new Promise(resolve=>setImmediate(resolve));
 assert.equal(element('clock').textContent,'16:30');
@@ -141,6 +141,21 @@ console.log('Order template UI passed: common catalog, destination requirements,
 
 assert.match(element('map').innerHTML,/North farm lane/);assert.match(element('map').innerHTML,/Farmstead/);assert.match(element('map').innerHTML,/FIELDWORKS/);
 console.log('Map feature UI passed: roads, buildings and fortifications rendered with the shared SVG overlay.');
+// Grid off and on: the toggle sets only the no-grid class; the feature layer is drawn unchanged.
+function featuresSurviveGridToggle(){
+  const map=element('map'),classes=map.classList,toggles=[];
+  map.classList={...classes,toggle(name,on){toggles.push([name,on]);}};
+  const layer=vm.runInContext('BattleFeatures.render(state.map_features,center,esc)',context);
+  assert.match(layer,/<path d="M/);
+  for(const gridOff of [true,false]){
+    element('hex-toggle').onclick();
+    assert.deepEqual(toggles.at(-1),['no-grid',gridOff]);
+    assert.ok(map.innerHTML.includes(layer),`feature layer with the grid ${gridOff?'off':'on'}`);
+  }
+  map.classList=classes;
+}
+featuresSurviveGridToggle();
+console.log('Grid toggle passed: Little Round Top roads and buildings drawn with the hex grid off and on.');
 
 vm.runInContext(`state.recommendations=[{id:'A1',unit_id:'U2',side:'union',status:'delivered',created_turn:1,received_turn:2,proposal:{unit_id:'U2',stance:'dig_in',destination:null},text:'General, improve this ground.',evidence:{ammo:1600,fatigue:0,morale:85}}];render();inspectAdvice('U2');`,context);
 assert.match(element('map').innerHTML,/Recommendation from U2/);
@@ -219,6 +234,7 @@ assert.match(element('map').innerHTML,/class="place-label">Hougoumont farm</);
 assert.match(element('map').innerHTML,/COMPOUND OBJECTIVE/);
 assert.doesNotMatch(element('map').innerHTML,/r="53"/);  // A compound is not a ring of hexes.
 assert.match(element('map').innerHTML,/Hougoumont chateau and farm/);  // The building feature is drawn.
+featuresSurviveGridToggle();
 assert.equal(vm.runInContext('state.voice_profile',context),'napoleonic-en-v1');
 assert.match(element('toast').textContent,/Battle reset to 11:20/);
 assert.equal(element('scenario-select').value,'hougoumont-north-gate');

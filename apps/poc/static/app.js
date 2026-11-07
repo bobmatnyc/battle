@@ -64,20 +64,8 @@ async function controlClock(command,speed){
 }
 async function getPost(path,body){const data=await api.post(path,body);return godMode?await get(stateUrl()):data;}
 function polygons(){return mapData.cells.map(c=>{const[x,y]=center(c.pos),points=Array.from({length:6},(_,i)=>{const a=(60*i-30)*Math.PI/180;return `${x+25.5*Math.cos(a)},${y+25.5*Math.sin(a)}`;}).join(' ');const chosen=destination&&String(c.pos)===String(destination);return `<polygon class="hex ${chosen?'selected-hex':''}" data-c="${c.pos[0]}" data-r="${c.pos[1]}" points="${points}"><title>Hex ${c.pos.join(',')} · ${c.terrain} · ${c.elevation} m (authored)${(state.map_features||[]).filter(f=>f.pos&&String(f.pos)===String(c.pos)||f.hexes?.some(p=>String(p)===String(c.pos))).map(f=>' · '+esc(f.name)+(f.kind==='fortification'?' '+f.progress+'% · cover '+f.cover:'')).join('')}</title></polygon>`;}).join('');}
-function renderFeatures(){
-  let svg='<g class="battle-features" pointer-events="none">';
-  for(const f of state.map_features||[]){
-    if(f.kind==='road'){
-      const path=f.points.map((p,i)=>(i?'L':'M')+center(p).join(',')).join(' '),[x,y]=center(f.points[1]);
-      svg+=`<path d="${path}" fill="none" stroke="#ae997b" stroke-width="10" stroke-linejoin="round"/><path d="${path}" fill="none" stroke="#fff4d5" stroke-width="6" stroke-linejoin="round"/><text x="${x+12}" y="${y-14}" class="feature-label">${esc(f.name)}</text>`;
-    }else{
-      const[x,y]=center(f.pos);
-      if(f.kind==='building')svg+=`<g transform="translate(${x},${y})"><rect x="-16" y="-11" width="32" height="22" rx="1" fill="#d8c7b0" stroke="#856f58" stroke-width="2"/><path d="M-16,0H16M0,-11V11" stroke="#aa9075" stroke-width="2"/><text x="0" y="-20" text-anchor="middle" class="feature-label">${esc(f.name)}</text></g>`;
-      else if(f.kind==='fortification')svg+=`<g transform="translate(${x},${y+24})" opacity="${f.progress===100?1:.65}"><path d="M-22,8V0L-11,-6L0,0L11,-6L22,0V8" fill="none" stroke="#70563a" stroke-width="6"/><path d="M-22,8V0L-11,-6L0,0L11,-6L22,0V8" fill="none" stroke="#cab18b" stroke-width="2"/><text x="30" y="5" text-anchor="start" class="feature-label">${f.progress===100?'FIELDWORKS':esc(f.progress)+'% WORKS'}</text></g>`;
-    }
-  }
-  return svg+'</g>';
-}
+// Features come from the commander view; static/map-features.js draws them.
+function renderFeatures(){return BattleFeatures.render(state.map_features,center,esc);}
 function renderMap(){const[ox,oy]=center(state.objective);const obj=state.scenario_brief?.objective||{place:'',label:'OBJECTIVE',ring:false};let shapes=BattleMap.render(mapData.cells,terrain,BattleMapView.active())+`<g>${polygons()}</g><g pointer-events="none" class="summit">${obj.ring?`<circle cx="${ox}" cy="${oy}" r="53" fill="#fff" fill-opacity=".25" stroke="#b19752" stroke-width="2" stroke-dasharray="5 5"/>`:''}<circle cx="${ox}" cy="${oy}" r="15" fill="#fff" stroke="#b19752" stroke-width="2"/><path d="M${ox-4},${oy+8}v-17l11,4 -11,4" fill="none" stroke="#94772e" stroke-width="2"/><text x="${ox}" y="${oy-118}" class="place-label">${esc(obj.place)}</text><text x="${ox}" y="${oy-97}" class="place-subtitle">${esc(obj.label)}</text></g>`;
 shapes+=renderFeatures();
 for(const depot of state.supply_sites||[]){const[x,y]=center(depot.pos);shapes+=`<g pointer-events="none"><rect x="${x-12}" y="${y-12}" width="24" height="24" rx="3" fill="#fff5d5" stroke="#8f7134" stroke-width="2"/><path d="M${x-7},${y-7}l14,14m0,-14l-14,14" stroke="#8f7134"/><text x="${x}" y="${y+29}" text-anchor="middle" font-size="11" fill="#634e27">${godMode?esc(depot.side)+' · ':''}AMMUNITION</text></g>`;}

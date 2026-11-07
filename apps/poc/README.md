@@ -65,6 +65,7 @@ This is **based on the actual Little Round Top engagement**, not a calibrated re
 python3 -m unittest discover -s tests -v
 python3 scripts/smoke_http.py
 node scripts/check_map_geometry.mjs
+node scripts/check_map_features.mjs
 node scripts/smoke_ui.mjs
 python3 -m battle --headless --db /tmp/battle-check.sqlite
 python3 -m battle --db /tmp/battle-check.sqlite --replay GAME_ID_FROM_HEADLESS_OUTPUT
@@ -157,6 +158,7 @@ New code should use these interfaces and the composition root. Preserve atomic e
 | `battle/server.py` | Local HTTP API and static UI |
 | `static/map-view.js` | MapLibre camera, local projection, vector terrain and fallback |
 | `static/cartography.js` | Shared terrain geometry and SVG annotations/fallback |
+| `static/map-features.js` | Roads, buildings and fieldworks from the commander view's `map_features` |
 | `static/` | Throwaway command map and chat UI |
 | `tests/` | Granular component and persistence tests |
 
