@@ -1,7 +1,7 @@
 """Pure deterministic state transitions. Models never adjudicate effects."""
 from copy import deepcopy
 from . import grid,recon,tactics,comms,command,formations,features,gates,recommendations,standing,victory
-from . import bridges,signals,facing
+from . import bridges,signals,facing,captives
 from . import orders as order_rules
 from .scenario import SIDES
 from .scenario_entry import LEGACY_ROLES
@@ -117,7 +117,7 @@ def estimate(s,arrival_turn):
 
 def summary(u):
     result={k:deepcopy(u[k]) for k in ('id','side','name','pos','initial','strength','ammo','morale','suppression','fatigue','status','target','stance','order_version')}
-    result.update({k:deepcopy(u[k]) for k in ('unit_type','weapon_class','skill','recon_role','recon_skill','local_action','local_reason','tactical_target','merged_into','mission_result','supply_site','tools','standing_profile','standing_version','cut_off','fire_posture','officers','leaderless') if k in u})
+    result.update({k:deepcopy(u[k]) for k in ('unit_type','weapon_class','skill','recon_role','recon_skill','local_action','local_reason','tactical_target','merged_into','mission_result','supply_site','tools','standing_profile','standing_version','cut_off','fire_posture','officers','leaderless','captives') if k in u})
     return result
 
 def enqueue(s, side, text, data=None, kind='dispatch', delay=1, sender=None):
@@ -324,6 +324,7 @@ def advance(s):
     local_sightings=recon.scan(s)
     for contacts in local_sightings.values():
         for contact in contacts:contact['phase']='1_before_actions'
+    captives.check(s,local_sightings,emit,enqueue)  # docs/research/59: a declared surrender, on what the unit sees.
     for u in sorted(s['units'],key=lambda x:x['id']):
         if u['strength']<=0:continue
         decision=order_rules.decide(s,u,local_sightings.get(u['id'],[]))
@@ -403,6 +404,7 @@ def advance(s):
             u['status']='routed'; emit(s,'unit_routed',unit_id=u['id'])
             enqueue(s,u['side'],f'{u["id"]}: formation breaking; withdrawing toward headquarters.',kind='morale',sender=u['id'])
     command.succession(s,emit,message)  # poc-13B: a fallen command passes on.
+    captives.escape(s,emit)  # docs/research/59: a routed or lost holder loses its captives.
     gates.progress(s)  # poc-10: gate labour continues under fire, adjudicated after it.
     gates.push(s)  # poc-11: attackers push through a held gateway, also under fire.
     signals.check(s,emit,enqueue)  # docs/research/53: a taken bridge's codeword goes out as a report.
@@ -500,4 +502,5 @@ def god_view(s):
                   dispatches=[dict(deepcopy(d),side=side) for side in sides(s) for d in s['dispatches'][side]])
     result.update(standing_orders=deepcopy(s.get('standing_orders',[])),recommendations=deepcopy(s.get('recommendations',[])),map_features=deepcopy(s.get('map_features',[])),supply_sites=deepcopy(s.get('supply_sites',[])),formation_ops=deepcopy(s.get('formation_ops',[])),retired_units=deepcopy(s.get('retired_units',[])))
     if 'signals' in s:result['signals']=deepcopy(s['signals'])  # docs/research/53: sent or not, with sender.
+    if 'captives' in s:result['captives']=deepcopy(s['captives'])  # docs/research/59: the whole account.
     return result

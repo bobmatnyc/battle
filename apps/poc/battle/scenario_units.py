@@ -15,9 +15,27 @@ from .scenario_command import TACTICS_V11
 # Without ``rout_strength`` a unit routs below 12 men (engine.advance); without
 # ``press_assault`` tactics_v11 presses only into a gated compound; without
 # ``facing``, ``arc`` and ``reorient_turns`` a unit fires on every side
-# (docs/research/59 §2).
+# (docs/research/59 §2); without ``surrender`` a unit never yields (§1).
 FACING_KEYS = ("facing", "arc", "reorient_turns")
-KEYS = ("rout_strength", "press_assault") + FACING_KEYS
+KEYS = ("rout_strength", "press_assault", "surrender") + FACING_KEYS
+SURRENDER_FIELDS = ("odds_pct", "reach", "rear_only", "support_reach")
+
+
+def _surrender_problems(u):
+    """docs/research/59: a rule with exactly ``SURRENDER_FIELDS``: ``reach`` 1
+    to 7 hexes (the sight cap), ``odds_pct`` 1 to 1000, ``support_reach`` 0 to
+    7 and a boolean ``rear_only``, which needs a declared facing."""
+    if "surrender" not in u.overrides:
+        return []
+    r = u.overrides["surrender"]
+    if not (isinstance(r, dict) and tuple(sorted(r)) == SURRENDER_FIELDS and _int(r["reach"])
+            and 1 <= r["reach"] <= 7 and _int(r["odds_pct"]) and 1 <= r["odds_pct"] <= 1000
+            and _int(r["support_reach"]) and 0 <= r["support_reach"] <= 7 and type(r["rear_only"]) is bool):
+        return [f"unit {u.id!r} surrender must have exactly {SURRENDER_FIELDS}: reach 1-7, odds_pct 1-1000, "
+                "support_reach 0-7 and rear_only true or false"]
+    if r["rear_only"] and "facing" not in u.overrides:
+        return [f"unit {u.id!r} surrender rear_only needs a declared facing"]
+    return []
 
 
 def _facing_problems(u):
@@ -52,14 +70,16 @@ def problems(entry):
     or more and below the unit's starting strength, so the unit does not
     rout before it has lost a man; each declared ``press_assault`` is a
     boolean on an entry that selects tactics_v11, the only tactics edition
-    that reads it; a facing is declared whole (``_facing_problems``).
-    Test: `test_registration_refuses_a_bad_rout_strength`,
+    that reads it; a facing is declared whole (``_facing_problems``); a
+    surrender rule has every field in range (``_surrender_problems``).
+    Test: `test_registration_refuses_a_bad_rout_strength`, `test_registration_refuses_a_bad_rule`,
     `test_the_threshold_is_compared_with_the_default_strength_when_none_is_set`,
     `test_refused_on_a_tactics_v10_entry`, `test_refused_unless_a_boolean`,
     `test_registration_refuses_bad_facing_values`, `test_the_three_keys_are_declared_together`."""
     found = []
     for u in entry.units:
         found.extend(_facing_problems(u))
+        found.extend(_surrender_problems(u))
         if "press_assault" in u.overrides and (type(u.overrides["press_assault"]) is not bool
                                                or entry.tactics != TACTICS_V11):
             found.append(f"unit {u.id!r} press_assault must be true or false, on an entry that selects "

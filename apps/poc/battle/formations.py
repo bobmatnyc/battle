@@ -25,17 +25,20 @@ def carries_sappers(units):
 
 # docs/research/58: a split would copy one absolute rout threshold to two smaller
 # halves and a combine would keep only one, so a declaring unit does neither.
-# docs/research/59: nor does a unit with a gun facing (two facings cannot merge).
-FIXED_KEYS=('rout_strength','facing')
-ROUT_REFUSAL='A formation with a declared rout_strength or gun facing cannot split or combine.'
+# docs/research/59: nor does a unit with a gun facing (two facings cannot merge),
+# a surrender rule, or captives (the account names one holder).
+FIXED_KEYS=('rout_strength','facing','surrender')
+ROUT_REFUSAL=('A formation with a declared rout_strength, gun facing or surrender rule, or holding captives, '
+              'cannot split or combine.')
 
 
 def declares_rout(units):
-    """True when any of ``units`` declares one of ``FIXED_KEYS``.
+    """True when any of ``units`` declares one of ``FIXED_KEYS`` or holds captives.
     Test: `test_split_of_a_declaring_unit_is_refused_at_request`,
     `test_split_applied_after_the_unit_declared_is_refused_at_execution`,
-    `test_a_facing_unit_neither_splits_nor_combines`."""
-    return any(u is not None and any(k in u for k in FIXED_KEYS) for u in units)
+    `test_a_facing_unit_neither_splits_nor_combines`,
+    `test_a_unit_holding_captives_neither_splits_nor_combines`."""
+    return any(u is not None and (any(k in u for k in FIXED_KEYS) or u.get('captives')) for u in units)
 
 
 def validate(s,side,request):
