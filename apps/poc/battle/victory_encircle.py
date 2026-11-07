@@ -19,6 +19,9 @@ KIND = "encircle"
 FIELDS = (("exits", ()), ("pocket_units", ()), ("centre_units", ()), ("zoc", None), ("min_enclosed_pct", None),
           ("centre_break", None))
 FLOW_CAP = 24  # Passage width counted up to the grid's width; wider is "open".
+# Dd8 (Bob 2026-11-07): Q2 literal reading. Doc 63 §5's centre break wins "before that":
+# only while enclosed and lost men are below min_enclosed_pct (doc 68 §8 q2). False: at any interval.
+BREAK_ONLY_BELOW_SHARE = True
 
 
 def encircle_only_problems(entry):
@@ -141,7 +144,8 @@ class Encircle:
     ``min_enclosed_pct`` per cent (rounded up) of their starting strength;
     otherwise the attacker wins at the deadline ("army not enclosed"). The
     attacker wins at once when ``centre_break`` of ``centre_units`` (the
-    defender's centre) are routed or lost. Recorded, not scored, in
+    defender's centre) are routed or lost, but only while enclosed and lost
+    men are still below that share (``BREAK_ONLY_BELOW_SHARE``). Recorded, not scored, in
     ``s['victory']``: per interval ``record`` rows ``[turn, enclosed units,
     enclosed men, men lost, open exits, narrowest passage, pocket units in
     contact]``; ``closed_turn``, the first interval with an enclosed unit;
@@ -152,6 +156,7 @@ class Encircle:
     ``s['victory']`` is in neither side's view. A reading of route geometry,
     not a historical result.
     Test: `test_the_centre_breaking_wins_for_the_attacker_at_once`,
+    `test_the_centre_break_wins_only_while_enclosed_and_lost_are_below_the_share`,
     `test_an_enclosed_pocket_wins_for_the_defender_at_the_deadline`,
     `test_an_open_army_wins_for_the_attacker_at_the_deadline`,
     `test_headquarters_learn_of_the_pocket_from_reports_only`.
@@ -226,7 +231,8 @@ class Encircle:
             if u["side"] == attacker and _live(u) and grid.key(u["pos"]) in exits and u["id"] not in v["exited"]:
                 v["exited"][u["id"]] = [s["turn"], u["strength"]]
         broken = [uid for uid in v["centre_units"] if units[uid]["status"] in INEFFECTIVE or units[uid]["strength"] <= 0]
-        if len(broken) >= v["centre_break"]:
+        below = men + lost < v["enclosed_needed"] or not BREAK_ONLY_BELOW_SHARE  # Dd8 (Bob 2026-11-07): Q2
+        if len(broken) >= v["centre_break"] and below:
             return attacker, (f"The {names[defender]} centre broke: {len(broken)} of its "
                               f"{len(v['centre_units'])} centre units routed or lost.")
         if s["turn"] < s["max_turns"]:

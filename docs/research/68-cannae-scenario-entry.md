@@ -105,7 +105,7 @@ Each is labelled in the entry's `provenance` or at its change site with the D86 
 
 ## 4. The `encircle` kind
 
-Each interval `enclosure` blocks every hex held by a live Carthaginian unit and every hex within `zoc` of one, floods the open hexes from each open exit, and counts a Roman heavy unit enclosed when neither its hex nor a neighbour is reached. The Carthaginian side wins at the deadline when enclosed men plus men lost reach 50 per cent (28,400) of the heavy infantry's 56,800; otherwise the Roman side wins at the deadline. The Roman side wins at once when 5 of C1 to C8 are routed or lost. The reasons read "army enclosed", "army not enclosed" or "centre broke", not a historical result. `s['victory']` is in neither side's view.
+Each interval `enclosure` blocks every hex held by a live Carthaginian unit and every hex within `zoc` of one, floods the open hexes from each open exit, and counts a Roman heavy unit enclosed when neither its hex nor a neighbour is reached. The Carthaginian side wins at the deadline when enclosed men plus men lost reach 50 per cent (28,400) of the heavy infantry's 56,800; otherwise the Roman side wins at the deadline. The Roman side wins at once when 5 of C1 to C8 are routed or lost, but only while enclosed and lost men are still below that 50 per cent (Dd8, §8 question 2). The reasons read "army enclosed", "army not enclosed" or "centre broke", not a historical result. `s['victory']` is in neither side's view.
 
 ## 5. Variants
 
@@ -130,15 +130,17 @@ Each interval `enclosure` blocks every hex held by a live Carthaginian unit and 
 
 ## 7. Tests
 
-`tests/test_army.py` (26 tests) covers the declared scale, the army data and unit-key checks, the side profiles, the delivery estimate, the engaged-share volley, the rear multiplier, morale by share and its carried remainder, the front, the cavalry's three steps, the routed contact, the yield and its limit, the wheel and its trigger, the enclosure measure with `zoc` 1 and 0, the three `encircle` outcomes, headquarters knowledge, the field refusal by other kinds, and the opt-in digests. `tests/test_cannae.py` (13 tests) covers the registration, every 63 §8 default, the D86 labels, the designed yield against `no-design`, each variant's difference, the policy registration, each scripted order's locator or label, the light-troops and advance sequence, Hasdrubal's trigger, the charge, the cavalry delay, the deserters, and a 12-interval headless run with its replay check.
+`tests/test_army.py` (27 tests) covers the declared scale, the army data and unit-key checks, the side profiles, the delivery estimate, the engaged-share volley, the rear multiplier, morale by share and its carried remainder, the front, the cavalry's three steps, the routed contact, the yield and its limit, the wheel and its trigger, the enclosure measure with `zoc` 1 and 0, the three `encircle` outcomes, the centre break only below the share (Dd8 q2), headquarters knowledge, the field refusal by other kinds, and the opt-in digests. `tests/test_cannae.py` (13 tests) covers the registration, every 63 §8 default, the D86 labels, the designed yield against `no-design`, each variant's difference, the policy registration, each scripted order's locator or label, the light-troops and advance sequence, Hasdrubal's trigger, the charge, the cavalry delay, the deserters, and a 12-interval headless run with its replay check.
 
-## 8. Open questions for the owner (before the EVO runs)
+## 8. Readings ruled by the owner (Dd8)
 
-Each changes outcomes; the entry takes the reading marked "built", and each is one constant.
+Six readings of 63 change outcomes. Bob ruled on all six in Dd8 (2026-11-07, relayed 23:47Z), accepting the PM's recommendation on each: keep the built reading for questions 1 and 3 to 6, take the option for question 2. None is open. Each is one constant. Results are still pending the EVO runs.
 
-1. **The Carthaginian rear row (63 §8 row 21).** Built: row 0, the Carthaginian map edge. Option: row 6, the Africans' row. With row 6 a pressing unit stops on reaching row 6 and is never "past the African's front row" (row 19), so the wheel could not fire.
-2. **"Before that" in the centre-break win (63 §5).** Built: at any interval before the deadline. Option: only while enclosed and lost men are below 50 per cent.
-3. **Yield and rout (63 §3 C1, "without routing").** Built: the step back is not a rout, and the ordinary morale rout still applies. Option: a unit within its yield limit cannot rout.
-4. **The battle signal (row 17).** Built: before the start, not sounded. Option: a new signal kind sounded at the start that begins the press of the units in reach (6 hexes from Varro on the left, so the two right-hand columns would not hear it).
-5. **Hasdrubal's trigger (row 20).** Built: read from the Carthaginian view (routed contact, or no contact after interval 7). Option: read from the truth, or a local doctrine on the horse.
-6. **Line spacing (row 10).** Built: 3 hexes from the Roman front row to the crescent, which puts the two light lines adjacent at the start. Option: from the Roman front to the Carthaginian base row, which puts both light lines in one row and needs another placement.
+| # | Question | Dd8 ruling | Rejected reading |
+|---|---|---|---|
+| 1 | The Carthaginian rear row (63 §8 row 21) | **Built:** row 0, the Carthaginian map edge (`PRESS_ROW`) | Row 6, the Africans' row: a pressing unit would stop there and never be "past the African's front row" (row 19), so the wheel could not fire |
+| 2 | "Before that" in the centre-break win (63 §5) | **Option, the literal reading:** the centre break wins only while enclosed and lost men are below 50 per cent (`victory_encircle.BREAK_ONLY_BELOW_SHARE`, `# Dd8 (Bob 2026-11-07): Q2 literal reading`) | At any interval before the deadline (the first build) |
+| 3 | Yield and rout (63 §3 C1, "without routing") | **Built:** the step back is not a rout; the ordinary morale rout still applies | A unit within its yield limit cannot rout |
+| 4 | The battle signal (row 17) | **Built:** before the start, not sounded (§3.2 item 1) | A new signal kind sounded at the start that begins the press of the units in reach (6 hexes from Varro, so the two right-hand columns would not hear it) |
+| 5 | Hasdrubal's trigger (row 20) | **Built:** read from the Carthaginian view (a routed contact, or no contact after interval 7) | Read from the truth, or a local doctrine on the horse |
+| 6 | Line spacing (row 10) | **Built:** 3 hexes from the Roman front row to the crescent, so the two light lines start adjacent | From the Roman front to the Carthaginian base row, which puts both light lines in one row |

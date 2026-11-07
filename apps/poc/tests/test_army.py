@@ -254,6 +254,20 @@ class EncircleTests(unittest.TestCase):
         winner, reason = victory.score(s)
         self.assertEqual((winner, reason), ("roman", "The Carthaginian centre broke: 5 of its 8 centre units routed or lost."))
 
+    def test_the_centre_break_wins_only_while_enclosed_and_lost_are_below_the_share(self):
+        """Dd8 (Bob 2026-11-07), doc 68 §8 q2: "before that" is read literally."""
+        s = build_state(ENTRY)
+        for uid in ("C1", "C2", "C3", "C4", "C5"):
+            unit(s, uid)["status"] = "routed"
+        heavy = [u for u in s["units"] if u["id"] in ENTRY.victory.pocket_units]
+        for u in heavy[:7]:  # 7 × 3,550 = 24,850 lost: below the 28,400 required.
+            u.update(status="lost", strength=0)
+        self.assertEqual(victory.score(s)[0], "roman")
+        heavy[7].update(status="lost", strength=0)  # 8 × 3,550 = 28,400: the share is reached.
+        self.assertEqual(victory.score(s), (None, None))
+        s["turn"] = s["max_turns"]
+        self.assertEqual(victory.score(s)[0], "carthaginian")
+
     def test_an_enclosed_pocket_wins_for_the_defender_at_the_deadline(self):
         s = build_state(ENTRY)
         for u in s["units"]:  # Every Roman heavy unit inside a ring of Carthaginians at the top of the map.
