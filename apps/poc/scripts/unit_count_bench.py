@@ -6,8 +6,9 @@ feature work; ``recon.scan`` and ``recon.reports`` loop over every unit pair.
 What: for each count in ``--counts`` it builds a SYNTHETIC BENCHMARK entry, not
 a scenario and never in a catalog: today's engine as-is (50 m hexes, 30 s
 intervals, the 24 by 21 grid), flat open ground, two sides split as evenly as
-the count allows, two facing lines 4 hexes apart, so fire, recon and pathing
-run from the first interval. Units take Gergovia's existing weapon classes
+the count allows, two facing lines 4 hexes apart on columns 1 to 22 (up to 4
+ranks a side; a count that does not fit is refused), so fire, recon and
+pathing run from the first interval. Units take Gergovia's existing weapon classes
 (shock, range 1; every third unit missile, range 3), the Roman communications
 profile, voice reach 1 and tactics_v11, as the doc 63 entry would. Each count
 runs in its own child process (a clean peak RSS) through ``HeadlessRunner``
@@ -23,8 +24,11 @@ time spent in ``battle/recon.py`` and the cumulative time of ``recon.scan``,
 ``recon.reports`` and ``recon.sees``. Both include the closing replay check,
 which re-runs every interval. The engine draws no random number; the digest is
 deterministic, the timings are not.
+A count whose child process fails is reported with its error, not dropped.
 Test: `test_quick_bench_has_the_expected_shape`,
-`test_quick_bench_digest_is_deterministic`.
+`test_quick_bench_digest_is_deterministic`,
+`test_large_counts_keep_every_sight_line_on_the_grid`,
+`test_a_count_that_cannot_fit_is_refused`.
 Usage, from apps/poc: ``python3 scripts/unit_count_bench.py --out bench.json``;
 ``--quick`` runs counts 6 and 12 for 5 intervals.
 """
@@ -64,6 +68,13 @@ QUICK_COUNTS, QUICK_INTERVALS = (6, 12), 5
 OPTION_A_INTERVALS = 160
 PROFILE_COUNT = 41
 DEFENDER_ROWS, ATTACKER_ROWS = (8, 7, 6, 5), (12, 13, 14, 15)  # Lines 4 hexes apart.
+# Columns 1 to 22 only: grid.line between two hexes of edge column 0 or 23 a
+# few rows apart passes off the grid, and grid.visible then raises KeyError
+# (e.g. hex -1,9 at 60 units). The bench changes no engine code, so it keeps
+# its units off those columns. Counts up to 41 place exactly as before.
+FIRST_COL, LAST_COL = 1, COLS - 2
+ROW_WIDTH = LAST_COL - FIRST_COL + 1
+PER_SIDE = ROW_WIDTH * len(DEFENDER_ROWS)  # 88 units a side, 176 in all.
 STRENGTH = 40  # scenario_entry.unit()'s default detachment; ammo as Gergovia (20 rounds a man).
 
 
@@ -73,14 +84,14 @@ def flat_terrain():
 
 
 def placements(n, rows):
-    """``n`` hexes filling ``rows`` in order, each row centred on the grid."""
+    """``n`` hexes filling ``rows`` in order, each row centred on columns 1 to 22."""
     out = []
     for row in rows:
-        k = min(COLS, n - len(out))
-        out += [(start + i, row) for start in [(COLS - k) // 2] for i in range(k)]
+        k = min(ROW_WIDTH, n - len(out))
+        out += [(FIRST_COL + (ROW_WIDTH - k) // 2 + i, row) for i in range(k)]
         if len(out) == n:
             return out
-    raise ValueError(f"{n} units do not fit in rows {rows}")
+    raise ValueError(f"{n} units do not fit in rows {rows} of {ROW_WIDTH} hexes")
 
 
 def side_units(prefix, side, n, rows):
@@ -94,7 +105,11 @@ def side_units(prefix, side, n, rows):
 
 
 def bench_entry(count, intervals):
-    """The synthetic benchmark entry for ``count`` units (attacker gets the odd one)."""
+    """The synthetic benchmark entry for ``count`` units (attacker gets the odd one).
+    Raises ValueError for a count outside 2 to ``2 * PER_SIDE``."""
+    if not 2 <= count <= 2 * PER_SIDE:
+        raise ValueError(f"the bench places 2 to {2 * PER_SIDE} units ({len(DEFENDER_ROWS)} ranks of "
+                         f"{ROW_WIDTH} a side, off the edge columns); {count} does not fit")
     defenders, attackers = count // 2, count - count // 2
     centre = placements(defenders, DEFENDER_ROWS)[defenders // 2]
     return ScenarioEntry(
@@ -209,10 +224,14 @@ def profile_count(count, intervals):
 
 
 def child(*extra):
-    """Run this script for one measurement in a fresh interpreter; returns its JSON."""
+    """Run this script for one measurement in a fresh interpreter; returns its
+    JSON, or ``{"error": ...}`` with the traceback's last lines when it fails,
+    so one failed count does not discard the others."""
     cmd = [sys.executable, __file__, *extra]
-    out = subprocess.run(cmd, check=True, capture_output=True, text=True, cwd=POC).stdout
-    return json.loads(out)
+    done = subprocess.run(cmd, capture_output=True, text=True, cwd=POC)
+    if done.returncode:
+        return {"error": done.stderr.strip().splitlines()[-6:], "exit": done.returncode}
+    return json.loads(done.stdout)
 
 
 def main():
@@ -240,8 +259,13 @@ def main():
     timing = ["--intervals", str(args.intervals), "--run-intervals", str(args.run_intervals)]
     results = []
     for count in args.counts:
-        results.append(child("--child", str(count), *timing))
-        print(f"{count} units: mean {results[-1]['timing']['mean_s']:.4f} s/interval", file=sys.stderr)
+        bench_entry(count, args.run_intervals)  # Refuses a count that cannot fit before any run.
+    for count in args.counts:
+        result = child("--child", str(count), *timing)
+        results.append({"count": count, **result})
+        line = (f"FAILED: {result['error'][-1]}" if "error" in result
+                else f"mean {result['timing']['mean_s']:.4f} s/interval")
+        print(f"{count} units: {line}", file=sys.stderr)
     target = args.profile if args.profile in args.counts else max(args.counts)
     profile = child("--child-profile", str(target), *timing) if args.profile else None
     report = {

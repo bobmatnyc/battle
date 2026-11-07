@@ -2,12 +2,15 @@
 ``--quick`` mode: its JSON shape and a deterministic battle digest. Timings
 vary from run to run and are not compared."""
 
+import importlib.util
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+from battle import grid
 
 POC = Path(__file__).resolve().parent.parent
 SCRIPT = POC / "scripts" / "unit_count_bench.py"
@@ -52,6 +55,34 @@ class UnitCountBenchTest(unittest.TestCase):
             return [(r["count"], r["intervals_run"], r["battle"]) for r in report["results"]]
 
         self.assertEqual(battles(self.first), battles(self.second))
+
+
+def load_bench():
+    spec = importlib.util.spec_from_file_location("unit_count_bench", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class BenchPlacementTest(unittest.TestCase):
+    """At 60 units a full row reached columns 0 and 23, and grid.line between
+    two edge hexes leaves the grid, so grid.visible raised KeyError '-1,9'."""
+
+    def test_large_counts_keep_every_sight_line_on_the_grid(self):
+        bench = load_bench()
+        for count in (60, 82):
+            hexes = [list(u.pos) for u in bench.bench_entry(count, 5).units]
+            self.assertEqual(len(hexes), count)
+            self.assertTrue(all(grid.valid(h) for h in hexes), count)
+            off = [(a, b) for a in hexes for b in hexes
+                   if grid.distance(a, b) <= 7 and not all(grid.valid(p) for p in grid.line(a, b))]
+            self.assertEqual(off, [], f"{count} units: sight lines leave the grid")
+
+    def test_a_count_that_cannot_fit_is_refused(self):
+        bench = load_bench()
+        bench.bench_entry(2 * bench.PER_SIDE, 5)
+        with self.assertRaisesRegex(ValueError, "does not fit"):
+            bench.bench_entry(2 * bench.PER_SIDE + 1, 5)
 
 
 if __name__ == "__main__":
