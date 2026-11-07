@@ -72,7 +72,7 @@ Each 57 §10 must-have was checked on this branch (base `264709d`, on `e15bd3f`)
 
 **Audibility at the default geometry.** From `RX`, `R8a` stands 8 hexes off with the valley on the line (`blocked`); `R8b` to `R8d` and `R8f` stand 10 to 14 hexes off (`out_of_reach`). No forward group hears the default recall at the start; as they press upslope they move further off.
 
-**Recall timing, D85 ruling 2026-11-07 13:10Z ("Earlier recall").** 57 §8 put the recall at interval 40 (12:20) and said the time is not sourced. In the runs of §5 the default force breaks at 36, so the recall never sounded (§9). The ruling names no interval. The value used is the Architect's reading of it (Architect 2026-11-07 16:38Z, option b): the recall sounds during the fight, after gate contact and before the break, at interval 20 (12:10:00). It is authored and is not Bob's own figure. Its basis is the default run's timeline in the EVO run `bt05p-466c33c` (`gergovia-default.sqlite`, read-only), which matches the §5 default up to 36:
+**Recall timing, D85 ruling 2026-11-07 13:10Z ("Earlier recall").** 57 §8 put the recall at interval 40 (12:20) and said the time is not sourced. In the earlier runs, with the recall at 40, the default force broke at 36, so the recall never sounded. The ruling names no interval. The value used is the Architect's reading of it (Architect 2026-11-07 16:38Z, option b): the recall sounds during the fight, after gate contact and before the break, at interval 20 (12:10:00). It is authored and is not Bob's own figure. Its basis is the default run's timeline in the EVO run `bt05p-466c33c` (`gergovia-default.sqlite`, read-only), which matches the §5 default up to 36:
 
 | Interval | Clock | Event |
 |---|---|---|
@@ -97,7 +97,7 @@ Option not taken: interval 1, inferred from VII.47 (the retreat sounded once the
 | Name | Change | 57 §8 basis |
 |---|---|---|
 | `recall-audible` | Reach 45, no block: every group hears | Control; VII.47 (the Tenth heard) |
-| `recall-by-runner` | Each forward group also gets a retreat order to (20, 19) from the recall interval (20 since D85; 40 in the §5 runs) | VII.47 (tribunes and legates) |
+| `recall-by-runner` | Each forward group also gets a retreat order to (20, 19) from the recall interval (20 since D85) | VII.47 (tribunes and legates) |
 | `ardour` | The S1 pursuit with `recall_binding` false: a heard recall is taken up only once the press stops | Caesar's account: VII.47, VII.52; mechanism authored |
 | `leaders-fall` | Each forward group has 1 officer (its centurion), not 2 | Inferred: VII.47, VII.51 |
 | `sextius-cover` | The default's own reading (Sextius out at 60) | VII.49 |
@@ -111,37 +111,40 @@ Option not taken: interval 1, inferred from VII.47 (the retreat sounded once the
 
 ## 5. Results (model results)
 
-**Superseded, pending re-run (D85 ruling 2026-11-07).** The results in this section and in §6 were produced with the recall at interval 40. Per D85, as the Architect reads it (16:38Z, option b), the recall now sounds at interval 20 (§3), after gate contact and before the force breaks, so the recall, its partial hearing and the `recall-audible`, `recall-by-runner` and `ardour` differences now act in the default battle. The 14 runs must be repeated on EVO; until then the table below describes the interval-40 entry only, and no new result is claimed here.
+The 14 runs were repeated on EVO at `d7b6838` with the recall at interval 20 (run `bt05q-d7b6838`, `apps/poc/artifacts/gergovia-d85-d7b6838/`; `make test-poc` there: 704 tests OK, exit 0). Every replay is `identical`. The recall now sounds during the fight, after `R8a` reaches the gate (19) and before the first rout (23). At the default geometry no forward group hears it in time; only the audible variant changes the result.
 
-One run each, 14 runs, after the fix round of §7 rows 1 and 13 (the earlier runs, with the groups on `hold`, are superseded). Every replay is `identical`. Interval *t* is 12:00 plus *t* × 30 s. "Recovered" is the forward force's men within 2 hexes of the rally hex at the end; 122 are needed (82 for `strength-40`, 162 for `strength-80`). Total run time 240.7 s on the Mac, summed from the per-run timings.
+One run each, 14 runs. Interval *t* is 12:00 plus *t* × 30 s. "Recovered" is the forward force's men within 2 hexes of the rally hex at the end; 122 are needed (82 for `strength-40`, 162 for `strength-80`). Total run time 378.8 s on EVO, summed from the per-run timings.
 
-| Run | Winner, end | Reason | Recall receipts (forward groups) | Furthest row reached | Recovered | Exploit stops (unit, turn, reason) | Roman / Gallic losses | Routed | Seconds |
+| Run | Winner, end | Reason | Recall receipts at 20 (forward groups) | Furthest row reached | Recovered | Exploit stops (unit, turn, reason) | Roman / Gallic losses | Routed | Seconds |
 |---|---|---|---|---|---|---|---|---|---|
-| default | gallic, 12:18:00 (36) | the force can no longer bring back enough | none: the battle ended before 40 | 1 (`R8b`), 2 (`R8a`, `R8c`, `R8d`), 4 (`R8f`) | 0 | `R8f` 15 shaken; `R8a` 19, `R8b` 26, `R8d` 28 reached | 42 / 2 | `R8a`, `R8b` | 5.3 |
-| `recall-audible` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.2 |
-| `recall-by-runner` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.2 |
-| `ardour` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.2 |
-| `leaders-fall` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.3 |
-| `sextius-cover` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.3 |
-| `no-cover` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.2 |
-| `gallic-delay-10` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.2 |
-| `gallic-delay-20` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.2 |
-| `gallic-delay-40` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.3 |
-| `strength-60` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.2 |
-| `aedui-misread` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 5.9 |
-| `strength-40` | gallic, 14:00:00 (240) | not brought back by the deadline | `R8a` heard at 40 while routed (not obeyed); others out of reach | 2 to 4 | 0 | `R8f` 15, `R8b` 18, `R8c` 25 shaken; `R8a` 19, `R8d` 22 reached | 29 / 4 | `R8a` | 79.6 |
-| `strength-80` | gallic, 14:00:00 (240) | not brought back by the deadline | all out of reach | 2 to 4 | 0 | `R8f` 15 shaken; `R8a` 19 reached | 11 / 3 | none | 97.6 |
+| default | gallic, 12:18:00 (36) | the forward force can no longer bring back the men required | all five out of reach; none obeys | 1 (`R8b`), 2 (`R8a`, `R8c`, `R8d`), 4 (`R8f`) | 0 | `R8f` 15 shaken; `R8a` 19, `R8b` 26, `R8d` 28 reached | 42 / 2 | `R8a`, `R8b` | 6.8 |
+| `recall-audible` | roman, 12:20:30 (41) | the commander brought 183 of the forward force back to the rally point by the deadline | all five hear and obey | 2 to 4 | 183 (at 41) | `R8f` 15 shaken; `R8a` 19 reached; `R8b`, `R8c`, `R8d` 20 recalled | 10 / 2 | none | 6.4 |
+| `recall-by-runner` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 7.2 |
+| `ardour` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 7.3 |
+| `leaders-fall` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 8.1 |
+| `sextius-cover` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 7.1 |
+| `no-cover` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 8.1 |
+| `gallic-delay-10` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 6.2 |
+| `gallic-delay-20` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 6.2 |
+| `gallic-delay-40` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 7.2 |
+| `strength-60` | as default | as default | as default | as default | 0 | as default | 42 / 2 | `R8a`, `R8b` | 7.4 |
+| `aedui-misread` | as default | as default | as default | as default | 0 | as default | 42 / 2 (Gallic of 460, else 400) | `R8a`, `R8b` | 10.0 |
+| `strength-40` | gallic, 14:00:00 (240) | the forward force was not brought back to the rally point by the deadline | all out of reach | 2 to 4 | 0 | `R8f` 15, `R8b` 18, `R8c` 25 shaken; `R8a` 19, `R8d` 22 reached | 29 / 4 | `R8a` | 131.9 |
+| `strength-80` | gallic, 14:00:00 (240) | the forward force was not brought back to the rally point by the deadline | all out of reach | 2 to 4 | 0 | `R8f` 15 shaken; `R8a` 19 reached | 11 / 3 | none | 158.9 |
 
-Event counts: 3,036 for the default and for every run marked "as default", except `leaders-fall` (3,034) and `aedui-misread` (3,314); 25,213 for `strength-40`; 26,719 for `strength-80`. In the runs that end at 36 no Gallic order and no Sextius order is sent: the return (40), Sextius (60) and the recall (40) all come after the end. In `strength-40` and `strength-80` the Gallic return is first sent at 42 and Sextius at 60; only `strength-80` sends the push down (45). In `strength-40`, `R8a` routed back toward the Tenth (it ends at (21, 18)) and heard the recall at 40, but a routed group does not obey (60 §1). In `strength-80`, `R8a` to `R8d` end at the gate with 71 to 80 men each.
+Event counts: 3,043 for the default and for every run marked "as default", except `recall-by-runner` (3,056), `leaders-fall` (3,041) and `aedui-misread` (3,321); 2,904 for `recall-audible`; 25,213 for `strength-40`; 26,719 for `strength-80`. In the runs that end at 36 no Gallic order and no Sextius order is sent: the return (40) and Sextius (60) come after the end. In `strength-40` and `strength-80` the Gallic return is first sent at 42 and Sextius at 60; only `strength-80` sends the push down (45). In `strength-40`, `R8a` routed back toward the Tenth (it ends at (21, 18)); the recall at 20 was out of its reach. In `strength-80`, `R8a` to `R8d` end at the gate with 71 to 80 men each.
+
+Against the recall at 40 (`bt05o-08e7ef2`): only `recall-audible` changes winner. The other 13 entries differ only in their recall receipts and about 7 more events. `recall-by-runner`, a Roman win at 42 when the recall sounded at interval 1, is now a Gallic win at 36 like the default.
 
 ## 6. Reading the results
 
-Superseded pending re-run, as §5: these readings are of the interval-40 runs.
+These readings are of the interval-20 runs (§5).
 
-- **Under S1 the unheard groups press on to the wall, so signal failure now produces the overrun.** At the default geometry no forward group can hear the recall, and none is ever recalled. They reach the hex below the gate in 9 to 14 minutes and take missile fire from the wall. Two groups rout; the effective force falls to 120, under the 122 needed, and the defender wins at 12:18.
-- **Signal failure and ardour produce the same battle in every run.** The default and `ardour` give the same outcome, metrics and event count (3,036). The two readings differ only for a group that hears the recall: S1 stops its pursuit, ardour does not. In these runs no forward group hears the recall while able to obey it: in eleven runs the battle ends at 36, before the recall sounds at 40, and in `strength-40` and `strength-80` every pressing group is out of reach by 40. The difference is shown on the entry only with the recall moved to interval 2 (`test_a_heard_recall_stops_the_pursuit_under_signal_failure_but_not_under_ardour`). The recall stays at interval 40, reach 8, valley block, as 57 §8 authors it (PM decision in the fix round).
-- **The control variants change nothing.** `recall-audible` and `recall-by-runner` are the default's battle because the recall and the runner orders (from 40) come after the end at 36. `leaders-fall`, `no-cover`, `aedui-misread` and the delays are the default's battle too: in `leaders-fall` the one-officer step is 30 losses, so no group goes leaderless before 36 (the default has one `officer_down` at a 20-loss step, `leaders-fall` none, hence 2 fewer events), and the orders the others change all fall after 36.
-- **Strength decides whether the force breaks.** With groups of 40 (82 needed of 164) or 80 (162 of 324), two routs do not take the force below the share, so the battle runs to the deadline. Neither brings anyone back: the pressing groups are out of earshot, and the press ends at the gate (`reached`) or on a withdrawal (`shaken`); the group then keeps its `hold` mission where it stands.
+- **Moving the recall to 20 makes it sound during the fight, but no group hears it in time.** At the default geometry all five forward groups are out of reach at 20 and none obeys. They press on to the wall and take missile fire from it. Two groups rout; the effective force falls under the 122 needed, and the defender wins at 12:18, as at interval 40.
+- **Only the audible variant turns the result.** In `recall-audible` all five groups hear the recall at 20 and obey; no group routs, 183 men are back at the rally point at 41, and the Romans win at 12:20:30 with 10 and 2 losses.
+- **Signal failure and ardour still produce the same battle.** The default and `ardour` give the same outcome, metrics and event count (3,043). The two readings differ only for a group that hears the recall while able to obey it; none does in the default, `ardour` or the strength variants. The difference is shown on the entry only with the recall audible or moved to interval 2 (`test_a_heard_recall_stops_the_pursuit_under_signal_failure_but_not_under_ardour`). The recall interval 20 is the Architect's reading of Bob's "Earlier recall"; reach 8 and the valley block are as 57 §8 authors them.
+- **The other control variants change nothing.** `recall-by-runner` sends its orders at 20 but no group obeys; the winner and end turn are the default's (13 more events). `leaders-fall`, `no-cover`, `aedui-misread` and the delays are the default's battle too: in `leaders-fall` the one-officer step is 30 losses, so no group goes leaderless before 36 (the default has one `officer_down` at a 20-loss step, `leaders-fall` none, hence 2 fewer events), and the orders the others change all fall after 36.
+- **Strength decides whether the force breaks.** With groups of 40 (82 needed of 164) or 80 (162 of 324), two routs do not take the force below the share, so the battle runs to the deadline. Neither brings anyone back: all five groups are out of reach at 20, and the press ends at the gate (`reached`) or on a withdrawal (`shaken`); the group then keeps its `hold` mission where it stands.
 - **Against the record (not scored).** VII.51 gives 46 centurions and about 700 men lost for the whole assault; the default loses 42 of 404 in this sector. An order-of-magnitude check only (57 §5); S61 and S64 say Caesar's figure may understate.
 
 ## 7. Deviations from doc 57
@@ -183,8 +186,8 @@ No test asserts a winner.
 
 ## 9. Limits and next steps
 
-- **Signal failure and ardour need a heard recall to differ.** With the recall at 40 and the force breaking at 36, no run tested the difference. Decided by D85 ruling 2026-11-07: "Earlier recall" (§3). The lower recovery share, the loss limit and a group placed in earshot were not taken. At interval 20 no forward group stands in earshot in the default, so the default still differs from `ardour` only in a variant where a group hears it; `recall-audible` and `recall-by-runner` now act before the break. The re-run results are pending (§5).
-- **Most variants act after the end** (in the interval-40 runs). `recall-audible`, `recall-by-runner`, `no-cover`, the delays and `leaders-fall` change things that happen at 40 or later (or after more losses than a group takes before it routs). Since D85, `recall-audible` and `recall-by-runner` act at interval 20.
+- **Signal failure and ardour need a heard recall to differ.** Decided by D85 ruling 2026-11-07: "Earlier recall" (§3). The lower recovery share, the loss limit and a group placed in earshot were not taken. At interval 20 no forward group stands in earshot in the default (§5), so the default still differs from `ardour` only in a variant where a group hears it; only `recall-audible` does.
+- **Most variants still act after the end.** `no-cover`, the delays and `leaders-fall` change things that happen at 40 or later (or after more losses than a group takes before it routs). `recall-audible` and `recall-by-runner` act at interval 20; only `recall-audible` changes the result.
 - **Map.** Authored and schematic; no contour map was obtained (57 §7).
-- **Run cost.** About 5 s for a run that ends at 36, 80 to 98 s for a run to the deadline on the Mac; 14 runs in about 4 minutes. No run went to EVO.
-- Reproduce, from `apps/poc`: `python3 scripts/gergovia_runs.py` (one JSON line per run; `--only NAME`).
+- **Run cost.** 6 to 10 s for a run that ends at 36 or 41, 132 and 159 s for the two runs to the deadline, on EVO; the 14 runs took 6 min 19 s, and the job with `make test-poc` 8 min 33 s.
+- Reproduce, from `apps/poc`: `python3 scripts/gergovia_runs.py` (one JSON line per run; `--only NAME`). The results above are the EVO run `bt05q-d7b6838` at `d7b6838`.
