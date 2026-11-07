@@ -67,8 +67,20 @@ class BattleQueries:
         return result
 
     def replay(self, game_id, revision, *, god=False, side=None):
-        """Read-only: the stored snapshot at ``revision`` through ``project``."""
-        return self.project(self.repository.load(game_id, revision), god=god, side=side)
+        """Why: the opponent's replay carries its brief and mission, which no
+        live endpoint, God Mode included, shows the player.
+        What: the stored snapshot at ``revision`` through ``project``, read
+        only. While the game (its latest state, not the snapshot) is active, a
+        ``side`` other than the player side raises ValueError (HTTP 400), as
+        the full export stays locked until completion.
+        Test: `test_opponent_replay_is_locked_until_the_battle_is_complete`,
+        `test_no_endpoint_shows_the_opponent_mission_during_an_active_battle`."""
+        state = self.repository.load(game_id, revision)
+        if (side is not None and side != self.simulation.player_side(state)
+                and self.repository.load(game_id)["status"] == "active"):
+            # docs/research/65: locked like the export; the owner may loosen it later.
+            raise ValueError("The opponent's replay unlocks after battle completion.")
+        return self.project(state, god=god, side=side)
 
     def history(self, game_id):
         return self.repository.history(game_id)

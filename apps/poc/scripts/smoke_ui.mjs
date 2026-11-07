@@ -39,6 +39,8 @@ const replays=JSON.parse(generated.stdout).replays;
 const replayed=path=>{const q=new URLSearchParams(path.split('?')[1]);return {...replays[q.get('view')==='god'?'god':q.get('side')||'union'],revision:+q.get('revision')};};
 const hougoumontView={...hougoumont.view,game_id:'test-hougoumont',mode:'scripted',messages:[],clock:initial.clock};
 let served='little-round-top';  // Which scenario the mock server is playing.
+let completed=false;  // docs/research/65: the opponent's replay unlocks only after the battle.
+const liveInitial=()=>completed?{...initial,status:'complete',winner:'union',reason:'The Union held out until the scenario deadline.'}:initial;
 const setCells=[];
 const context=vm.createContext({document:{getElementById:element},window:{matchMedia:()=>({matches:false})},console,BattleMapView:{active:()=>false,update(){},init(){},setCells(cells){setCells.push(cells);}},setTimeout:()=>0,clearTimeout(){},
   confirm(){throw Error('Native dialogs must not be used');},
@@ -49,7 +51,7 @@ const context=vm.createContext({document:{getElementById:element},window:{matchM
     const catalog={default:'little-round-top',scenarios:[{id:'little-round-top',title:'Little Round Top'},{id:'hougoumont-north-gate',title:'Hougoumont: the north gate'}]};
     if(path.startsWith('/api/history'))return {ok:true,json:async()=>[{revision:0,turn:0},{revision:1,turn:0}]};
     if(path.startsWith('/api/replay'))return {ok:true,json:async()=>replayed(path)};
-    return {ok:true,json:async()=>path==='/api/map'?{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}:path==='/api/scenarios'?catalog:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:initial};}});
+    return {ok:true,json:async()=>path==='/api/map'?{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}:path==='/api/scenarios'?catalog:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:liveInitial()};}});
 vm.runInContext(readFileSync(new URL('../static/cartography.js',import.meta.url),'utf8'),context);
 for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
 vm.runInContext(readFileSync(new URL('../static/app.js',import.meta.url),'utf8'),context);
@@ -220,11 +222,19 @@ assert.equal(vm.runInContext('state.voice_profile',context),'civil-war-en-v1');
 assert.match(element('scenario-select').innerHTML,/value="little-round-top".*value="hougoumont-north-gate"/);
 console.log('Scenario text passed: Little Round Top mission, headings, objective and voice come from the brief unchanged.');
 
-// docs/research/65: Replay as the Union, then the Confederates, then God, then the Union again.
+// docs/research/65: while the battle is active, Replay offers the player's side and God only.
 const lastReplay=()=>requests.filter(r=>r.path.startsWith('/api/replay')).at(-1).path;
 const chooseReplayView=async value=>{element('replay-view').value=value;await element('replay-view').onchange();};
 const commandsBefore=requests.filter(r=>r.options?.method==='POST'&&r.path!=='/api/clock').length;
 await element('history-toggle').onclick();
+assert.equal(vm.runInContext('state.status',context),'active');
+assert.match(element('replay-view').innerHTML,/value="union">Union commander.*value="god">God view/);
+assert.doesNotMatch(element('replay-view').innerHTML,/confederate|Confederate/);
+await element('live-view').onclick();
+// A completed battle: Replay as the Union, then the Confederates, then God, then the Union again.
+completed=true;
+await element('history-toggle').onclick();
+assert.equal(vm.runInContext('liveState.status',context),'complete');
 assert.equal(vm.runInContext('replay',context),true);
 assert.equal(lastReplay(),'/api/replay?game_id=test-initial&revision=0');  // The player's own view by default.
 assert.match(element('replay-view').innerHTML,/value="union">Union commander.*value="confederate">Confederate commander.*value="god">God view/);
@@ -255,8 +265,19 @@ assert.equal(vm.runInContext('replay',context),false);
 assert.equal(requests.at(-1).path,'/api/state');  // Live is the player's commander view again.
 assert.equal(vm.runInContext('state.side',context),'union');
 assert.equal(element('replay-view').innerHTML,'');
+// Return to live from a God replay keeps God Mode on: the live desk opens in God view, as the switch shows.
+await element('history-toggle').onclick();
+await chooseReplayView('god');
+await element('live-view').onclick();
+assert.equal(vm.runInContext('replay',context),false);
+assert.equal(requests.at(-1).path,'/api/state?view=god');
+assert.equal(element('god-toggle-state').textContent,'On');
+await element('god-toggle').onclick();
+assert.equal(requests.at(-1).path,'/api/state');
+assert.equal(element('god-toggle-state').textContent,'Off');
 assert.equal(requests.filter(r=>r.options?.method==='POST'&&r.path!=='/api/clock').length,commandsBefore);  // Replay sent no command.
-console.log('Replay sides passed: Union, Confederate and God replay views by selector, seek keeps the view, live returns to the player, no commands or dialogs.');
+completed=false;vm.runInContext(`state=liveState=${JSON.stringify(initial)};render()`,context);
+console.log('Replay sides passed: player and God only while active; after the battle Union, Confederate and God views by selector, seek keeps the view, live returns to the player, God replay returns to live God view, no commands or dialogs.');
 
 // New-game selection: pick Hougoumont, Reset, and the whole desk follows the new game.
 element('scenario-select').value='hougoumont-north-gate';

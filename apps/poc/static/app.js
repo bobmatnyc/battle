@@ -251,6 +251,7 @@ $('chat-form').onsubmit=async e=>{e.preventDefault();const text=$('chat-input').
 $('messages').onclick=async e=>{const button=e.target.closest('[data-proposal]');if(!button)return;const msg=(state.messages||[]).find(m=>m.id===+button.dataset.proposal);if(!msg)return;const result=await post('/api/orders',{orders:msg.proposals});if(result)toast('Proposed orders dispatched.');};
 function stopReplay(){replayPlaying=false;clearTimeout(replayTimer);replayGeneration++;}
 // docs/research/65: replay either side's commander view or God's; the player's side is the default request.
+// The opponent is offered only after the battle (the server refuses it before). Return to live keeps God Mode.
 const replaySides=()=>{const b=liveState?.scenario_brief;return b?[b.side,b.opponent]:[{id:liveState?.side,name:liveState?.side}];};
 const replayQuery=()=>godMode?'&view=god':replaySide?'&side='+encodeURIComponent(replaySide):'';
 const replayViewName=()=>godMode?'omniscient':`${(replaySides().find(s=>s.id===state.side)||{name:state.side}).name} commander`;
@@ -266,7 +267,7 @@ $('history-toggle').onclick=async()=>{
   if(busy)return;if(replay)return;
   busy=true;viewEpoch++;renderControls();
   try{await pauseLive();history=await get('/api/history?game_id='+state.game_id);liveState=state;replay=true;replaySpeed=state.clock.speed;replaySide=null;
-    $('replay-view').innerHTML=[...replaySides().map(s=>`<option value="${esc(s.id)}">${esc(s.name)} commander</option>`),'<option value="god">God view</option>'].join('');
+    $('replay-view').innerHTML=[...replaySides().filter((s,i)=>i===0||liveState.status!=='active').map(s=>`<option value="${esc(s.id)}">${esc(s.name)} commander</option>`),'<option value="god">God view</option>'].join('');
     $('replay-bar').classList.remove('hidden');$('replay-slider').max=history.length-1;await loadReplay(0);
   }catch(e){toast(e.message);}finally{busy=false;renderControls();}
 };

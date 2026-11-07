@@ -55,8 +55,9 @@ def replay(api, revision, *, side=None, god=False, game_id=None):
     return api.read("/api/replay", query)
 
 
-def played(tmp, scenario_id, intervals=12):
-    """A live offline game: one player order, then clock intervals. Returns the
+def played(tmp, scenario_id, intervals=80):
+    """A live offline game: one player order, then clock intervals until the
+    battle ends (both player scenarios end before 80). Returns the app, the
     API and, per revision, what each side and God saw live at that revision."""
     app = build_application(Path(tmp) / "battle.sqlite", offline=True,
                             settings=Settings(), scenario_id=scenario_id)
@@ -93,6 +94,7 @@ class ReplayViewTests(unittest.TestCase):
             with self.subTest(scenario=entry.id), tempfile.TemporaryDirectory() as tmp:
                 app, api, live = played(tmp, entry.id)
                 state = app.repository.load(app.game_id)
+                self.assertEqual(state["status"], "complete")  # The opponent's replay is unlocked.
                 player, sides = engine.player_side(state), engine.sides(state)
                 self.assertEqual(len(sides), 2)
                 self.assertEqual([h["revision"] for h in app.queries.history(app.game_id)], sorted(live))
@@ -132,11 +134,14 @@ class ReplayViewTests(unittest.TestCase):
                   for u in s["units"] if u["side"] == digger]
         action = ({"type": "orders", "orders": orders} if digger == engine.player_side(s) else
                   {"type": "advance", "decision": {"side": digger, "source": "scripted", "orders": orders}})
-        unseen_units = unseen_works = 0
-        while s["status"] == "active" and s["turn"] < 12:
+        while s["status"] == "active":  # Played to the end: the opponent's replay is locked before.
             updated = simulation.apply(s, action)
             repository.save(app.game_id, updated, s["revision"])
             s, action = updated, {"type": "advance"}
+            self.assertLess(s["turn"], 80)
+        unseen_units = unseen_works = 0
+        for revision in range(1, s["revision"] + 1):
+            s = repository.load(app.game_id, revision)
             god = replay(api, s["revision"], god=True)
             for side in engine.sides(s):
                 other = next(x for x in engine.sides(s) if x != side)
@@ -168,7 +173,7 @@ class ReplayViewTests(unittest.TestCase):
     def test_switching_replay_views_leaves_stored_records_byte_identical(self):
         for entry in PLAYER_SCENARIOS:
             with self.subTest(scenario=entry.id), tempfile.TemporaryDirectory() as tmp:
-                app, api, live = played(tmp, entry.id, intervals=6)
+                app, api, live = played(tmp, entry.id)
                 path = Path(tmp) / "battle.sqlite"
                 before, commander = stored_records(path), recorded(app.state())
                 sides = engine.sides(app.repository.load(app.game_id))
@@ -185,12 +190,67 @@ class ReplayViewTests(unittest.TestCase):
 
     def test_replay_refuses_an_unknown_side_and_side_with_god(self):
         with tempfile.TemporaryDirectory() as tmp:
-            app = build_application(Path(tmp) / "battle.sqlite", offline=True, settings=Settings())
-            api = HttpApi(app)
-            for side, god in (("french", False), ("", False), ("union", True)):
+            app, api, _ = played(tmp, "little-round-top")
+            self.assertEqual(app.repository.load(app.game_id)["status"], "complete")
+            for side, god in (("french", False), ("", False), ("union", True), ("confederate", True)):
                 with self.subTest(side=side, god=god), self.assertRaises(ValueError):
-                    replay(api, 0, side=side or "nobody", god=god)
+                    # Straight to the query: HTTP parsing drops an empty ``side=``.
+                    app.queries.replay(app.game_id, 0, side=side, god=god)
             app.close()
+
+    def test_opponent_replay_is_locked_until_the_battle_is_complete(self):
+        for entry in PLAYER_SCENARIOS:
+            with self.subTest(scenario=entry.id), tempfile.TemporaryDirectory() as tmp:
+                app = build_application(Path(tmp) / "battle.sqlite", offline=True,
+                                        settings=Settings(), scenario_id=entry.id)
+                api, gid = HttpApi(app), app.game_id
+                state = app.repository.load(gid)
+                player = engine.player_side(state)
+                opponent = next(x for x in engine.sides(state) if x != player)
+                while state["status"] == "active":
+                    for revision in range(state["revision"] + 1):  # Every snapshot, while active.
+                        with self.assertRaisesRegex(ValueError, "unlocks after battle completion"):
+                            replay(api, revision, side=opponent)
+                        self.assertEqual(replay(api, revision, side=player)["side"], player)
+                    app.execute("advance", {}, game_id=gid, revision=state["revision"])
+                    state = app.repository.load(gid)
+                    self.assertLess(state["turn"], 80)
+                for revision in range(state["revision"] + 1):
+                    snapshot = app.repository.load(gid, revision)
+                    view = replay(api, revision, side=opponent)
+                    self.assertEqual(view, app.queries.project(snapshot, side=opponent))
+                    commander = engine.view(snapshot, opponent)
+                    for key in ("side", "units", "contacts", "orders", "map_features"):
+                        self.assertEqual(view[key], commander[key], (revision, key))
+                app.close()
+
+    def test_no_endpoint_shows_the_opponent_mission_during_an_active_battle(self):
+        catalog = build_scenarios()
+        for entry in PLAYER_SCENARIOS:
+            with self.subTest(scenario=entry.id), tempfile.TemporaryDirectory() as tmp:
+                app = build_application(Path(tmp) / "battle.sqlite", offline=True,
+                                        settings=Settings(), scenario_id=entry.id)
+                api, gid = HttpApi(app), app.game_id
+                state = app.repository.load(gid)
+                player = engine.player_side(state)
+                opponent = next(x for x in engine.sides(state) if x != player)
+                mission = brief_mission(catalog.resolve(entry.id), opponent)
+                for _ in range(6):
+                    app.execute("advance", {}, game_id=gid, revision=state["revision"])
+                    state = app.repository.load(gid)
+                self.assertEqual(state["status"], "active")
+                shown = [api.read("/api/state", {}), api.read("/api/state", {"view": ["god"]}),
+                         api.read("/api/history", {"game_id": [gid]})]
+                for revision in range(state["revision"] + 1):
+                    shown += [replay(api, revision), replay(api, revision, god=True),
+                              replay(api, revision, side=player)]
+                    try:
+                        shown.append(replay(api, revision, side=opponent))
+                    except ValueError:
+                        pass  # Locked: nothing returned.
+                for document in shown:
+                    self.assertNotIn(mission, json.dumps(document))
+                app.close()
 
 
 if __name__ == "__main__":

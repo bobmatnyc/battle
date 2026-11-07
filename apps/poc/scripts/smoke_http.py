@@ -70,13 +70,11 @@ with tempfile.TemporaryDirectory() as tmp:
         assert god['events'] and god['decisions']
         assert all(u['side']=='confederate' for u in god['decisions'][0]['observation']['units'])
         assert len(request('/api/history'))==4
-        # docs/research/65: each side's recorded commander view; one view per request.
+        # docs/research/65: the player's own recorded view; the opponent's stays locked while active.
         for revision in range(4):
             mine=request(f'/api/replay?revision={revision}')
             assert request(f'/api/replay?revision={revision}&side=union')==mine and mine['side']=='union'
-            theirs=request(f'/api/replay?revision={revision}&side=confederate')
-            assert theirs['side']=='confederate' and theirs['scenario_brief']['side']['id']=='confederate'
-            assert all(u['side']=='confederate' for u in theirs['units']) and 'events' not in theirs
+            request(f'/api/replay?revision={revision}&side=confederate',expected=400)
         request('/api/replay?revision=0&side=french',expected=400)
         request('/api/replay?revision=0&side=union&view=god',expected=400)
         gid=state['game_id']
@@ -164,8 +162,14 @@ with tempfile.TemporaryDirectory() as tmp:
             assert view['scenario_brief']==brief
             assert 'pass men through' not in json.dumps(view['scenario_brief']),'Opponent mission leaked into the brief'
         assert 'pass men through' not in json.dumps(state)
-        french=request('/api/replay?revision=0&side=french')  # docs/research/65: the opponent's own brief and units.
+        request('/api/replay?revision=0&side=french',expected=400)  # docs/research/65: locked while active.
+        for _ in range(80):
+            if state['status']!='active':break
+            state=request('/api/advance',{'game_id':state['game_id'],'revision':state['revision']})
+        assert state['status']=='complete'
+        french=request('/api/replay?revision=0&side=french')  # Unlocked: the opponent's own brief and units.
         assert french['side']=='french' and french['scenario_brief']['side']['name']=='French'
+        assert 'events' not in french and 'view_mode' not in french
         assert all(u['side']=='french' for u in french['units']) and 'Hold the farm' not in json.dumps(french)
         assert request('/api/replay?revision=0&side=allied')==request('/api/replay?revision=0')
         state=request('/api/new',{'game_id':state['game_id'],'revision':state['revision']})
