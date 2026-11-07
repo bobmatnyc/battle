@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": ["apps/web", "packages/contracts"],
   "scripts": {
-    "typecheck": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.test.json",
     "test": "npm test --workspaces --if-present"
   },
   "devDependencies": {"typescript": "7.0.2"}

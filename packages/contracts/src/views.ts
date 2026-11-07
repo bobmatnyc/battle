@@ -32,6 +32,10 @@ export const unitReport: Check<UnitReport> = object({
   observed_turn: integer, received_turn: integer,
 }, {}, {rest: "keep"});
 
+/** Exact enemy values a sighting never carries: a contact holds an estimate,
+ * a confidence and a strength range (recon.py), never the true unit's state. */
+export const CONTACT_FORBIDDEN = ["strength", "initial", "ammo", "morale", "suppression", "fatigue"] as const;
+
 /** An enemy sighting held by headquarters (engine.view adds ``age``). */
 export interface Contact {
   id: string; side: string; pos: Hex; observed_turn: number; received_turn: number; age: number;
@@ -41,22 +45,25 @@ export interface Contact {
 export const contact: Check<Contact> = object({
   id: string, side: string, pos: hex, observed_turn: integer, received_turn: integer, age: count,
   confidence: string, estimate: string,
-}, {}, {rest: "keep"});
+}, {}, {rest: "keep", forbidden: CONTACT_FORBIDDEN});
 
+// engine.issue copies the order as given, and validate_order accepts one with no
+// destination for a template that selects its own, so the key may be absent.
 const orderFields = {
-  id: string, side: string, unit_id: string, stance: string, destination: nullable(hex),
+  id: string, side: string, unit_id: string, stance: string,
   source: string, version: count, sent_turn: count, arrival_turn: nullable(integer), status: string,
 };
+const orderOptional = {destination: nullable(hex)};
 /** An order as the issuing side knows it: status from acknowledgements only. */
 export interface CommanderOrder {
-  id: string; side: string; unit_id: string; stance: string; destination: Hex | null;
+  id: string; side: string; unit_id: string; stance: string; destination?: Hex | null;
   source: string; version: number; sent_turn: number; arrival_turn: number | null; status: string;
   [extra: string]: unknown;
 }
-export const commanderOrder: Check<CommanderOrder> = object(orderFields, {}, {rest: "keep", forbidden: ["transport"]});
+export const commanderOrder: Check<CommanderOrder> = object(orderFields, orderOptional, {rest: "keep", forbidden: ["transport"]});
 /** An order with its true status and its messenger packet (God only). */
 export interface GodOrder extends CommanderOrder { transport: JsonObject }
-export const godOrder: Check<GodOrder> = object({...orderFields, transport: jsonObject}, {}, {rest: "keep"});
+export const godOrder: Check<GodOrder> = object({...orderFields, transport: jsonObject}, orderOptional, {rest: "keep"});
 
 const dispatchFields = {turn: integer, observed_turn: integer, kind: string, text: string, display_text: string};
 const dispatchOptional = {message_key: string, message_args: record(string)};
@@ -70,13 +77,48 @@ export const commanderDispatch: Check<Dispatch> = object(dispatchFields, dispatc
 export interface GodDispatch extends Dispatch { side: string }
 export const godDispatch: Check<GodDispatch> = object({...dispatchFields, side: string}, dispatchOptional);
 
-/** Staff advice (recommendations.visible); ``display_text`` in a voice with its own address. */
+/** Staff advice; ``display_text`` in a voice with its own address. */
 export interface Recommendation {
   id: string; side: string; unit_id: string; status: string; text: string; display_text?: string;
+  received_turn?: number;
   [extra: string]: unknown;
 }
-export const recommendation: Check<Recommendation> = object(
-  {id: string, side: string, unit_id: string, status: string, text: string}, {display_text: string}, {rest: "keep"});
+const recommendationFields = {id: string, side: string, unit_id: string, status: string, text: string};
+/** recommendations.visible returns only advice that reached headquarters. */
+export const commanderRecommendation: Check<Recommendation & {received_turn: number}> = object(
+  {...recommendationFields, received_turn: count}, {display_text: string}, {rest: "keep"});
+/** God sees every piece of advice, delivered or not. */
+export const godRecommendation: Check<Recommendation> = object(
+  recommendationFields, {display_text: string, received_turn: count}, {rest: "keep"});
+
+/** A split or combine as the issuing side knows it (formations.observed):
+ * the status is the last notice received; the true ready and completed turns are God-only. */
+export interface FormationOp { id: string; side: string; kind: string; status: string; [extra: string]: unknown }
+export const commanderFormationOp: Check<FormationOp> = object(
+  {id: string, side: string, kind: string, status: string}, {},
+  {rest: "keep", forbidden: ["ready_turn", "completed_turn"]});
+
+/** A delivered codeword (signals.receive): the report data plus its arrival turn.
+ * UNCONFIRMED by fixture (Pegasus Bridge only); keys from signals.py. */
+export interface ReceivedSignal {
+  codeword: string; meaning: string; bridge: string; sender_id: string; receiver_id: string;
+  sent_turn: number; delivered_turn: number;
+}
+export const receivedSignal: Check<ReceivedSignal> = object({
+  codeword: string, meaning: string, bridge: string, sender_id: string, receiver_id: string,
+  sent_turn: integer, delivered_turn: integer,
+});
+
+/** A side's own broadcast signal (broadcast.visible): exactly these keys, never who heard.
+ * UNCONFIRMED by fixture (Gergovia only); keys from broadcast.py. */
+export interface CommanderBroadcast {
+  id: string; kind: string; meaning: string; stance: string; destination: Hex | null;
+  turn: number | null; ordered_turn: number | null; sounded_turn: number | null;
+}
+export const commanderBroadcast: Check<CommanderBroadcast> = object({
+  id: string, kind: string, meaning: string, stance: string, destination: nullable(hex),
+  turn: nullable(integer), ordered_turn: nullable(integer), sounded_turn: nullable(integer),
+});
 
 /** A standing-order instruction (standing.visible). UNCONFIRMED: no fixture holds one. */
 export interface StandingOrder { id: string; side: string; status: string; [extra: string]: unknown }
@@ -149,11 +191,10 @@ const sharedFields = {
   winner: nullable(string), reason: nullable(string), objective: hex,
   max_turns: count, seconds_per_turn: count, side: string, weather: jsonObject, hq: hex,
   command: commandLocation, units: array(unitReport), order_templates: array(orderTemplate),
-  standing_templates: jsonList, recommendations: array(recommendation),
-  map_features: jsonList, formation_ops: jsonList,
+  standing_templates: jsonList, map_features: jsonList,
   display_locale: literal("en"), voice_profile: string, analysis,
 };
-const sharedOptional = {scenario_brief: scenarioBrief, signals: jsonList, broadcasts: jsonList};
+const sharedOptional = {scenario_brief: scenarioBrief};
 
 interface SharedView {
   rules: string; turn: number; revision: number; status: "active" | "complete";
@@ -161,15 +202,17 @@ interface SharedView {
   max_turns: number; seconds_per_turn: number; side: string; weather: JsonObject; hq: Hex;
   command: CommandLocation; units: UnitReport[]; order_templates: OrderTemplate[];
   standing_templates: JsonObject[]; recommendations: Recommendation[];
-  map_features: JsonObject[]; formation_ops: JsonObject[];
+  map_features: JsonObject[];
   display_locale: "en"; voice_profile: string; analysis: Analysis;
-  scenario_brief?: ScenarioBrief; signals?: JsonObject[]; broadcasts?: JsonObject[];
+  scenario_brief?: ScenarioBrief;
 }
 
 /** One side's commander view: its own delivered reports only. */
 export interface CommanderView extends SharedView {
   contacts: Contact[]; orders: CommanderOrder[]; dispatches: Dispatch[];
   standing_orders: StandingOrder[]; supply_sites: SupplySite[];
+  recommendations: (Recommendation & {received_turn: number})[]; formation_ops: FormationOp[];
+  signals?: ReceivedSignal[]; broadcasts?: CommanderBroadcast[];
 }
 
 /** The God view: true state of every side, for the local observer only. */
@@ -178,7 +221,8 @@ export interface GodView extends SharedView {
   standing_orders: StandingOrder[]; supply_sites: GodSupplySite[];
   reports: JsonObject[]; events: JsonObject[]; decisions: JsonObject[];
   headquarters: Record<string, Hex>; commands: Record<string, CommandLocation>;
-  retired_units: JsonObject[]; captives?: JsonValue;
+  retired_units: JsonObject[]; formation_ops: JsonObject[];
+  signals?: JsonObject[]; broadcasts?: JsonObject[]; captives?: JsonValue;
 }
 
 function sameSide(items: readonly {side: string}[], side: string, path: string, field: string): void {
@@ -197,19 +241,24 @@ function ownBrief(view: SharedView, path: string): void {
 
 /** Why: the commander view is the information boundary of docs/research/21 and 65.
  * What: the projection fields; no God-only field; every unit, order, standing
- * order, recommendation and supply site of the viewing side; every contact of
- * another side; dispatches untagged by side; no order transport; no stocks.
+ * order, recommendation, formation operation and supply site of the viewing
+ * side; every contact of another side with no exact enemy values; dispatches
+ * untagged by side; no order transport; no stocks; delivered codewords and
+ * own broadcasts with no sender condition, reach or receipts.
  * Test: `commander fixtures validate`, `commander view refuses each God-only field`. */
 export const commanderView: Check<CommanderView> = refine(object({
   ...sharedFields,
   contacts: array(contact), orders: array(commanderOrder), dispatches: array(commanderDispatch),
   standing_orders: array(commanderStandingOrder), supply_sites: array(commanderSupplySite),
-}, sharedOptional, {forbidden: GOD_ONLY_FIELDS}), (view, path) => {
+  recommendations: array(commanderRecommendation), formation_ops: array(commanderFormationOp),
+}, {...sharedOptional, signals: array(receivedSignal), broadcasts: array(commanderBroadcast)},
+{forbidden: GOD_ONLY_FIELDS}), (view, path) => {
   sameSide(view.units, view.side, path, "units");
   sameSide(view.orders, view.side, path, "orders");
   sameSide(view.standing_orders, view.side, path, "standing_orders");
   sameSide(view.recommendations, view.side, path, "recommendations");
   sameSide(view.supply_sites, view.side, path, "supply_sites");
+  sameSide(view.formation_ops, view.side, path, "formation_ops");
   view.contacts.forEach((item, index) => {
     if (item.side === view.side) fail(`${path}.contacts[${index}].side`, "a contact is an enemy sighting, not the viewing side");
   });
@@ -229,4 +278,5 @@ export const godView: Check<GodView> = refine(object({
   standing_orders: array(godStandingOrder), supply_sites: array(godSupplySite),
   reports: jsonList, events: jsonList, decisions: jsonList,
   headquarters: record(hex), commands: record(commandLocation), retired_units: jsonList,
-}, {...sharedOptional, captives: json}), ownBrief);
+  recommendations: array(godRecommendation), formation_ops: jsonList,
+}, {...sharedOptional, signals: jsonList, broadcasts: jsonList, captives: json}), ownBrief);

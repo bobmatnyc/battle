@@ -1,10 +1,14 @@
 {
- "game_id": "9ae0fbb0ce0241c5",
+ "game_id": "f1c7f1c7f1c7f1c7",
  "orders": [
   {
    "destination": null,
    "stance": "hold",
    "unit_id": "U1"
+  },
+  {
+   "stance": "hold",
+   "unit_id": "U3"
   }
  ],
  "revision": 0

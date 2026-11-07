@@ -20,10 +20,11 @@ const fixtures = {
   godReplay: fixture("replay-god"), history: fixture("history"), orders: fixture("orders-request"),
 };
 
-function fails(check: Check<unknown>, input: unknown, path: string): void {
+function fails(check: Check<unknown>, input: unknown, path: string, problem?: string): void {
   assert.throws(() => parse(check, input), (error: unknown) => {
     assert.ok(error instanceof ContractError, `expected ContractError, got ${String(error)}`);
     assert.equal(error.path, path, error.message);
+    if (problem) assert.ok(error.message.includes(problem), error.message);
     return true;
   });
 }
@@ -45,6 +46,10 @@ test("commander fixtures validate", () => {
   // The recorded game reached contacts, a delivered order and staff chat.
   assert.ok(fixtures.commanderState["contacts"].length > 0);
   assert.ok(fixtures.commanderState["messages"].length > 0);
+  // Python accepts an order with no destination key and stores it as given.
+  assert.ok(!("destination" in fixtures.orders["orders"][1]));
+  assert.ok(fixtures.commanderState["orders"].some((o: Doc) => !("destination" in o)));
+  assert.ok(fixtures.godState["orders"].some((o: Doc) => !("destination" in o)));
 });
 
 test("god fixtures validate", () => {
@@ -71,8 +76,9 @@ test("a replay is the live projection without the live fields", () => {
 test("commander view refuses each God-only field", () => {
   for (const key of GOD_ONLY_FIELDS) {
     const value = key === "view_mode" ? "god" : fixtures.godState[key] ?? [];
-    fails(commanderState, {...fixtures.commanderState, [key]: value}, `$.${key}`);
-    fails(commanderReplay, {...fixtures.commanderReplay, [key]: value}, `$.${key}`);
+    // Named as God-only, not merely unknown: the list holds even if the top level were open.
+    fails(commanderState, {...fixtures.commanderState, [key]: value}, `$.${key}`, "not allowed in this view");
+    fails(commanderReplay, {...fixtures.commanderReplay, [key]: value}, `$.${key}`, "not allowed in this view");
   }
   // A God view never passes as a commander view, nor the reverse.
   assert.throws(() => parse(commanderState, fixtures.godState), ContractError);
@@ -87,6 +93,25 @@ test("god view requires view_mode god", () => {
 });
 
 const enemy = (doc: Doc): string => doc["scenario_brief"]["opponent"]["id"];
+
+// Items for records the recorded game has none of, with the keys the Python code writes.
+const formationOp = (side: string): Doc => ({id: "F1", side, kind: "split", unit_id: "U1", count: 20,
+  destination: [11, 13], order_ids: ["O3"], sent_turn: 12, status: "awaiting_report"});
+const codeword = (): Doc => ({codeword: "HAM", meaning: "Bridge taken intact.", bridge: "canal",
+  sender_id: "U1", receiver_id: "U2", sent_turn: 10, delivered_turn: 12});
+const ownBroadcast = (): Doc => ({id: "recall", kind: "recall", meaning: "Fall back to the camp.",
+  stance: "retreat", destination: [3, 4], turn: 40, ordered_turn: null, sounded_turn: null});
+const withOwn = (doc: Doc): Doc => {
+  doc["formation_ops"] = [formationOp(doc["side"])];
+  doc["signals"] = [codeword()];
+  doc["broadcasts"] = [ownBroadcast()];
+  return doc;
+};
+
+test("commander view accepts own formation operations, codewords and broadcasts", () => {
+  const doc = mutated("commanderState", withOwn);
+  assert.deepEqual(parse(commanderState, doc), doc);
+});
 
 const cases: [string, Check<unknown>, keyof typeof fixtures, (doc: Doc) => void, string][] = [
   ["unit of another side", commanderState, "commanderState", (d) => { d["units"][0].side = enemy(d); }, "$.units[0].side"],
@@ -106,6 +131,16 @@ const cases: [string, Check<unknown>, keyof typeof fixtures, (doc: Doc) => void,
   ["unknown top field", commanderState, "commanderState", (d) => { d["debug"] = true; }, "$.debug"],
   ["message role", commanderState, "commanderState", (d) => { d["messages"][0].role = "system"; }, "$.messages[0].role"],
   ["template destination", commanderReplay, "commanderReplay", (d) => { d["order_templates"][0].destination = "map"; }, "$.order_templates[0].destination"],
+  ["contact with exact strength", commanderState, "commanderState", (d) => { d["contacts"][0].strength = 40; }, "$.contacts[0].strength"],
+  ["order of another side", commanderState, "commanderState", (d) => { d["orders"][0].side = enemy(d); }, "$.orders[0].side"],
+  ["standing order of another side", commanderReplay, "commanderReplay", (d) => { d["standing_orders"] = [{id: "S1", side: enemy(d), status: "awaiting_ack"}]; }, "$.standing_orders[0].side"],
+  ["supply site of another side", commanderState, "commanderState", (d) => { d["supply_sites"][0].side = enemy(d); }, "$.supply_sites[0].side"],
+  ["formation op of another side", commanderState, "commanderState", (d) => { withOwn(d)["formation_ops"][0].side = enemy(d); }, "$.formation_ops[0].side"],
+  ["formation op true ready turn", commanderState, "commanderState", (d) => { withOwn(d)["formation_ops"][0].ready_turn = 14; }, "$.formation_ops[0].ready_turn"],
+  ["broadcast with side", commanderState, "commanderState", (d) => { withOwn(d)["broadcasts"][0].side = d["side"]; }, "$.broadcasts[0].side"],
+  ["broadcast receipts", commanderReplay, "commanderReplay", (d) => { withOwn(d)["broadcasts"][0].receipts = {}; }, "$.broadcasts[0].receipts"],
+  ["codeword sender condition", commanderState, "commanderState", (d) => { withOwn(d)["signals"][0].radius = 2; }, "$.signals[0].radius"],
+  ["undelivered recommendation", commanderState, "commanderState", (d) => { delete d["recommendations"][0].received_turn; }, "$.recommendations[0].received_turn"],
   ["missing God events", godState, "godState", (d) => { delete d["events"]; }, "$.events"],
   ["God dispatch without side", godState, "godState", (d) => { delete d["dispatches"][0].side; }, "$.dispatches[0].side"],
   ["God contacts", godState, "godState", (d) => { d["contacts"] = [{}]; }, "$.contacts"],

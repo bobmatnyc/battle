@@ -3,9 +3,9 @@
     "target": "ES2022", "lib": ["ES2022", "DOM"],
     "module": "ESNext", "moduleResolution": "Bundler",
     "strict": true, "noEmit": true, "verbatimModuleSyntax": true,
-    "allowImportingTsExtensions": true, "resolveJsonModule": true,
-    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "types": [],
     "paths": {"@battle/contracts": ["./packages/contracts/src/index.ts"]}
   },
-  "include": ["packages/contracts/src/**/*.ts", "packages/contracts/test/**/*.ts", "apps/web/src/**/*.ts"]
+  "include": ["packages/contracts/src/**/*.ts", "apps/web/src/**/*.ts"]
 }

@@ -315,6 +315,19 @@
    "turn": 0
   },
   {
+   "display_text": "To U3: Instructions to hold position are on their way by runner. Delivery expected in 120 seconds.",
+   "kind": "order",
+   "message_args": {
+    "seconds": "120",
+    "stance": "hold",
+    "unit": "U3"
+   },
+   "message_key": "order.hold.sent",
+   "observed_turn": 0,
+   "text": "U3: hold order dispatched by runner. Expected delivery in 120 seconds.",
+   "turn": 0
+  },
+  {
    "display_text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
    "kind": "recommendation",
    "observed_turn": 2,
@@ -347,6 +360,19 @@
    "observed_turn": 3,
    "text": "U1: order O1 delivered.",
    "turn": 6
+  },
+  {
+   "display_text": "U3 to headquarters: Order O2 received.",
+   "kind": "ack",
+   "message_args": {
+    "order": "O2",
+    "status": "delivered",
+    "unit": "U3"
+   },
+   "message_key": "order.delivered",
+   "observed_turn": 4,
+   "text": "U3: order O2 delivered.",
+   "turn": 8
   },
   {
    "display_text": "General, enemy near map reference 6,18: 20\u2013100 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
@@ -784,6 +810,17 @@
    "status": "delivered",
    "unit_id": "U1",
    "version": 1
+  },
+  {
+   "arrival_turn": 4,
+   "id": "O2",
+   "sent_turn": 0,
+   "side": "union",
+   "source": "human",
+   "stance": "hold",
+   "status": "delivered",
+   "unit_id": "U3",
+   "version": 1
   }
  ],
  "reason": null,
@@ -871,7 +908,7 @@
    },
    "received_turn": 6,
    "side": "union",
-   "status": "delivered",
+   "status": "superseded",
    "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
    "unit_id": "U3"
   }
@@ -1062,10 +1099,18 @@
    "initial": 40,
    "local_action": "defend",
    "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
+   "mission_result": {
+    "order_version": 1,
+    "reason": "Instructions received.",
+    "started_turn": 4,
+    "status": "active",
+    "template": "hold",
+    "updated_turn": 4
+   },
    "morale": 90,
    "name": "20th Maine \u00b7 C",
    "observed_turn": 8,
-   "order_version": 0,
+   "order_version": 1,
    "pos": [
     10,
     13
@@ -1080,6 +1125,7 @@
    "standing_version": 0,
    "status": "ready",
    "strength": 40,
+   "supply_site": null,
    "suppression": 0,
    "tactical_target": null,
    "target": null,

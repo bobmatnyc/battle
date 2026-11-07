@@ -299,6 +299,12 @@
       "observed_turn": 0,
       "text": "U1: hold order dispatched by runner. Expected delivery in 90 seconds.",
       "turn": 0
+     },
+     {
+      "kind": "order",
+      "observed_turn": 0,
+      "text": "U3: hold order dispatched by runner. Expected delivery in 120 seconds.",
+      "turn": 0
      }
     ],
     "formation_ops": [],
@@ -857,6 +863,17 @@
       "stance": "hold",
       "status": "awaiting_ack",
       "unit_id": "U1",
+      "version": 1
+     },
+     {
+      "arrival_turn": 4,
+      "id": "O2",
+      "sent_turn": 0,
+      "side": "union",
+      "source": "human",
+      "stance": "hold",
+      "status": "awaiting_ack",
+      "unit_id": "U3",
       "version": 1
      }
     ],
@@ -2516,7 +2533,7 @@
        11,
        15
       ],
-      "id": "O2",
+      "id": "O3",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -2531,7 +2548,7 @@
        12,
        15
       ],
-      "id": "O3",
+      "id": "O4",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -2546,7 +2563,7 @@
        10,
        15
       ],
-      "id": "O4",
+      "id": "O5",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -3442,7 +3459,7 @@
        11,
        15
       ],
-      "id": "O2",
+      "id": "O3",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -3457,7 +3474,7 @@
        12,
        15
       ],
-      "id": "O3",
+      "id": "O4",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -3472,7 +3489,7 @@
        10,
        15
       ],
-      "id": "O4",
+      "id": "O5",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -3487,7 +3504,7 @@
        11,
        15
       ],
-      "id": "O5",
+      "id": "O6",
       "sent_turn": 3,
       "side": "confederate",
       "source": "scripted",
@@ -3502,7 +3519,7 @@
        10,
        15
       ],
-      "id": "O6",
+      "id": "O7",
       "sent_turn": 3,
       "side": "confederate",
       "source": "scripted",
@@ -4456,7 +4473,7 @@
        11,
        15
       ],
-      "id": "O2",
+      "id": "O3",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -4471,7 +4488,7 @@
        12,
        15
       ],
-      "id": "O3",
+      "id": "O4",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -4486,7 +4503,7 @@
        10,
        15
       ],
-      "id": "O4",
+      "id": "O5",
       "sent_turn": 0,
       "side": "confederate",
       "source": "scripted",
@@ -4501,7 +4518,7 @@
        11,
        15
       ],
-      "id": "O5",
+      "id": "O6",
       "sent_turn": 3,
       "side": "confederate",
       "source": "scripted",
@@ -4516,7 +4533,7 @@
        10,
        15
       ],
-      "id": "O6",
+      "id": "O7",
       "sent_turn": 3,
       "side": "confederate",
       "source": "scripted",
@@ -4531,7 +4548,7 @@
        11,
        15
       ],
-      "id": "O7",
+      "id": "O8",
       "sent_turn": 6,
       "side": "confederate",
       "source": "scripted",
@@ -4546,7 +4563,7 @@
        10,
        15
       ],
-      "id": "O8",
+      "id": "O9",
       "sent_turn": 6,
       "side": "confederate",
       "source": "scripted",
@@ -4827,6 +4844,20 @@
    "turn": 0
   },
   {
+   "display_text": "To U3: Instructions to hold position are on their way by runner. Delivery expected in 120 seconds.",
+   "kind": "order",
+   "message_args": {
+    "seconds": "120",
+    "stance": "hold",
+    "unit": "U3"
+   },
+   "message_key": "order.hold.sent",
+   "observed_turn": 0,
+   "side": "union",
+   "text": "U3: hold order dispatched by runner. Expected delivery in 120 seconds.",
+   "turn": 0
+  },
+  {
    "display_text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
    "kind": "recommendation",
    "observed_turn": 2,
@@ -4863,6 +4894,20 @@
    "side": "union",
    "text": "U1: order O1 delivered.",
    "turn": 6
+  },
+  {
+   "display_text": "U3 to headquarters: Order O2 received.",
+   "kind": "ack",
+   "message_args": {
+    "order": "O2",
+    "status": "delivered",
+    "unit": "U3"
+   },
+   "message_key": "order.delivered",
+   "observed_turn": 4,
+   "side": "union",
+   "text": "U3: order O2 delivered.",
+   "turn": 8
   },
   {
    "display_text": "General, enemy near map reference 6,18: 20\u2013100 troops \u00b7 unidentified troops; low confidence. Report from U1 (line).",
@@ -4989,17 +5034,17 @@
    "turn": 0
   },
   {
-   "display_text": "C2 to headquarters: Order O3 received.",
+   "display_text": "C2 to headquarters: Order O4 received.",
    "kind": "ack",
    "message_args": {
-    "order": "O3",
+    "order": "O4",
     "status": "delivered",
     "unit": "C2"
    },
    "message_key": "order.delivered",
    "observed_turn": 1,
    "side": "confederate",
-   "text": "C2: order O3 delivered.",
+   "text": "C2: order O4 delivered.",
    "turn": 1
   },
   {
@@ -5083,17 +5128,17 @@
    "turn": 8
   },
   {
-   "display_text": "C1 to headquarters: Order O2 received.",
+   "display_text": "C1 to headquarters: Order O3 received.",
    "kind": "ack",
    "message_args": {
-    "order": "O2",
+    "order": "O3",
     "status": "delivered",
     "unit": "C1"
    },
    "message_key": "order.delivered",
    "observed_turn": 3,
    "side": "confederate",
-   "text": "C1: order O2 delivered.",
+   "text": "C1: order O3 delivered.",
    "turn": 9
   },
   {
@@ -5151,17 +5196,17 @@
    "turn": 11
   },
   {
-   "display_text": "C3 to headquarters: Order O4 received.",
+   "display_text": "C3 to headquarters: Order O5 received.",
    "kind": "ack",
    "message_args": {
-    "order": "O4",
+    "order": "O5",
     "status": "delivered",
     "unit": "C3"
    },
    "message_key": "order.delivered",
    "observed_turn": 5,
    "side": "confederate",
-   "text": "C3: order O4 delivered.",
+   "text": "C3: order O5 delivered.",
    "turn": 12
   },
   {
@@ -5220,16 +5265,52 @@
    "version": 1
   },
   {
+   "arrival_turn": 4,
+   "destination": null,
+   "kind": "order_sent",
+   "order_id": "O2",
+   "seq": 2,
+   "side": "union",
+   "transport": {
+    "address": [
+     10,
+     13
+    ],
+    "credit": 0,
+    "expected_turn": 4,
+    "expires_turn": 20,
+    "forwardings": 0,
+    "id": "O2",
+    "last_progress_turn": 0,
+    "method": "courier",
+    "origin": [
+     13,
+     15
+    ],
+    "pos": [
+     13,
+     15
+    ],
+    "ready_turn": 1,
+    "recipient_id": "U3",
+    "sent_turn": 0,
+    "status": "en_route"
+   },
+   "turn": 0,
+   "unit_id": "U3",
+   "version": 1
+  },
+  {
    "decision_index": 0,
    "kind": "staff_consulted",
-   "seq": 2,
+   "seq": 3,
    "source": "scripted",
    "turn": 0
   },
   {
    "decision_index": 1,
    "kind": "commander_decision",
-   "seq": 3,
+   "seq": 4,
    "source": "scripted",
    "turn": 0
   },
@@ -5240,8 +5321,8 @@
     15
    ],
    "kind": "order_sent",
-   "order_id": "O2",
-   "seq": 4,
+   "order_id": "O3",
+   "seq": 5,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5252,7 +5333,7 @@
     "expected_turn": 3,
     "expires_turn": 20,
     "forwardings": 0,
-    "id": "O2",
+    "id": "O3",
     "last_progress_turn": 0,
     "method": "courier",
     "origin": [
@@ -5279,8 +5360,8 @@
     15
    ],
    "kind": "order_sent",
-   "order_id": "O3",
-   "seq": 5,
+   "order_id": "O4",
+   "seq": 6,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5291,7 +5372,7 @@
     "expected_turn": 1,
     "expires_turn": 20,
     "forwardings": 0,
-    "id": "O3",
+    "id": "O4",
     "last_progress_turn": 0,
     "method": "voice",
     "origin": [
@@ -5318,8 +5399,8 @@
     15
    ],
    "kind": "order_sent",
-   "order_id": "O4",
-   "seq": 6,
+   "order_id": "O5",
+   "seq": 7,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5330,7 +5411,7 @@
     "expected_turn": 5,
     "expires_turn": 20,
     "forwardings": 0,
-    "id": "O4",
+    "id": "O5",
     "last_progress_turn": 0,
     "method": "courier",
     "origin": [
@@ -5352,17 +5433,17 @@
   },
   {
    "kind": "mission_started",
-   "order_id": "O3",
+   "order_id": "O4",
    "order_version": 1,
-   "seq": 7,
+   "seq": 8,
    "template": "move",
    "turn": 1,
    "unit_id": "C2"
   },
   {
    "kind": "order_delivered",
-   "order_id": "O3",
-   "seq": 8,
+   "order_id": "O4",
+   "seq": 9,
    "turn": 1,
    "unit_id": "C2",
    "version": 1
@@ -5370,9 +5451,9 @@
   {
    "arrival_turn": 1,
    "kind": "report_sent",
-   "report_id": "R9",
+   "report_id": "R10",
    "report_kind": "ack",
-   "seq": 9,
+   "seq": 10,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5383,7 +5464,7 @@
     "expected_turn": 1,
     "expires_turn": 21,
     "forwardings": 0,
-    "id": "R9",
+    "id": "R10",
     "last_progress_turn": 0,
     "method": "voice",
     "origin": [
@@ -5408,7 +5489,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 10,
+   "seq": 11,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -5423,7 +5504,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 11,
+   "seq": 12,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -5438,7 +5519,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 12,
+   "seq": 13,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -5453,7 +5534,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 13,
+   "seq": 14,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -5468,7 +5549,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 14,
+   "seq": 15,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -5483,7 +5564,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 15,
+   "seq": 16,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -5494,9 +5575,9 @@
   {
    "arrival_turn": 5,
    "kind": "report_sent",
-   "report_id": "R16",
+   "report_id": "R17",
    "report_kind": "friendly",
-   "seq": 16,
+   "seq": 17,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5507,7 +5588,7 @@
     "expected_turn": 5,
     "expires_turn": 21,
     "forwardings": 0,
-    "id": "R16",
+    "id": "R17",
     "last_progress_turn": 1,
     "method": "courier",
     "origin": [
@@ -5528,9 +5609,9 @@
   {
    "arrival_turn": 1,
    "kind": "report_sent",
-   "report_id": "R17",
+   "report_id": "R18",
    "report_kind": "friendly",
-   "seq": 17,
+   "seq": 18,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5541,7 +5622,7 @@
     "expected_turn": 1,
     "expires_turn": 21,
     "forwardings": 0,
-    "id": "R17",
+    "id": "R18",
     "last_progress_turn": 0,
     "method": "voice",
     "origin": [
@@ -5562,9 +5643,9 @@
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R18",
+   "report_id": "R19",
    "report_kind": "friendly",
-   "seq": 18,
+   "seq": 19,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5575,7 +5656,7 @@
     "expected_turn": 6,
     "expires_turn": 21,
     "forwardings": 0,
-    "id": "R18",
+    "id": "R19",
     "last_progress_turn": 1,
     "method": "courier",
     "origin": [
@@ -5596,9 +5677,9 @@
   {
    "arrival_turn": 4,
    "kind": "report_sent",
-   "report_id": "R19",
+   "report_id": "R20",
    "report_kind": "friendly",
-   "seq": 19,
+   "seq": 20,
    "side": "union",
    "transport": {
     "address": [
@@ -5609,7 +5690,7 @@
     "expected_turn": 4,
     "expires_turn": 21,
     "forwardings": 0,
-    "id": "R19",
+    "id": "R20",
     "last_progress_turn": 1,
     "method": "courier",
     "origin": [
@@ -5630,9 +5711,9 @@
   {
    "arrival_turn": 1,
    "kind": "report_sent",
-   "report_id": "R20",
+   "report_id": "R21",
    "report_kind": "friendly",
-   "seq": 20,
+   "seq": 21,
    "side": "union",
    "transport": {
     "address": [
@@ -5643,7 +5724,7 @@
     "expected_turn": 1,
     "expires_turn": 21,
     "forwardings": 0,
-    "id": "R20",
+    "id": "R21",
     "last_progress_turn": 0,
     "method": "voice",
     "origin": [
@@ -5664,9 +5745,9 @@
   {
    "arrival_turn": 5,
    "kind": "report_sent",
-   "report_id": "R21",
+   "report_id": "R22",
    "report_kind": "friendly",
-   "seq": 21,
+   "seq": 22,
    "side": "union",
    "transport": {
     "address": [
@@ -5677,7 +5758,7 @@
     "expected_turn": 5,
     "expires_turn": 21,
     "forwardings": 0,
-    "id": "R21",
+    "id": "R22",
     "last_progress_turn": 1,
     "method": "courier",
     "origin": [
@@ -5698,17 +5779,8 @@
   {
    "kind": "report_received",
    "observed_turn": 1,
-   "report_id": "R9",
+   "report_id": "R10",
    "report_kind": "ack",
-   "seq": 22,
-   "side": "confederate",
-   "turn": 1
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 1,
-   "report_id": "R17",
-   "report_kind": "friendly",
    "seq": 23,
    "side": "confederate",
    "turn": 1
@@ -5716,15 +5788,24 @@
   {
    "kind": "report_received",
    "observed_turn": 1,
-   "report_id": "R20",
+   "report_id": "R18",
    "report_kind": "friendly",
    "seq": 24,
+   "side": "confederate",
+   "turn": 1
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 1,
+   "report_id": "R21",
+   "report_kind": "friendly",
+   "seq": 25,
    "side": "union",
    "turn": 1
   },
   {
    "kind": "turn_completed",
-   "seq": 25,
+   "seq": 26,
    "turn": 1,
    "turn_number": 1
   },
@@ -5735,7 +5816,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 26,
+   "seq": 27,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -5750,28 +5831,13 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 27,
-   "standing_profile": "balanced",
-   "standing_version": 0,
-   "target": null,
-   "turn": 2,
-   "under_fire": false,
-   "unit_id": "C2"
-  },
-  {
-   "action": "hold",
-   "contacts": [],
-   "kind": "local_decision",
-   "mission_version": 0,
-   "policy": "common-orders-v3",
-   "reason": "No enemy within effective range; maintain the assigned mission.",
    "seq": 28,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
    "turn": 2,
    "under_fire": false,
-   "unit_id": "C3"
+   "unit_id": "C2"
   },
   {
    "action": "hold",
@@ -5786,7 +5852,7 @@
    "target": null,
    "turn": 2,
    "under_fire": false,
-   "unit_id": "U1"
+   "unit_id": "C3"
   },
   {
    "action": "hold",
@@ -5801,7 +5867,7 @@
    "target": null,
    "turn": 2,
    "under_fire": false,
-   "unit_id": "U2"
+   "unit_id": "U1"
   },
   {
    "action": "hold",
@@ -5816,10 +5882,25 @@
    "target": null,
    "turn": 2,
    "under_fire": false,
+   "unit_id": "U2"
+  },
+  {
+   "action": "hold",
+   "contacts": [],
+   "kind": "local_decision",
+   "mission_version": 0,
+   "policy": "common-orders-v3",
+   "reason": "No enemy within effective range; maintain the assigned mission.",
+   "seq": 32,
+   "standing_profile": "balanced",
+   "standing_version": 0,
+   "target": null,
+   "turn": 2,
+   "under_fire": false,
    "unit_id": "U3"
   },
   {
-   "decision_seq": 27,
+   "decision_seq": 28,
    "destination": [
     10,
     20
@@ -5829,16 +5910,16 @@
     9,
     20
    ],
-   "seq": 32,
+   "seq": 33,
    "turn": 2,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R33",
+   "report_id": "R34",
    "report_kind": "friendly",
-   "seq": 33,
+   "seq": 34,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5849,7 +5930,7 @@
     "expected_turn": 6,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R33",
+    "id": "R34",
     "last_progress_turn": 2,
     "method": "courier",
     "origin": [
@@ -5870,9 +5951,9 @@
   {
    "arrival_turn": 2,
    "kind": "report_sent",
-   "report_id": "R34",
+   "report_id": "R35",
    "report_kind": "friendly",
-   "seq": 34,
+   "seq": 35,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5883,7 +5964,7 @@
     "expected_turn": 2,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R34",
+    "id": "R35",
     "last_progress_turn": 1,
     "method": "voice",
     "origin": [
@@ -5904,9 +5985,9 @@
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R35",
+   "report_id": "R36",
    "report_kind": "friendly",
-   "seq": 35,
+   "seq": 36,
    "side": "confederate",
    "transport": {
     "address": [
@@ -5917,7 +5998,7 @@
     "expected_turn": 8,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R35",
+    "id": "R36",
     "last_progress_turn": 2,
     "method": "courier",
     "origin": [
@@ -5938,9 +6019,9 @@
   {
    "arrival_turn": 5,
    "kind": "report_sent",
-   "report_id": "R36",
+   "report_id": "R37",
    "report_kind": "friendly",
-   "seq": 36,
+   "seq": 37,
    "side": "union",
    "transport": {
     "address": [
@@ -5951,7 +6032,7 @@
     "expected_turn": 5,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R36",
+    "id": "R37",
     "last_progress_turn": 2,
     "method": "courier",
     "origin": [
@@ -5972,9 +6053,9 @@
   {
    "arrival_turn": 2,
    "kind": "report_sent",
-   "report_id": "R37",
+   "report_id": "R38",
    "report_kind": "friendly",
-   "seq": 37,
+   "seq": 38,
    "side": "union",
    "transport": {
     "address": [
@@ -5985,7 +6066,7 @@
     "expected_turn": 2,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R37",
+    "id": "R38",
     "last_progress_turn": 1,
     "method": "voice",
     "origin": [
@@ -6006,9 +6087,9 @@
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R38",
+   "report_id": "R39",
    "report_kind": "friendly",
-   "seq": 38,
+   "seq": 39,
    "side": "union",
    "transport": {
     "address": [
@@ -6019,7 +6100,7 @@
     "expected_turn": 6,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R38",
+    "id": "R39",
     "last_progress_turn": 2,
     "method": "courier",
     "origin": [
@@ -6067,15 +6148,15 @@
     "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
     "unit_id": "C1"
    },
-   "seq": 39,
+   "seq": 40,
    "turn": 2
   },
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R40",
+   "report_id": "R41",
    "report_kind": "recommendation",
-   "seq": 40,
+   "seq": 41,
    "side": "confederate",
    "transport": {
     "address": [
@@ -6086,7 +6167,7 @@
     "expected_turn": 6,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R40",
+    "id": "R41",
     "last_progress_turn": 2,
     "method": "courier",
     "origin": [
@@ -6134,15 +6215,15 @@
     "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
     "unit_id": "C3"
    },
-   "seq": 41,
+   "seq": 42,
    "turn": 2
   },
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R42",
+   "report_id": "R43",
    "report_kind": "recommendation",
-   "seq": 42,
+   "seq": 43,
    "side": "confederate",
    "transport": {
     "address": [
@@ -6153,7 +6234,7 @@
     "expected_turn": 8,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R42",
+    "id": "R43",
     "last_progress_turn": 2,
     "method": "courier",
     "origin": [
@@ -6201,15 +6282,15 @@
     "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
     "unit_id": "U1"
    },
-   "seq": 43,
+   "seq": 44,
    "turn": 2
   },
   {
    "arrival_turn": 5,
    "kind": "report_sent",
-   "report_id": "R44",
+   "report_id": "R45",
    "report_kind": "recommendation",
-   "seq": 44,
+   "seq": 45,
    "side": "union",
    "transport": {
     "address": [
@@ -6220,7 +6301,7 @@
     "expected_turn": 5,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R44",
+    "id": "R45",
     "last_progress_turn": 2,
     "method": "courier",
     "origin": [
@@ -6268,15 +6349,15 @@
     "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
     "unit_id": "U2"
    },
-   "seq": 45,
+   "seq": 46,
    "turn": 2
   },
   {
    "arrival_turn": 2,
    "kind": "report_sent",
-   "report_id": "R46",
+   "report_id": "R47",
    "report_kind": "recommendation",
-   "seq": 46,
+   "seq": 47,
    "side": "union",
    "transport": {
     "address": [
@@ -6287,7 +6368,7 @@
     "expected_turn": 2,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R46",
+    "id": "R47",
     "last_progress_turn": 1,
     "method": "voice",
     "origin": [
@@ -6335,15 +6416,15 @@
     "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
     "unit_id": "U3"
    },
-   "seq": 47,
+   "seq": 48,
    "turn": 2
   },
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R48",
+   "report_id": "R49",
    "report_kind": "recommendation",
-   "seq": 48,
+   "seq": 49,
    "side": "union",
    "transport": {
     "address": [
@@ -6354,7 +6435,7 @@
     "expected_turn": 6,
     "expires_turn": 22,
     "forwardings": 0,
-    "id": "R48",
+    "id": "R49",
     "last_progress_turn": 2,
     "method": "courier",
     "origin": [
@@ -6375,18 +6456,18 @@
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R34",
+   "report_id": "R35",
    "report_kind": "friendly",
-   "seq": 49,
+   "seq": 50,
    "side": "confederate",
    "turn": 2
   },
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R37",
+   "report_id": "R38",
    "report_kind": "friendly",
-   "seq": 50,
+   "seq": 51,
    "side": "union",
    "turn": 2
   },
@@ -6394,7 +6475,7 @@
    "kind": "recommendation_received",
    "observed_turn": 2,
    "recommendation_id": "A4",
-   "seq": 51,
+   "seq": 52,
    "status": "delivered",
    "turn": 2,
    "unit_id": "U2"
@@ -6402,15 +6483,15 @@
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R46",
+   "report_id": "R47",
    "report_kind": "recommendation",
-   "seq": 52,
+   "seq": 53,
    "side": "union",
    "turn": 2
   },
   {
    "kind": "turn_completed",
-   "seq": 53,
+   "seq": 54,
    "turn": 2,
    "turn_number": 2
   },
@@ -6418,7 +6499,7 @@
    "kind": "mission_started",
    "order_id": "O1",
    "order_version": 1,
-   "seq": 54,
+   "seq": 55,
    "template": "hold",
    "turn": 3,
    "unit_id": "U1"
@@ -6426,7 +6507,7 @@
   {
    "kind": "order_delivered",
    "order_id": "O1",
-   "seq": 55,
+   "seq": 56,
    "turn": 3,
    "unit_id": "U1",
    "version": 1
@@ -6434,9 +6515,9 @@
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R56",
+   "report_id": "R57",
    "report_kind": "ack",
-   "seq": 56,
+   "seq": 57,
    "side": "union",
    "transport": {
     "address": [
@@ -6447,7 +6528,7 @@
     "expected_turn": 6,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "R56",
+    "id": "R57",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -6467,17 +6548,17 @@
   },
   {
    "kind": "mission_started",
-   "order_id": "O2",
+   "order_id": "O3",
    "order_version": 1,
-   "seq": 57,
+   "seq": 58,
    "template": "move",
    "turn": 3,
    "unit_id": "C1"
   },
   {
    "kind": "order_delivered",
-   "order_id": "O2",
-   "seq": 58,
+   "order_id": "O3",
+   "seq": 59,
    "turn": 3,
    "unit_id": "C1",
    "version": 1
@@ -6485,9 +6566,9 @@
   {
    "arrival_turn": 7,
    "kind": "report_sent",
-   "report_id": "R59",
+   "report_id": "R60",
    "report_kind": "ack",
-   "seq": 59,
+   "seq": 60,
    "side": "confederate",
    "transport": {
     "address": [
@@ -6498,7 +6579,7 @@
     "expected_turn": 7,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "R59",
+    "id": "R60",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -6523,7 +6604,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 60,
+   "seq": 61,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -6538,7 +6619,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 61,
+   "seq": 62,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -6553,7 +6634,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 62,
+   "seq": 63,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -6568,7 +6649,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 63,
+   "seq": 64,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -6583,7 +6664,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 64,
+   "seq": 65,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -6598,7 +6679,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 65,
+   "seq": 66,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -6607,7 +6688,7 @@
    "unit_id": "U3"
   },
   {
-   "decision_seq": 60,
+   "decision_seq": 61,
    "destination": [
     4,
     19
@@ -6617,12 +6698,12 @@
     5,
     20
    ],
-   "seq": 66,
+   "seq": 67,
    "turn": 3,
    "unit_id": "C1"
   },
   {
-   "decision_seq": 61,
+   "decision_seq": 62,
    "destination": [
     10,
     19
@@ -6632,16 +6713,16 @@
     10,
     20
    ],
-   "seq": 67,
+   "seq": 68,
    "turn": 3,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R68",
+   "report_id": "R69",
    "report_kind": "friendly",
-   "seq": 68,
+   "seq": 69,
    "side": "confederate",
    "transport": {
     "address": [
@@ -6652,7 +6733,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "R68",
+    "id": "R69",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -6673,9 +6754,9 @@
   {
    "arrival_turn": 3,
    "kind": "report_sent",
-   "report_id": "R69",
+   "report_id": "R70",
    "report_kind": "friendly",
-   "seq": 69,
+   "seq": 70,
    "side": "confederate",
    "transport": {
     "address": [
@@ -6686,7 +6767,7 @@
     "expected_turn": 3,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "R69",
+    "id": "R70",
     "last_progress_turn": 2,
     "method": "voice",
     "origin": [
@@ -6707,9 +6788,9 @@
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R70",
+   "report_id": "R71",
    "report_kind": "friendly",
-   "seq": 70,
+   "seq": 71,
    "side": "confederate",
    "transport": {
     "address": [
@@ -6720,7 +6801,7 @@
     "expected_turn": 9,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "R70",
+    "id": "R71",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -6741,9 +6822,9 @@
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R71",
+   "report_id": "R72",
    "report_kind": "friendly",
-   "seq": 71,
+   "seq": 72,
    "side": "union",
    "transport": {
     "address": [
@@ -6754,7 +6835,7 @@
     "expected_turn": 6,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "R71",
+    "id": "R72",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -6775,9 +6856,9 @@
   {
    "arrival_turn": 3,
    "kind": "report_sent",
-   "report_id": "R72",
+   "report_id": "R73",
    "report_kind": "friendly",
-   "seq": 72,
+   "seq": 73,
    "side": "union",
    "transport": {
     "address": [
@@ -6788,7 +6869,7 @@
     "expected_turn": 3,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "R72",
+    "id": "R73",
     "last_progress_turn": 2,
     "method": "voice",
     "origin": [
@@ -6809,9 +6890,9 @@
   {
    "arrival_turn": 7,
    "kind": "report_sent",
-   "report_id": "R73",
+   "report_id": "R74",
    "report_kind": "friendly",
-   "seq": 73,
+   "seq": 74,
    "side": "union",
    "transport": {
     "address": [
@@ -6822,7 +6903,7 @@
     "expected_turn": 7,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "R73",
+    "id": "R74",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -6843,52 +6924,59 @@
   {
    "kind": "recommendation_superseded",
    "recommendation_id": "A1",
-   "seq": 74,
+   "seq": 75,
    "turn": 3,
    "unit_id": "C1"
   },
   {
    "kind": "recommendation_superseded",
    "recommendation_id": "A2",
-   "seq": 75,
+   "seq": 76,
    "turn": 3,
    "unit_id": "C3"
   },
   {
    "kind": "recommendation_superseded",
    "recommendation_id": "A3",
-   "seq": 76,
+   "seq": 77,
    "turn": 3,
    "unit_id": "U1"
   },
   {
+   "kind": "recommendation_superseded",
+   "recommendation_id": "A5",
+   "seq": 78,
+   "turn": 3,
+   "unit_id": "U3"
+  },
+  {
    "kind": "report_received",
    "observed_turn": 3,
-   "report_id": "R69",
+   "report_id": "R70",
    "report_kind": "friendly",
-   "seq": 77,
+   "seq": 79,
    "side": "confederate",
    "turn": 3
   },
   {
    "kind": "report_received",
    "observed_turn": 3,
-   "report_id": "R72",
+   "report_id": "R73",
    "report_kind": "friendly",
-   "seq": 78,
+   "seq": 80,
    "side": "union",
    "turn": 3
   },
   {
    "kind": "turn_completed",
-   "seq": 79,
+   "seq": 81,
    "turn": 3,
    "turn_number": 3
   },
   {
    "decision_index": 2,
    "kind": "commander_decision",
-   "seq": 80,
+   "seq": 82,
    "source": "scripted",
    "turn": 3
   },
@@ -6899,8 +6987,8 @@
     15
    ],
    "kind": "order_sent",
-   "order_id": "O5",
-   "seq": 81,
+   "order_id": "O6",
+   "seq": 83,
    "side": "confederate",
    "transport": {
     "address": [
@@ -6911,7 +6999,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "O5",
+    "id": "O6",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -6938,8 +7026,8 @@
     15
    ],
    "kind": "order_sent",
-   "order_id": "O6",
-   "seq": 82,
+   "order_id": "O7",
+   "seq": 84,
    "side": "confederate",
    "transport": {
     "address": [
@@ -6950,7 +7038,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 0,
-    "id": "O6",
+    "id": "O7",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -6973,10 +7061,61 @@
   {
    "kind": "report_received",
    "observed_turn": 1,
-   "report_id": "R19",
+   "report_id": "R20",
    "report_kind": "friendly",
-   "seq": 83,
+   "seq": 85,
    "side": "union",
+   "turn": 4
+  },
+  {
+   "kind": "mission_started",
+   "order_id": "O2",
+   "order_version": 1,
+   "seq": 86,
+   "template": "hold",
+   "turn": 4,
+   "unit_id": "U3"
+  },
+  {
+   "kind": "order_delivered",
+   "order_id": "O2",
+   "seq": 87,
+   "turn": 4,
+   "unit_id": "U3",
+   "version": 1
+  },
+  {
+   "arrival_turn": 8,
+   "kind": "report_sent",
+   "report_id": "R88",
+   "report_kind": "ack",
+   "seq": 88,
+   "side": "union",
+   "transport": {
+    "address": [
+     13,
+     15
+    ],
+    "credit": 0,
+    "expected_turn": 8,
+    "expires_turn": 24,
+    "forwardings": 0,
+    "id": "R88",
+    "last_progress_turn": 4,
+    "method": "courier",
+    "origin": [
+     10,
+     13
+    ],
+    "pos": [
+     10,
+     13
+    ],
+    "ready_turn": 5,
+    "recipient_id": "U2",
+    "sent_turn": 4,
+    "status": "en_route"
+   },
    "turn": 4
   },
   {
@@ -6986,7 +7125,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 84,
+   "seq": 89,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7001,7 +7140,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 85,
+   "seq": 90,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7016,7 +7155,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 86,
+   "seq": 91,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7031,7 +7170,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 87,
+   "seq": 92,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7046,7 +7185,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 88,
+   "seq": 93,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7058,10 +7197,10 @@
    "action": "hold",
    "contacts": [],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 89,
+   "seq": 94,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7070,7 +7209,7 @@
    "unit_id": "U3"
   },
   {
-   "decision_seq": 84,
+   "decision_seq": 89,
    "destination": [
     5,
     18
@@ -7080,16 +7219,16 @@
     4,
     19
    ],
-   "seq": 90,
+   "seq": 95,
    "turn": 4,
    "unit_id": "C1"
   },
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R91",
+   "report_id": "R96",
    "report_kind": "friendly",
-   "seq": 91,
+   "seq": 96,
    "side": "confederate",
    "transport": {
     "address": [
@@ -7100,7 +7239,7 @@
     "expected_turn": 9,
     "expires_turn": 24,
     "forwardings": 0,
-    "id": "R91",
+    "id": "R96",
     "last_progress_turn": 4,
     "method": "courier",
     "origin": [
@@ -7121,9 +7260,9 @@
   {
    "arrival_turn": 4,
    "kind": "report_sent",
-   "report_id": "R92",
+   "report_id": "R97",
    "report_kind": "friendly",
-   "seq": 92,
+   "seq": 97,
    "side": "confederate",
    "transport": {
     "address": [
@@ -7134,7 +7273,7 @@
     "expected_turn": 4,
     "expires_turn": 24,
     "forwardings": 0,
-    "id": "R92",
+    "id": "R97",
     "last_progress_turn": 3,
     "method": "voice",
     "origin": [
@@ -7155,9 +7294,9 @@
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R93",
+   "report_id": "R98",
    "report_kind": "friendly",
-   "seq": 93,
+   "seq": 98,
    "side": "confederate",
    "transport": {
     "address": [
@@ -7168,7 +7307,7 @@
     "expected_turn": 10,
     "expires_turn": 24,
     "forwardings": 0,
-    "id": "R93",
+    "id": "R98",
     "last_progress_turn": 4,
     "method": "courier",
     "origin": [
@@ -7189,9 +7328,9 @@
   {
    "arrival_turn": 7,
    "kind": "report_sent",
-   "report_id": "R94",
+   "report_id": "R99",
    "report_kind": "friendly",
-   "seq": 94,
+   "seq": 99,
    "side": "union",
    "transport": {
     "address": [
@@ -7202,7 +7341,7 @@
     "expected_turn": 7,
     "expires_turn": 24,
     "forwardings": 0,
-    "id": "R94",
+    "id": "R99",
     "last_progress_turn": 4,
     "method": "courier",
     "origin": [
@@ -7223,9 +7362,9 @@
   {
    "arrival_turn": 4,
    "kind": "report_sent",
-   "report_id": "R95",
+   "report_id": "R100",
    "report_kind": "friendly",
-   "seq": 95,
+   "seq": 100,
    "side": "union",
    "transport": {
     "address": [
@@ -7236,7 +7375,7 @@
     "expected_turn": 4,
     "expires_turn": 24,
     "forwardings": 0,
-    "id": "R95",
+    "id": "R100",
     "last_progress_turn": 3,
     "method": "voice",
     "origin": [
@@ -7257,9 +7396,9 @@
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R96",
+   "report_id": "R101",
    "report_kind": "friendly",
-   "seq": 96,
+   "seq": 101,
    "side": "union",
    "transport": {
     "address": [
@@ -7270,7 +7409,7 @@
     "expected_turn": 8,
     "expires_turn": 24,
     "forwardings": 0,
-    "id": "R96",
+    "id": "R101",
     "last_progress_turn": 4,
     "method": "courier",
     "origin": [
@@ -7291,24 +7430,24 @@
   {
    "kind": "report_received",
    "observed_turn": 4,
-   "report_id": "R92",
+   "report_id": "R97",
    "report_kind": "friendly",
-   "seq": 97,
+   "seq": 102,
    "side": "confederate",
    "turn": 4
   },
   {
    "kind": "report_received",
    "observed_turn": 4,
-   "report_id": "R95",
+   "report_id": "R100",
    "report_kind": "friendly",
-   "seq": 98,
+   "seq": 103,
    "side": "union",
    "turn": 4
   },
   {
    "kind": "turn_completed",
-   "seq": 99,
+   "seq": 104,
    "turn": 4,
    "turn_number": 4
   },
@@ -7323,7 +7462,7 @@
     "expected_turn": 5,
     "expires_turn": 21,
     "forwardings": 1,
-    "id": "R16",
+    "id": "R17",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -7339,24 +7478,24 @@
     "sent_turn": 1,
     "status": "en_route"
    },
-   "seq": 100,
+   "seq": 105,
    "turn": 5
   },
   {
    "kind": "report_received",
    "observed_turn": 1,
-   "report_id": "R21",
+   "report_id": "R22",
    "report_kind": "friendly",
-   "seq": 101,
+   "seq": 106,
    "side": "union",
    "turn": 5
   },
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R36",
+   "report_id": "R37",
    "report_kind": "friendly",
-   "seq": 102,
+   "seq": 107,
    "side": "union",
    "turn": 5
   },
@@ -7364,7 +7503,7 @@
    "kind": "recommendation_received",
    "observed_turn": 2,
    "recommendation_id": "A3",
-   "seq": 103,
+   "seq": 108,
    "status": "superseded",
    "turn": 5,
    "unit_id": "U1"
@@ -7372,25 +7511,25 @@
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R44",
+   "report_id": "R45",
    "report_kind": "recommendation",
-   "seq": 104,
+   "seq": 109,
    "side": "union",
    "turn": 5
   },
   {
    "kind": "mission_started",
-   "order_id": "O4",
+   "order_id": "O5",
    "order_version": 1,
-   "seq": 105,
+   "seq": 110,
    "template": "move",
    "turn": 5,
    "unit_id": "C3"
   },
   {
    "kind": "order_delivered",
-   "order_id": "O4",
-   "seq": 106,
+   "order_id": "O5",
+   "seq": 111,
    "turn": 5,
    "unit_id": "C3",
    "version": 1
@@ -7398,9 +7537,9 @@
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R107",
+   "report_id": "R112",
    "report_kind": "ack",
-   "seq": 107,
+   "seq": 112,
    "side": "confederate",
    "transport": {
     "address": [
@@ -7411,7 +7550,7 @@
     "expected_turn": 11,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R107",
+    "id": "R112",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -7436,7 +7575,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 108,
+   "seq": 113,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7451,7 +7590,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 109,
+   "seq": 114,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7466,7 +7605,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 110,
+   "seq": 115,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7481,7 +7620,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 111,
+   "seq": 116,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7496,7 +7635,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 112,
+   "seq": 117,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7508,10 +7647,10 @@
    "action": "hold",
    "contacts": [],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 113,
+   "seq": 118,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -7520,7 +7659,7 @@
    "unit_id": "U3"
   },
   {
-   "decision_seq": 108,
+   "decision_seq": 113,
    "destination": [
     6,
     18
@@ -7530,12 +7669,12 @@
     5,
     18
    ],
-   "seq": 114,
+   "seq": 119,
    "turn": 5,
    "unit_id": "C1"
   },
   {
-   "decision_seq": 109,
+   "decision_seq": 114,
    "destination": [
     11,
     18
@@ -7545,12 +7684,12 @@
     10,
     19
    ],
-   "seq": 115,
+   "seq": 120,
    "turn": 5,
    "unit_id": "C2"
   },
   {
-   "decision_seq": 110,
+   "decision_seq": 115,
    "destination": [
     4,
     17
@@ -7560,7 +7699,7 @@
     3,
     17
    ],
-   "seq": 116,
+   "seq": 121,
    "turn": 5,
    "unit_id": "C3"
   },
@@ -7568,7 +7707,7 @@
    "exposure": 96,
    "kind": "volley",
    "rounds": 40,
-   "seq": 117,
+   "seq": 122,
    "target_id": "U1",
    "turn": 5,
    "unit_id": "C2"
@@ -7577,20 +7716,20 @@
    "exposure": 120,
    "kind": "volley",
    "rounds": 40,
-   "seq": 118,
+   "seq": 123,
    "target_id": "C2",
    "turn": 5,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 119,
+   "seq": 124,
    "turn": 5,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 120,
+   "seq": 125,
    "turn": 5,
    "unit_id": "C2"
   },
@@ -7598,16 +7737,16 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 39,
-   "seq": 121,
+   "seq": 126,
    "turn": 5,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R122",
+   "report_id": "R127",
    "report_kind": "friendly",
-   "seq": 122,
+   "seq": 127,
    "side": "confederate",
    "transport": {
     "address": [
@@ -7618,7 +7757,7 @@
     "expected_turn": 9,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R122",
+    "id": "R127",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -7639,9 +7778,9 @@
   {
    "arrival_turn": 5,
    "kind": "report_sent",
-   "report_id": "R123",
+   "report_id": "R128",
    "report_kind": "friendly",
-   "seq": 123,
+   "seq": 128,
    "side": "confederate",
    "transport": {
     "address": [
@@ -7652,7 +7791,7 @@
     "expected_turn": 5,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R123",
+    "id": "R128",
     "last_progress_turn": 4,
     "method": "voice",
     "origin": [
@@ -7673,9 +7812,9 @@
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R124",
+   "report_id": "R129",
    "report_kind": "friendly",
-   "seq": 124,
+   "seq": 129,
    "side": "confederate",
    "transport": {
     "address": [
@@ -7686,7 +7825,7 @@
     "expected_turn": 10,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R124",
+    "id": "R129",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -7707,9 +7846,9 @@
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R125",
+   "report_id": "R130",
    "report_kind": "friendly",
-   "seq": 125,
+   "seq": 130,
    "side": "union",
    "transport": {
     "address": [
@@ -7720,7 +7859,7 @@
     "expected_turn": 8,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R125",
+    "id": "R130",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -7741,9 +7880,9 @@
   {
    "arrival_turn": 5,
    "kind": "report_sent",
-   "report_id": "R126",
+   "report_id": "R131",
    "report_kind": "friendly",
-   "seq": 126,
+   "seq": 131,
    "side": "union",
    "transport": {
     "address": [
@@ -7754,7 +7893,7 @@
     "expected_turn": 5,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R126",
+    "id": "R131",
     "last_progress_turn": 4,
     "method": "voice",
     "origin": [
@@ -7775,9 +7914,9 @@
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R127",
+   "report_id": "R132",
    "report_kind": "friendly",
-   "seq": 127,
+   "seq": 132,
    "side": "union",
    "transport": {
     "address": [
@@ -7788,7 +7927,7 @@
     "expected_turn": 9,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R127",
+    "id": "R132",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -7833,16 +7972,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 128,
+   "seq": 133,
    "side": "confederate",
    "turn": 5
   },
   {
    "arrival_turn": 5,
    "kind": "report_sent",
-   "report_id": "R129",
+   "report_id": "R134",
    "report_kind": "contact",
-   "seq": 129,
+   "seq": 134,
    "side": "confederate",
    "transport": {
     "address": [
@@ -7853,7 +7992,7 @@
     "expected_turn": 5,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R129",
+    "id": "R134",
     "last_progress_turn": 4,
     "method": "voice",
     "origin": [
@@ -7898,16 +8037,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 130,
+   "seq": 135,
    "side": "union",
    "turn": 5
   },
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R131",
+   "report_id": "R136",
    "report_kind": "contact",
-   "seq": 131,
+   "seq": 136,
    "side": "union",
    "transport": {
     "address": [
@@ -7918,7 +8057,7 @@
     "expected_turn": 8,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R131",
+    "id": "R136",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -7963,16 +8102,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 132,
+   "seq": 137,
    "side": "union",
    "turn": 5
   },
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R133",
+   "report_id": "R138",
    "report_kind": "contact",
-   "seq": 133,
+   "seq": 138,
    "side": "union",
    "transport": {
     "address": [
@@ -7983,7 +8122,7 @@
     "expected_turn": 8,
     "expires_turn": 25,
     "forwardings": 0,
-    "id": "R133",
+    "id": "R138",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -8004,33 +8143,33 @@
   {
    "kind": "report_received",
    "observed_turn": 5,
-   "report_id": "R123",
+   "report_id": "R128",
    "report_kind": "friendly",
-   "seq": 134,
+   "seq": 139,
    "side": "confederate",
    "turn": 5
   },
   {
    "kind": "report_received",
    "observed_turn": 5,
-   "report_id": "R126",
+   "report_id": "R131",
    "report_kind": "friendly",
-   "seq": 135,
+   "seq": 140,
    "side": "union",
    "turn": 5
   },
   {
    "kind": "report_received",
    "observed_turn": 5,
-   "report_id": "R129",
+   "report_id": "R134",
    "report_kind": "contact",
-   "seq": 136,
+   "seq": 141,
    "side": "confederate",
    "turn": 5
   },
   {
    "kind": "turn_completed",
-   "seq": 137,
+   "seq": 142,
    "turn": 5,
    "turn_number": 5
   },
@@ -8045,7 +8184,7 @@
     "expected_turn": 6,
     "expires_turn": 21,
     "forwardings": 1,
-    "id": "R18",
+    "id": "R19",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8061,7 +8200,7 @@
     "sent_turn": 1,
     "status": "en_route"
    },
-   "seq": 138,
+   "seq": 143,
    "turn": 6
   },
   {
@@ -8075,7 +8214,7 @@
     "expected_turn": 6,
     "expires_turn": 22,
     "forwardings": 1,
-    "id": "R33",
+    "id": "R34",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8091,15 +8230,15 @@
     "sent_turn": 2,
     "status": "en_route"
    },
-   "seq": 139,
+   "seq": 144,
    "turn": 6
   },
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R38",
+   "report_id": "R39",
    "report_kind": "friendly",
-   "seq": 140,
+   "seq": 145,
    "side": "union",
    "turn": 6
   },
@@ -8114,7 +8253,7 @@
     "expected_turn": 6,
     "expires_turn": 22,
     "forwardings": 1,
-    "id": "R40",
+    "id": "R41",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8130,42 +8269,42 @@
     "sent_turn": 2,
     "status": "en_route"
    },
-   "seq": 141,
+   "seq": 146,
    "turn": 6
   },
   {
    "kind": "recommendation_received",
    "observed_turn": 2,
    "recommendation_id": "A5",
-   "seq": 142,
-   "status": "delivered",
+   "seq": 147,
+   "status": "superseded",
    "turn": 6,
    "unit_id": "U3"
   },
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R48",
+   "report_id": "R49",
    "report_kind": "recommendation",
-   "seq": 143,
+   "seq": 148,
    "side": "union",
    "turn": 6
   },
   {
    "kind": "report_received",
    "observed_turn": 3,
-   "report_id": "R56",
+   "report_id": "R57",
    "report_kind": "ack",
-   "seq": 144,
+   "seq": 149,
    "side": "union",
    "turn": 6
   },
   {
    "kind": "report_received",
    "observed_turn": 3,
-   "report_id": "R71",
+   "report_id": "R72",
    "report_kind": "friendly",
-   "seq": 145,
+   "seq": 150,
    "side": "union",
    "turn": 6
   },
@@ -8189,7 +8328,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy sighted beyond effective range; observe, report and maintain mission.",
-   "seq": 146,
+   "seq": 151,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -8200,9 +8339,9 @@
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R147",
+   "report_id": "R152",
    "report_kind": "reaction",
-   "seq": 147,
+   "seq": 152,
    "side": "confederate",
    "transport": {
     "address": [
@@ -8213,7 +8352,7 @@
     "expected_turn": 10,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R147",
+    "id": "R152",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8251,7 +8390,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 148,
+   "seq": 153,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -8262,9 +8401,9 @@
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R149",
+   "report_id": "R154",
    "report_kind": "reaction",
-   "seq": 149,
+   "seq": 154,
    "side": "confederate",
    "transport": {
     "address": [
@@ -8275,7 +8414,7 @@
     "expected_turn": 6,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R149",
+    "id": "R154",
     "last_progress_turn": 5,
     "method": "voice",
     "origin": [
@@ -8300,7 +8439,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 150,
+   "seq": 155,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -8340,7 +8479,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 151,
+   "seq": 156,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -8351,9 +8490,9 @@
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R152",
+   "report_id": "R157",
    "report_kind": "reaction",
-   "seq": 152,
+   "seq": 157,
    "side": "union",
    "transport": {
     "address": [
@@ -8364,7 +8503,7 @@
     "expected_turn": 9,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R152",
+    "id": "R157",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8389,7 +8528,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 153,
+   "seq": 158,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -8401,10 +8540,10 @@
    "action": "hold",
    "contacts": [],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 154,
+   "seq": 159,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -8413,7 +8552,7 @@
    "unit_id": "U3"
   },
   {
-   "decision_seq": 146,
+   "decision_seq": 151,
    "destination": [
     6,
     17
@@ -8423,7 +8562,7 @@
     6,
     18
    ],
-   "seq": 155,
+   "seq": 160,
    "turn": 6,
    "unit_id": "C1"
   },
@@ -8431,7 +8570,7 @@
    "exposure": 92,
    "kind": "volley",
    "rounds": 39,
-   "seq": 156,
+   "seq": 161,
    "target_id": "U1",
    "turn": 6,
    "unit_id": "C2"
@@ -8440,14 +8579,14 @@
    "exposure": 119,
    "kind": "volley",
    "rounds": 40,
-   "seq": 157,
+   "seq": 162,
    "target_id": "C2",
    "turn": 6,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 158,
+   "seq": 163,
    "turn": 6,
    "unit_id": "U1"
   },
@@ -8455,13 +8594,13 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 39,
-   "seq": 159,
+   "seq": 164,
    "turn": 6,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 160,
+   "seq": 165,
    "turn": 6,
    "unit_id": "C2"
   },
@@ -8469,16 +8608,16 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 38,
-   "seq": 161,
+   "seq": 166,
    "turn": 6,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R162",
+   "report_id": "R167",
    "report_kind": "friendly",
-   "seq": 162,
+   "seq": 167,
    "side": "confederate",
    "transport": {
     "address": [
@@ -8489,7 +8628,7 @@
     "expected_turn": 10,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R162",
+    "id": "R167",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8510,9 +8649,9 @@
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R163",
+   "report_id": "R168",
    "report_kind": "friendly",
-   "seq": 163,
+   "seq": 168,
    "side": "confederate",
    "transport": {
     "address": [
@@ -8523,7 +8662,7 @@
     "expected_turn": 6,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R163",
+    "id": "R168",
     "last_progress_turn": 5,
     "method": "voice",
     "origin": [
@@ -8544,9 +8683,9 @@
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R164",
+   "report_id": "R169",
    "report_kind": "friendly",
-   "seq": 164,
+   "seq": 169,
    "side": "confederate",
    "transport": {
     "address": [
@@ -8557,7 +8696,7 @@
     "expected_turn": 11,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R164",
+    "id": "R169",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8578,9 +8717,9 @@
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R165",
+   "report_id": "R170",
    "report_kind": "friendly",
-   "seq": 165,
+   "seq": 170,
    "side": "union",
    "transport": {
     "address": [
@@ -8591,7 +8730,7 @@
     "expected_turn": 9,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R165",
+    "id": "R170",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8612,9 +8751,9 @@
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R166",
+   "report_id": "R171",
    "report_kind": "friendly",
-   "seq": 166,
+   "seq": 171,
    "side": "union",
    "transport": {
     "address": [
@@ -8625,7 +8764,7 @@
     "expected_turn": 6,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R166",
+    "id": "R171",
     "last_progress_turn": 5,
     "method": "voice",
     "origin": [
@@ -8646,9 +8785,9 @@
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R167",
+   "report_id": "R172",
    "report_kind": "friendly",
-   "seq": 167,
+   "seq": 172,
    "side": "union",
    "transport": {
     "address": [
@@ -8659,7 +8798,7 @@
     "expected_turn": 10,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R167",
+    "id": "R172",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8704,16 +8843,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 168,
+   "seq": 173,
    "side": "confederate",
    "turn": 6
   },
   {
    "arrival_turn": 6,
    "kind": "report_sent",
-   "report_id": "R169",
+   "report_id": "R174",
    "report_kind": "contact",
-   "seq": 169,
+   "seq": 174,
    "side": "confederate",
    "transport": {
     "address": [
@@ -8724,7 +8863,7 @@
     "expected_turn": 6,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R169",
+    "id": "R174",
     "last_progress_turn": 5,
     "method": "voice",
     "origin": [
@@ -8769,16 +8908,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 170,
+   "seq": 175,
    "side": "confederate",
    "turn": 6
   },
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R171",
+   "report_id": "R176",
    "report_kind": "contact",
-   "seq": 171,
+   "seq": 176,
    "side": "confederate",
    "transport": {
     "address": [
@@ -8789,7 +8928,7 @@
     "expected_turn": 10,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R171",
+    "id": "R176",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8834,16 +8973,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 172,
+   "seq": 177,
    "side": "union",
    "turn": 6
   },
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R173",
+   "report_id": "R178",
    "report_kind": "contact",
-   "seq": 173,
+   "seq": 178,
    "side": "union",
    "transport": {
     "address": [
@@ -8854,7 +8993,7 @@
     "expected_turn": 10,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R173",
+    "id": "R178",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8899,16 +9038,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 174,
+   "seq": 179,
    "side": "union",
    "turn": 6
   },
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R175",
+   "report_id": "R180",
    "report_kind": "contact",
-   "seq": 175,
+   "seq": 180,
    "side": "union",
    "transport": {
     "address": [
@@ -8919,7 +9058,7 @@
     "expected_turn": 9,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "R175",
+    "id": "R180",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -8940,49 +9079,49 @@
   {
    "kind": "report_received",
    "observed_turn": 6,
-   "report_id": "R149",
+   "report_id": "R154",
    "report_kind": "reaction",
-   "seq": 176,
+   "seq": 181,
    "side": "confederate",
    "turn": 6
   },
   {
    "kind": "report_received",
    "observed_turn": 6,
-   "report_id": "R163",
+   "report_id": "R168",
    "report_kind": "friendly",
-   "seq": 177,
+   "seq": 182,
    "side": "confederate",
    "turn": 6
   },
   {
    "kind": "report_received",
    "observed_turn": 6,
-   "report_id": "R166",
+   "report_id": "R171",
    "report_kind": "friendly",
-   "seq": 178,
+   "seq": 183,
    "side": "union",
    "turn": 6
   },
   {
    "kind": "report_received",
    "observed_turn": 6,
-   "report_id": "R169",
+   "report_id": "R174",
    "report_kind": "contact",
-   "seq": 179,
+   "seq": 184,
    "side": "confederate",
    "turn": 6
   },
   {
    "kind": "turn_completed",
-   "seq": 180,
+   "seq": 185,
    "turn": 6,
    "turn_number": 6
   },
   {
    "decision_index": 3,
    "kind": "commander_decision",
-   "seq": 181,
+   "seq": 186,
    "source": "scripted",
    "turn": 6
   },
@@ -8993,8 +9132,8 @@
     15
    ],
    "kind": "order_sent",
-   "order_id": "O7",
-   "seq": 182,
+   "order_id": "O8",
+   "seq": 187,
    "side": "confederate",
    "transport": {
     "address": [
@@ -9005,7 +9144,7 @@
     "expected_turn": 11,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "O7",
+    "id": "O8",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -9032,8 +9171,8 @@
     15
    ],
    "kind": "order_sent",
-   "order_id": "O8",
-   "seq": 183,
+   "order_id": "O9",
+   "seq": 188,
    "side": "confederate",
    "transport": {
     "address": [
@@ -9044,7 +9183,7 @@
     "expected_turn": 11,
     "expires_turn": 26,
     "forwardings": 0,
-    "id": "O8",
+    "id": "O9",
     "last_progress_turn": 6,
     "method": "courier",
     "origin": [
@@ -9075,7 +9214,7 @@
     "expected_turn": 5,
     "expires_turn": 21,
     "forwardings": 2,
-    "id": "R16",
+    "id": "R17",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9091,7 +9230,7 @@
     "sent_turn": 1,
     "status": "en_route"
    },
-   "seq": 184,
+   "seq": 189,
    "turn": 7
   },
   {
@@ -9105,7 +9244,7 @@
     "expected_turn": 7,
     "expires_turn": 23,
     "forwardings": 1,
-    "id": "R59",
+    "id": "R60",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9121,24 +9260,24 @@
     "sent_turn": 3,
     "status": "en_route"
    },
-   "seq": 185,
+   "seq": 190,
    "turn": 7
   },
   {
    "kind": "report_received",
    "observed_turn": 3,
-   "report_id": "R73",
+   "report_id": "R74",
    "report_kind": "friendly",
-   "seq": 186,
+   "seq": 191,
    "side": "union",
    "turn": 7
   },
   {
    "kind": "report_received",
    "observed_turn": 4,
-   "report_id": "R94",
+   "report_id": "R99",
    "report_kind": "friendly",
-   "seq": 187,
+   "seq": 192,
    "side": "union",
    "turn": 7
   },
@@ -9174,7 +9313,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy sighted beyond effective range; observe, report and maintain mission.",
-   "seq": 188,
+   "seq": 193,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -9202,7 +9341,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 189,
+   "seq": 194,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -9217,7 +9356,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 190,
+   "seq": 195,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -9257,7 +9396,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 191,
+   "seq": 196,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -9272,7 +9411,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 192,
+   "seq": 197,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -9297,10 +9436,10 @@
     }
    ],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy sighted beyond effective range; observe, report and maintain mission.",
-   "seq": 193,
+   "seq": 198,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -9311,9 +9450,9 @@
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R194",
+   "report_id": "R199",
    "report_kind": "reaction",
-   "seq": 194,
+   "seq": 199,
    "side": "union",
    "transport": {
     "address": [
@@ -9324,7 +9463,7 @@
     "expected_turn": 11,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R194",
+    "id": "R199",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9343,7 +9482,7 @@
    "turn": 7
   },
   {
-   "decision_seq": 188,
+   "decision_seq": 193,
    "destination": [
     7,
     17
@@ -9353,12 +9492,12 @@
     6,
     17
    ],
-   "seq": 195,
+   "seq": 200,
    "turn": 7,
    "unit_id": "C1"
   },
   {
-   "decision_seq": 190,
+   "decision_seq": 195,
    "destination": [
     5,
     18
@@ -9368,7 +9507,7 @@
     4,
     17
    ],
-   "seq": 196,
+   "seq": 201,
    "turn": 7,
    "unit_id": "C3"
   },
@@ -9376,7 +9515,7 @@
    "exposure": 72,
    "kind": "volley",
    "rounds": 40,
-   "seq": 197,
+   "seq": 202,
    "target_id": "U1",
    "turn": 7,
    "unit_id": "C1"
@@ -9385,7 +9524,7 @@
    "exposure": 89,
    "kind": "volley",
    "rounds": 38,
-   "seq": 198,
+   "seq": 203,
    "target_id": "U1",
    "turn": 7,
    "unit_id": "C2"
@@ -9394,7 +9533,7 @@
    "exposure": 116,
    "kind": "volley",
    "rounds": 39,
-   "seq": 199,
+   "seq": 204,
    "target_id": "C2",
    "turn": 7,
    "unit_id": "U1"
@@ -9403,14 +9542,14 @@
    "exposure": 90,
    "kind": "volley",
    "rounds": 40,
-   "seq": 200,
+   "seq": 205,
    "target_id": "C1",
    "turn": 7,
    "unit_id": "U3"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 201,
+   "seq": 206,
    "turn": 7,
    "unit_id": "U1"
   },
@@ -9418,19 +9557,19 @@
    "count": 2,
    "kind": "casualties",
    "remaining": 37,
-   "seq": 202,
+   "seq": 207,
    "turn": 7,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 203,
+   "seq": 208,
    "turn": 7,
    "unit_id": "C1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 204,
+   "seq": 209,
    "turn": 7,
    "unit_id": "C2"
   },
@@ -9438,16 +9577,16 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 37,
-   "seq": 205,
+   "seq": 210,
    "turn": 7,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R206",
+   "report_id": "R211",
    "report_kind": "friendly",
-   "seq": 206,
+   "seq": 211,
    "side": "confederate",
    "transport": {
     "address": [
@@ -9458,7 +9597,7 @@
     "expected_turn": 11,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R206",
+    "id": "R211",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9479,9 +9618,9 @@
   {
    "arrival_turn": 7,
    "kind": "report_sent",
-   "report_id": "R207",
+   "report_id": "R212",
    "report_kind": "friendly",
-   "seq": 207,
+   "seq": 212,
    "side": "confederate",
    "transport": {
     "address": [
@@ -9492,7 +9631,7 @@
     "expected_turn": 7,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R207",
+    "id": "R212",
     "last_progress_turn": 6,
     "method": "voice",
     "origin": [
@@ -9513,9 +9652,9 @@
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R208",
+   "report_id": "R213",
    "report_kind": "friendly",
-   "seq": 208,
+   "seq": 213,
    "side": "confederate",
    "transport": {
     "address": [
@@ -9526,7 +9665,7 @@
     "expected_turn": 12,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R208",
+    "id": "R213",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9547,9 +9686,9 @@
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R209",
+   "report_id": "R214",
    "report_kind": "friendly",
-   "seq": 209,
+   "seq": 214,
    "side": "union",
    "transport": {
     "address": [
@@ -9560,7 +9699,7 @@
     "expected_turn": 10,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R209",
+    "id": "R214",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9581,9 +9720,9 @@
   {
    "arrival_turn": 7,
    "kind": "report_sent",
-   "report_id": "R210",
+   "report_id": "R215",
    "report_kind": "friendly",
-   "seq": 210,
+   "seq": 215,
    "side": "union",
    "transport": {
     "address": [
@@ -9594,7 +9733,7 @@
     "expected_turn": 7,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R210",
+    "id": "R215",
     "last_progress_turn": 6,
     "method": "voice",
     "origin": [
@@ -9615,9 +9754,9 @@
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R211",
+   "report_id": "R216",
    "report_kind": "friendly",
-   "seq": 211,
+   "seq": 216,
    "side": "union",
    "transport": {
     "address": [
@@ -9628,7 +9767,7 @@
     "expected_turn": 11,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R211",
+    "id": "R216",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9673,16 +9812,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 212,
+   "seq": 217,
    "side": "confederate",
    "turn": 7
   },
   {
    "arrival_turn": 7,
    "kind": "report_sent",
-   "report_id": "R213",
+   "report_id": "R218",
    "report_kind": "contact",
-   "seq": 213,
+   "seq": 218,
    "side": "confederate",
    "transport": {
     "address": [
@@ -9693,7 +9832,7 @@
     "expected_turn": 7,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R213",
+    "id": "R218",
     "last_progress_turn": 6,
     "method": "voice",
     "origin": [
@@ -9738,16 +9877,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 214,
+   "seq": 219,
    "side": "confederate",
    "turn": 7
   },
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R215",
+   "report_id": "R220",
    "report_kind": "contact",
-   "seq": 215,
+   "seq": 220,
    "side": "confederate",
    "transport": {
     "address": [
@@ -9758,7 +9897,7 @@
     "expected_turn": 11,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R215",
+    "id": "R220",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9803,16 +9942,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 216,
+   "seq": 221,
    "side": "union",
    "turn": 7
   },
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R217",
+   "report_id": "R222",
    "report_kind": "contact",
-   "seq": 217,
+   "seq": 222,
    "side": "union",
    "transport": {
     "address": [
@@ -9823,7 +9962,7 @@
     "expected_turn": 11,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R217",
+    "id": "R222",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9868,16 +10007,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 218,
+   "seq": 223,
    "side": "union",
    "turn": 7
   },
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R219",
+   "report_id": "R224",
    "report_kind": "contact",
-   "seq": 219,
+   "seq": 224,
    "side": "union",
    "transport": {
     "address": [
@@ -9888,7 +10027,7 @@
     "expected_turn": 10,
     "expires_turn": 27,
     "forwardings": 0,
-    "id": "R219",
+    "id": "R224",
     "last_progress_turn": 7,
     "method": "courier",
     "origin": [
@@ -9909,51 +10048,51 @@
   {
    "kind": "report_received",
    "observed_turn": 7,
-   "report_id": "R207",
+   "report_id": "R212",
    "report_kind": "friendly",
-   "seq": 220,
+   "seq": 225,
    "side": "confederate",
    "turn": 7
   },
   {
    "kind": "report_received",
    "observed_turn": 7,
-   "report_id": "R210",
+   "report_id": "R215",
    "report_kind": "friendly",
-   "seq": 221,
+   "seq": 226,
    "side": "union",
    "turn": 7
   },
   {
    "kind": "report_received",
    "observed_turn": 7,
-   "report_id": "R213",
+   "report_id": "R218",
    "report_kind": "contact",
-   "seq": 222,
+   "seq": 227,
    "side": "confederate",
    "turn": 7
   },
   {
    "kind": "turn_completed",
-   "seq": 223,
+   "seq": 228,
    "turn": 7,
    "turn_number": 7
   },
   {
    "kind": "report_received",
    "observed_turn": 1,
-   "report_id": "R16",
+   "report_id": "R17",
    "report_kind": "friendly",
-   "seq": 224,
+   "seq": 229,
    "side": "confederate",
    "turn": 8
   },
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R33",
+   "report_id": "R34",
    "report_kind": "friendly",
-   "seq": 225,
+   "seq": 230,
    "side": "confederate",
    "turn": 8
   },
@@ -9968,7 +10107,7 @@
     "expected_turn": 8,
     "expires_turn": 22,
     "forwardings": 1,
-    "id": "R35",
+    "id": "R36",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -9984,14 +10123,14 @@
     "sent_turn": 2,
     "status": "en_route"
    },
-   "seq": 226,
+   "seq": 231,
    "turn": 8
   },
   {
    "kind": "recommendation_received",
    "observed_turn": 2,
    "recommendation_id": "A1",
-   "seq": 227,
+   "seq": 232,
    "status": "superseded",
    "turn": 8,
    "unit_id": "C1"
@@ -9999,9 +10138,9 @@
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R40",
+   "report_id": "R41",
    "report_kind": "recommendation",
-   "seq": 228,
+   "seq": 233,
    "side": "confederate",
    "turn": 8
   },
@@ -10016,7 +10155,7 @@
     "expected_turn": 8,
     "expires_turn": 22,
     "forwardings": 1,
-    "id": "R42",
+    "id": "R43",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10032,7 +10171,7 @@
     "sent_turn": 2,
     "status": "en_route"
    },
-   "seq": 229,
+   "seq": 234,
    "turn": 8
   },
   {
@@ -10046,7 +10185,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 1,
-    "id": "R68",
+    "id": "R69",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10062,42 +10201,51 @@
     "sent_turn": 3,
     "status": "en_route"
    },
-   "seq": 230,
+   "seq": 235,
    "turn": 8
   },
   {
    "kind": "report_received",
    "observed_turn": 4,
-   "report_id": "R96",
+   "report_id": "R88",
+   "report_kind": "ack",
+   "seq": 236,
+   "side": "union",
+   "turn": 8
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 4,
+   "report_id": "R101",
    "report_kind": "friendly",
-   "seq": 231,
+   "seq": 237,
    "side": "union",
    "turn": 8
   },
   {
    "kind": "report_received",
    "observed_turn": 5,
-   "report_id": "R125",
+   "report_id": "R130",
    "report_kind": "friendly",
-   "seq": 232,
+   "seq": 238,
    "side": "union",
    "turn": 8
   },
   {
    "kind": "report_received",
    "observed_turn": 5,
-   "report_id": "R131",
+   "report_id": "R136",
    "report_kind": "contact",
-   "seq": 233,
+   "seq": 239,
    "side": "union",
    "turn": 8
   },
   {
    "kind": "report_received",
    "observed_turn": 5,
-   "report_id": "R133",
+   "report_id": "R138",
    "report_kind": "contact",
-   "seq": 234,
+   "seq": 240,
    "side": "union",
    "turn": 8
   },
@@ -10112,7 +10260,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 1,
-    "id": "O5",
+    "id": "O6",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10128,7 +10276,7 @@
     "sent_turn": 3,
     "status": "en_route"
    },
-   "seq": 235,
+   "seq": 241,
    "turn": 8
   },
   {
@@ -10142,7 +10290,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 1,
-    "id": "O6",
+    "id": "O7",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10158,7 +10306,7 @@
     "sent_turn": 3,
     "status": "en_route"
    },
-   "seq": 236,
+   "seq": 242,
    "turn": 8
   },
   {
@@ -10193,7 +10341,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 237,
+   "seq": 243,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -10204,9 +10352,9 @@
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R238",
+   "report_id": "R244",
    "report_kind": "reaction",
-   "seq": 238,
+   "seq": 244,
    "side": "confederate",
    "transport": {
     "address": [
@@ -10217,7 +10365,7 @@
     "expected_turn": 12,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R238",
+    "id": "R244",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10255,7 +10403,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 239,
+   "seq": 245,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -10270,7 +10418,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 240,
+   "seq": 246,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -10310,7 +10458,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 241,
+   "seq": 247,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -10325,7 +10473,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 242,
+   "seq": 248,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -10350,10 +10498,10 @@
     }
    ],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 243,
+   "seq": 249,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -10364,9 +10512,9 @@
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R244",
+   "report_id": "R250",
    "report_kind": "reaction",
-   "seq": 244,
+   "seq": 250,
    "side": "union",
    "transport": {
     "address": [
@@ -10377,7 +10525,7 @@
     "expected_turn": 12,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R244",
+    "id": "R250",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10396,7 +10544,7 @@
    "turn": 8
   },
   {
-   "decision_seq": 240,
+   "decision_seq": 246,
    "destination": [
     6,
     18
@@ -10406,7 +10554,7 @@
     5,
     18
    ],
-   "seq": 245,
+   "seq": 251,
    "turn": 8,
    "unit_id": "C3"
   },
@@ -10414,7 +10562,7 @@
    "exposure": 71,
    "kind": "volley",
    "rounds": 40,
-   "seq": 246,
+   "seq": 252,
    "target_id": "U1",
    "turn": 8,
    "unit_id": "C1"
@@ -10423,7 +10571,7 @@
    "exposure": 87,
    "kind": "volley",
    "rounds": 37,
-   "seq": 247,
+   "seq": 253,
    "target_id": "U1",
    "turn": 8,
    "unit_id": "C2"
@@ -10432,7 +10580,7 @@
    "exposure": 103,
    "kind": "volley",
    "rounds": 37,
-   "seq": 248,
+   "seq": 254,
    "target_id": "C2",
    "turn": 8,
    "unit_id": "U1"
@@ -10441,14 +10589,14 @@
    "exposure": 90,
    "kind": "volley",
    "rounds": 40,
-   "seq": 249,
+   "seq": 255,
    "target_id": "C1",
    "turn": 8,
    "unit_id": "U3"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 250,
+   "seq": 256,
    "turn": 8,
    "unit_id": "U1"
   },
@@ -10456,13 +10604,13 @@
    "count": 2,
    "kind": "casualties",
    "remaining": 35,
-   "seq": 251,
+   "seq": 257,
    "turn": 8,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 252,
+   "seq": 258,
    "turn": 8,
    "unit_id": "C1"
   },
@@ -10470,13 +10618,13 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 39,
-   "seq": 253,
+   "seq": 259,
    "turn": 8,
    "unit_id": "C1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 254,
+   "seq": 260,
    "turn": 8,
    "unit_id": "C2"
   },
@@ -10484,16 +10632,16 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 36,
-   "seq": 255,
+   "seq": 261,
    "turn": 8,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R256",
+   "report_id": "R262",
    "report_kind": "friendly",
-   "seq": 256,
+   "seq": 262,
    "side": "confederate",
    "transport": {
     "address": [
@@ -10504,7 +10652,7 @@
     "expected_turn": 12,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R256",
+    "id": "R262",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10525,9 +10673,9 @@
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R257",
+   "report_id": "R263",
    "report_kind": "friendly",
-   "seq": 257,
+   "seq": 263,
    "side": "confederate",
    "transport": {
     "address": [
@@ -10538,7 +10686,7 @@
     "expected_turn": 8,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R257",
+    "id": "R263",
     "last_progress_turn": 7,
     "method": "voice",
     "origin": [
@@ -10559,9 +10707,9 @@
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R258",
+   "report_id": "R264",
    "report_kind": "friendly",
-   "seq": 258,
+   "seq": 264,
    "side": "confederate",
    "transport": {
     "address": [
@@ -10572,7 +10720,7 @@
     "expected_turn": 12,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R258",
+    "id": "R264",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10593,9 +10741,9 @@
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R259",
+   "report_id": "R265",
    "report_kind": "friendly",
-   "seq": 259,
+   "seq": 265,
    "side": "union",
    "transport": {
     "address": [
@@ -10606,7 +10754,7 @@
     "expected_turn": 11,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R259",
+    "id": "R265",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10627,9 +10775,9 @@
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R260",
+   "report_id": "R266",
    "report_kind": "friendly",
-   "seq": 260,
+   "seq": 266,
    "side": "union",
    "transport": {
     "address": [
@@ -10640,7 +10788,7 @@
     "expected_turn": 8,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R260",
+    "id": "R266",
     "last_progress_turn": 7,
     "method": "voice",
     "origin": [
@@ -10661,9 +10809,9 @@
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R261",
+   "report_id": "R267",
    "report_kind": "friendly",
-   "seq": 261,
+   "seq": 267,
    "side": "union",
    "transport": {
     "address": [
@@ -10674,7 +10822,7 @@
     "expected_turn": 12,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R261",
+    "id": "R267",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10719,16 +10867,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 262,
+   "seq": 268,
    "side": "confederate",
    "turn": 8
   },
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R263",
+   "report_id": "R269",
    "report_kind": "contact",
-   "seq": 263,
+   "seq": 269,
    "side": "confederate",
    "transport": {
     "address": [
@@ -10739,7 +10887,7 @@
     "expected_turn": 12,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R263",
+    "id": "R269",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10784,16 +10932,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 264,
+   "seq": 270,
    "side": "confederate",
    "turn": 8
   },
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R265",
+   "report_id": "R271",
    "report_kind": "contact",
-   "seq": 265,
+   "seq": 271,
    "side": "confederate",
    "transport": {
     "address": [
@@ -10804,7 +10952,7 @@
     "expected_turn": 12,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R265",
+    "id": "R271",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10849,16 +10997,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 266,
+   "seq": 272,
    "side": "union",
    "turn": 8
   },
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R267",
+   "report_id": "R273",
    "report_kind": "contact",
-   "seq": 267,
+   "seq": 273,
    "side": "union",
    "transport": {
     "address": [
@@ -10869,7 +11017,7 @@
     "expected_turn": 12,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R267",
+    "id": "R273",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10914,16 +11062,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 268,
+   "seq": 274,
    "side": "union",
    "turn": 8
   },
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R269",
+   "report_id": "R275",
    "report_kind": "contact",
-   "seq": 269,
+   "seq": 275,
    "side": "union",
    "transport": {
     "address": [
@@ -10934,7 +11082,7 @@
     "expected_turn": 11,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R269",
+    "id": "R275",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -10979,16 +11127,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 270,
+   "seq": 276,
    "side": "union",
    "turn": 8
   },
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R271",
+   "report_id": "R277",
    "report_kind": "contact",
-   "seq": 271,
+   "seq": 277,
    "side": "union",
    "transport": {
     "address": [
@@ -10999,7 +11147,7 @@
     "expected_turn": 11,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R271",
+    "id": "R277",
     "last_progress_turn": 8,
     "method": "courier",
     "origin": [
@@ -11044,16 +11192,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 272,
+   "seq": 278,
    "side": "confederate",
    "turn": 8
   },
   {
    "arrival_turn": 8,
    "kind": "report_sent",
-   "report_id": "R273",
+   "report_id": "R279",
    "report_kind": "contact",
-   "seq": 273,
+   "seq": 279,
    "side": "confederate",
    "transport": {
     "address": [
@@ -11064,7 +11212,7 @@
     "expected_turn": 8,
     "expires_turn": 28,
     "forwardings": 0,
-    "id": "R273",
+    "id": "R279",
     "last_progress_turn": 7,
     "method": "voice",
     "origin": [
@@ -11085,60 +11233,60 @@
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R257",
+   "report_id": "R263",
    "report_kind": "friendly",
-   "seq": 274,
+   "seq": 280,
    "side": "confederate",
    "turn": 8
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R260",
+   "report_id": "R266",
    "report_kind": "friendly",
-   "seq": 275,
+   "seq": 281,
    "side": "union",
    "turn": 8
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R273",
+   "report_id": "R279",
    "report_kind": "contact",
-   "seq": 276,
+   "seq": 282,
    "side": "confederate",
    "turn": 8
   },
   {
    "kind": "turn_completed",
-   "seq": 277,
+   "seq": 283,
    "turn": 8,
    "turn_number": 8
   },
   {
    "kind": "report_received",
    "observed_turn": 1,
-   "report_id": "R18",
+   "report_id": "R19",
    "report_kind": "friendly",
-   "seq": 278,
+   "seq": 284,
    "side": "confederate",
    "turn": 9
   },
   {
    "kind": "report_received",
    "observed_turn": 3,
-   "report_id": "R59",
+   "report_id": "R60",
    "report_kind": "ack",
-   "seq": 279,
+   "seq": 285,
    "side": "confederate",
    "turn": 9
   },
   {
    "kind": "report_received",
    "observed_turn": 3,
-   "report_id": "R68",
+   "report_id": "R69",
    "report_kind": "friendly",
-   "seq": 280,
+   "seq": 286,
    "side": "confederate",
    "turn": 9
   },
@@ -11153,7 +11301,7 @@
     "expected_turn": 9,
     "expires_turn": 23,
     "forwardings": 1,
-    "id": "R70",
+    "id": "R71",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11169,7 +11317,7 @@
     "sent_turn": 3,
     "status": "en_route"
    },
-   "seq": 281,
+   "seq": 287,
    "turn": 9
   },
   {
@@ -11183,7 +11331,7 @@
     "expected_turn": 9,
     "expires_turn": 24,
     "forwardings": 1,
-    "id": "R91",
+    "id": "R96",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11199,16 +11347,7 @@
     "sent_turn": 4,
     "status": "en_route"
    },
-   "seq": 282,
-   "turn": 9
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 5,
-   "report_id": "R122",
-   "report_kind": "friendly",
-   "seq": 283,
-   "side": "confederate",
+   "seq": 288,
    "turn": 9
   },
   {
@@ -11216,34 +11355,43 @@
    "observed_turn": 5,
    "report_id": "R127",
    "report_kind": "friendly",
-   "seq": 284,
-   "side": "union",
+   "seq": 289,
+   "side": "confederate",
    "turn": 9
   },
   {
    "kind": "report_received",
-   "observed_turn": 6,
-   "report_id": "R152",
-   "report_kind": "reaction",
-   "seq": 285,
-   "side": "union",
-   "turn": 9
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 6,
-   "report_id": "R165",
+   "observed_turn": 5,
+   "report_id": "R132",
    "report_kind": "friendly",
-   "seq": 286,
+   "seq": 290,
    "side": "union",
    "turn": 9
   },
   {
    "kind": "report_received",
    "observed_turn": 6,
-   "report_id": "R175",
+   "report_id": "R157",
+   "report_kind": "reaction",
+   "seq": 291,
+   "side": "union",
+   "turn": 9
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 6,
+   "report_id": "R170",
+   "report_kind": "friendly",
+   "seq": 292,
+   "side": "union",
+   "turn": 9
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 6,
+   "report_id": "R180",
    "report_kind": "contact",
-   "seq": 287,
+   "seq": 293,
    "side": "union",
    "turn": 9
   },
@@ -11258,7 +11406,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 2,
-    "id": "O6",
+    "id": "O7",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11274,7 +11422,7 @@
     "sent_turn": 3,
     "status": "en_route"
    },
-   "seq": 288,
+   "seq": 294,
    "turn": 9
   },
   {
@@ -11309,7 +11457,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 289,
+   "seq": 295,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -11337,7 +11485,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 290,
+   "seq": 296,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -11365,7 +11513,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy sighted beyond effective range; observe, report and maintain mission.",
-   "seq": 291,
+   "seq": 297,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -11376,9 +11524,9 @@
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R292",
+   "report_id": "R298",
    "report_kind": "reaction",
-   "seq": 292,
+   "seq": 298,
    "side": "confederate",
    "transport": {
     "address": [
@@ -11389,7 +11537,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R292",
+    "id": "R298",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11451,7 +11599,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 293,
+   "seq": 299,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -11466,7 +11614,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 294,
+   "seq": 300,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -11491,10 +11639,10 @@
     }
    ],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 295,
+   "seq": 301,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -11503,7 +11651,7 @@
    "unit_id": "U3"
   },
   {
-   "decision_seq": 291,
+   "decision_seq": 297,
    "destination": [
     6,
     17
@@ -11513,7 +11661,7 @@
     6,
     18
    ],
-   "seq": 296,
+   "seq": 302,
    "turn": 9,
    "unit_id": "C3"
   },
@@ -11521,7 +11669,7 @@
    "exposure": 68,
    "kind": "volley",
    "rounds": 39,
-   "seq": 297,
+   "seq": 303,
    "target_id": "U1",
    "turn": 9,
    "unit_id": "C1"
@@ -11530,7 +11678,7 @@
    "exposure": 83,
    "kind": "volley",
    "rounds": 36,
-   "seq": 298,
+   "seq": 304,
    "target_id": "U1",
    "turn": 9,
    "unit_id": "C2"
@@ -11539,7 +11687,7 @@
    "exposure": 93,
    "kind": "volley",
    "rounds": 35,
-   "seq": 299,
+   "seq": 305,
    "target_id": "C2",
    "turn": 9,
    "unit_id": "U1"
@@ -11548,14 +11696,14 @@
    "exposure": 90,
    "kind": "volley",
    "rounds": 40,
-   "seq": 300,
+   "seq": 306,
    "target_id": "C1",
    "turn": 9,
    "unit_id": "U3"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 301,
+   "seq": 307,
    "turn": 9,
    "unit_id": "U1"
   },
@@ -11563,13 +11711,13 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 34,
-   "seq": 302,
+   "seq": 308,
    "turn": 9,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 303,
+   "seq": 309,
    "turn": 9,
    "unit_id": "C1"
   },
@@ -11577,13 +11725,13 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 38,
-   "seq": 304,
+   "seq": 310,
    "turn": 9,
    "unit_id": "C1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 305,
+   "seq": 311,
    "turn": 9,
    "unit_id": "C2"
   },
@@ -11591,16 +11739,16 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 35,
-   "seq": 306,
+   "seq": 312,
    "turn": 9,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R307",
+   "report_id": "R313",
    "report_kind": "friendly",
-   "seq": 307,
+   "seq": 313,
    "side": "confederate",
    "transport": {
     "address": [
@@ -11611,7 +11759,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R307",
+    "id": "R313",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11632,9 +11780,9 @@
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R308",
+   "report_id": "R314",
    "report_kind": "friendly",
-   "seq": 308,
+   "seq": 314,
    "side": "confederate",
    "transport": {
     "address": [
@@ -11645,7 +11793,7 @@
     "expected_turn": 9,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R308",
+    "id": "R314",
     "last_progress_turn": 8,
     "method": "voice",
     "origin": [
@@ -11666,9 +11814,9 @@
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R309",
+   "report_id": "R315",
    "report_kind": "friendly",
-   "seq": 309,
+   "seq": 315,
    "side": "confederate",
    "transport": {
     "address": [
@@ -11679,7 +11827,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R309",
+    "id": "R315",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11700,9 +11848,9 @@
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R310",
+   "report_id": "R316",
    "report_kind": "friendly",
-   "seq": 310,
+   "seq": 316,
    "side": "union",
    "transport": {
     "address": [
@@ -11713,7 +11861,7 @@
     "expected_turn": 12,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R310",
+    "id": "R316",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11734,9 +11882,9 @@
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R311",
+   "report_id": "R317",
    "report_kind": "friendly",
-   "seq": 311,
+   "seq": 317,
    "side": "union",
    "transport": {
     "address": [
@@ -11747,7 +11895,7 @@
     "expected_turn": 9,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R311",
+    "id": "R317",
     "last_progress_turn": 8,
     "method": "voice",
     "origin": [
@@ -11768,9 +11916,9 @@
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R312",
+   "report_id": "R318",
    "report_kind": "friendly",
-   "seq": 312,
+   "seq": 318,
    "side": "union",
    "transport": {
     "address": [
@@ -11781,7 +11929,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R312",
+    "id": "R318",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11826,16 +11974,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 313,
+   "seq": 319,
    "side": "confederate",
    "turn": 9
   },
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R314",
+   "report_id": "R320",
    "report_kind": "contact",
-   "seq": 314,
+   "seq": 320,
    "side": "confederate",
    "transport": {
     "address": [
@@ -11846,7 +11994,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R314",
+    "id": "R320",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11891,16 +12039,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 315,
+   "seq": 321,
    "side": "confederate",
    "turn": 9
   },
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R316",
+   "report_id": "R322",
    "report_kind": "contact",
-   "seq": 316,
+   "seq": 322,
    "side": "confederate",
    "transport": {
     "address": [
@@ -11911,7 +12059,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R316",
+    "id": "R322",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -11956,16 +12104,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 317,
+   "seq": 323,
    "side": "union",
    "turn": 9
   },
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R318",
+   "report_id": "R324",
    "report_kind": "contact",
-   "seq": 318,
+   "seq": 324,
    "side": "union",
    "transport": {
     "address": [
@@ -11976,7 +12124,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R318",
+    "id": "R324",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -12021,16 +12169,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 319,
+   "seq": 325,
    "side": "union",
    "turn": 9
   },
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R320",
+   "report_id": "R326",
    "report_kind": "contact",
-   "seq": 320,
+   "seq": 326,
    "side": "union",
    "transport": {
     "address": [
@@ -12041,7 +12189,7 @@
     "expected_turn": 12,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R320",
+    "id": "R326",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -12086,16 +12234,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 321,
+   "seq": 327,
    "side": "union",
    "turn": 9
   },
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R322",
+   "report_id": "R328",
    "report_kind": "contact",
-   "seq": 322,
+   "seq": 328,
    "side": "union",
    "transport": {
     "address": [
@@ -12106,7 +12254,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R322",
+    "id": "R328",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -12151,16 +12299,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 323,
+   "seq": 329,
    "side": "confederate",
    "turn": 9
   },
   {
    "arrival_turn": 9,
    "kind": "report_sent",
-   "report_id": "R324",
+   "report_id": "R330",
    "report_kind": "contact",
-   "seq": 324,
+   "seq": 330,
    "side": "confederate",
    "transport": {
     "address": [
@@ -12171,7 +12319,7 @@
     "expected_turn": 9,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R324",
+    "id": "R330",
     "last_progress_turn": 8,
     "method": "voice",
     "origin": [
@@ -12192,40 +12340,40 @@
   {
    "kind": "report_received",
    "observed_turn": 9,
-   "report_id": "R308",
+   "report_id": "R314",
    "report_kind": "friendly",
-   "seq": 325,
+   "seq": 331,
    "side": "confederate",
    "turn": 9
   },
   {
    "kind": "report_received",
    "observed_turn": 9,
-   "report_id": "R311",
+   "report_id": "R317",
    "report_kind": "friendly",
-   "seq": 326,
+   "seq": 332,
    "side": "union",
    "turn": 9
   },
   {
    "kind": "report_received",
    "observed_turn": 9,
-   "report_id": "R324",
+   "report_id": "R330",
    "report_kind": "contact",
-   "seq": 327,
+   "seq": 333,
    "side": "confederate",
    "turn": 9
   },
   {
    "kind": "turn_completed",
-   "seq": 328,
+   "seq": 334,
    "turn": 9,
    "turn_number": 9
   },
   {
    "decision_index": 4,
    "kind": "commander_decision",
-   "seq": 329,
+   "seq": 335,
    "source": "scripted",
    "turn": 9
   },
@@ -12236,8 +12384,8 @@
     15
    ],
    "kind": "order_sent",
-   "order_id": "O9",
-   "seq": 330,
+   "order_id": "O10",
+   "seq": 336,
    "side": "confederate",
    "transport": {
     "address": [
@@ -12248,7 +12396,7 @@
     "expected_turn": 14,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "O9",
+    "id": "O10",
     "last_progress_turn": 9,
     "method": "courier",
     "origin": [
@@ -12271,9 +12419,9 @@
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R35",
+   "report_id": "R36",
    "report_kind": "friendly",
-   "seq": 331,
+   "seq": 337,
    "side": "confederate",
    "turn": 10
   },
@@ -12281,7 +12429,7 @@
    "kind": "recommendation_received",
    "observed_turn": 2,
    "recommendation_id": "A2",
-   "seq": 332,
+   "seq": 338,
    "status": "superseded",
    "turn": 10,
    "unit_id": "C3"
@@ -12289,27 +12437,27 @@
   {
    "kind": "report_received",
    "observed_turn": 2,
-   "report_id": "R42",
+   "report_id": "R43",
    "report_kind": "recommendation",
-   "seq": 333,
+   "seq": 339,
    "side": "confederate",
    "turn": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 3,
-   "report_id": "R70",
+   "report_id": "R71",
    "report_kind": "friendly",
-   "seq": 334,
+   "seq": 340,
    "side": "confederate",
    "turn": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 4,
-   "report_id": "R91",
+   "report_id": "R96",
    "report_kind": "friendly",
-   "seq": 335,
+   "seq": 341,
    "side": "confederate",
    "turn": 10
   },
@@ -12324,7 +12472,7 @@
     "expected_turn": 10,
     "expires_turn": 24,
     "forwardings": 1,
-    "id": "R93",
+    "id": "R98",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -12340,33 +12488,24 @@
     "sent_turn": 4,
     "status": "en_route"
    },
-   "seq": 336,
+   "seq": 342,
    "turn": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 5,
-   "report_id": "R124",
+   "report_id": "R129",
    "report_kind": "friendly",
-   "seq": 337,
+   "seq": 343,
    "side": "confederate",
    "turn": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 6,
-   "report_id": "R147",
+   "report_id": "R152",
    "report_kind": "reaction",
-   "seq": 338,
-   "side": "confederate",
-   "turn": 10
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 6,
-   "report_id": "R162",
-   "report_kind": "friendly",
-   "seq": 339,
+   "seq": 344,
    "side": "confederate",
    "turn": 10
   },
@@ -12375,43 +12514,52 @@
    "observed_turn": 6,
    "report_id": "R167",
    "report_kind": "friendly",
-   "seq": 340,
-   "side": "union",
-   "turn": 10
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 6,
-   "report_id": "R171",
-   "report_kind": "contact",
-   "seq": 341,
+   "seq": 345,
    "side": "confederate",
    "turn": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 6,
-   "report_id": "R173",
-   "report_kind": "contact",
-   "seq": 342,
-   "side": "union",
-   "turn": 10
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 7,
-   "report_id": "R209",
+   "report_id": "R172",
    "report_kind": "friendly",
-   "seq": 343,
+   "seq": 346,
+   "side": "union",
+   "turn": 10
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 6,
+   "report_id": "R176",
+   "report_kind": "contact",
+   "seq": 347,
+   "side": "confederate",
+   "turn": 10
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 6,
+   "report_id": "R178",
+   "report_kind": "contact",
+   "seq": 348,
    "side": "union",
    "turn": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 7,
-   "report_id": "R219",
+   "report_id": "R214",
+   "report_kind": "friendly",
+   "seq": 349,
+   "side": "union",
+   "turn": 10
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 7,
+   "report_id": "R224",
    "report_kind": "contact",
-   "seq": 344,
+   "seq": 350,
    "side": "union",
    "turn": 10
   },
@@ -12426,7 +12574,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 3,
-    "id": "O6",
+    "id": "O7",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -12442,7 +12590,7 @@
     "sent_turn": 3,
     "status": "en_route"
    },
-   "seq": 345,
+   "seq": 351,
    "turn": 10
   },
   {
@@ -12477,7 +12625,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 346,
+   "seq": 352,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -12505,7 +12653,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 347,
+   "seq": 353,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -12545,7 +12693,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy sighted beyond effective range; observe, report and maintain mission.",
-   "seq": 348,
+   "seq": 354,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -12597,7 +12745,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 349,
+   "seq": 355,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -12612,7 +12760,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 350,
+   "seq": 356,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -12649,10 +12797,10 @@
     }
    ],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 351,
+   "seq": 357,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -12661,7 +12809,7 @@
    "unit_id": "U3"
   },
   {
-   "decision_seq": 348,
+   "decision_seq": 354,
    "destination": [
     7,
     16
@@ -12671,7 +12819,7 @@
     6,
     17
    ],
-   "seq": 352,
+   "seq": 358,
    "turn": 10,
    "unit_id": "C3"
   },
@@ -12679,7 +12827,7 @@
    "exposure": 66,
    "kind": "volley",
    "rounds": 38,
-   "seq": 353,
+   "seq": 359,
    "target_id": "U1",
    "turn": 10,
    "unit_id": "C1"
@@ -12688,7 +12836,7 @@
    "exposure": 81,
    "kind": "volley",
    "rounds": 35,
-   "seq": 354,
+   "seq": 360,
    "target_id": "U1",
    "turn": 10,
    "unit_id": "C2"
@@ -12697,7 +12845,7 @@
    "exposure": 72,
    "kind": "volley",
    "rounds": 40,
-   "seq": 355,
+   "seq": 361,
    "target_id": "U1",
    "turn": 10,
    "unit_id": "C3"
@@ -12706,7 +12854,7 @@
    "exposure": 85,
    "kind": "volley",
    "rounds": 34,
-   "seq": 356,
+   "seq": 362,
    "target_id": "C2",
    "turn": 10,
    "unit_id": "U1"
@@ -12715,14 +12863,14 @@
    "exposure": 90,
    "kind": "volley",
    "rounds": 40,
-   "seq": 357,
+   "seq": 363,
    "target_id": "C1",
    "turn": 10,
    "unit_id": "U3"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 358,
+   "seq": 364,
    "turn": 10,
    "unit_id": "U1"
   },
@@ -12730,13 +12878,13 @@
    "count": 2,
    "kind": "casualties",
    "remaining": 32,
-   "seq": 359,
+   "seq": 365,
    "turn": 10,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 360,
+   "seq": 366,
    "turn": 10,
    "unit_id": "C1"
   },
@@ -12744,13 +12892,13 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 37,
-   "seq": 361,
+   "seq": 367,
    "turn": 10,
    "unit_id": "C1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 362,
+   "seq": 368,
    "turn": 10,
    "unit_id": "C2"
   },
@@ -12758,16 +12906,16 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 34,
-   "seq": 363,
+   "seq": 369,
    "turn": 10,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R364",
+   "report_id": "R370",
    "report_kind": "friendly",
-   "seq": 364,
+   "seq": 370,
    "side": "confederate",
    "transport": {
     "address": [
@@ -12778,7 +12926,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R364",
+    "id": "R370",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -12799,9 +12947,9 @@
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R365",
+   "report_id": "R371",
    "report_kind": "friendly",
-   "seq": 365,
+   "seq": 371,
    "side": "confederate",
    "transport": {
     "address": [
@@ -12812,7 +12960,7 @@
     "expected_turn": 10,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R365",
+    "id": "R371",
     "last_progress_turn": 9,
     "method": "voice",
     "origin": [
@@ -12833,9 +12981,9 @@
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R366",
+   "report_id": "R372",
    "report_kind": "friendly",
-   "seq": 366,
+   "seq": 372,
    "side": "confederate",
    "transport": {
     "address": [
@@ -12846,7 +12994,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R366",
+    "id": "R372",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -12867,9 +13015,9 @@
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R367",
+   "report_id": "R373",
    "report_kind": "friendly",
-   "seq": 367,
+   "seq": 373,
    "side": "union",
    "transport": {
     "address": [
@@ -12880,7 +13028,7 @@
     "expected_turn": 13,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R367",
+    "id": "R373",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -12901,9 +13049,9 @@
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R368",
+   "report_id": "R374",
    "report_kind": "friendly",
-   "seq": 368,
+   "seq": 374,
    "side": "union",
    "transport": {
     "address": [
@@ -12914,7 +13062,7 @@
     "expected_turn": 10,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R368",
+    "id": "R374",
     "last_progress_turn": 9,
     "method": "voice",
     "origin": [
@@ -12935,9 +13083,9 @@
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R369",
+   "report_id": "R375",
    "report_kind": "friendly",
-   "seq": 369,
+   "seq": 375,
    "side": "union",
    "transport": {
     "address": [
@@ -12948,7 +13096,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R369",
+    "id": "R375",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -12993,16 +13141,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 370,
+   "seq": 376,
    "side": "confederate",
    "turn": 10
   },
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R371",
+   "report_id": "R377",
    "report_kind": "contact",
-   "seq": 371,
+   "seq": 377,
    "side": "confederate",
    "transport": {
     "address": [
@@ -13013,7 +13161,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R371",
+    "id": "R377",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -13058,16 +13206,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 372,
+   "seq": 378,
    "side": "confederate",
    "turn": 10
   },
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R373",
+   "report_id": "R379",
    "report_kind": "contact",
-   "seq": 373,
+   "seq": 379,
    "side": "confederate",
    "transport": {
     "address": [
@@ -13078,7 +13226,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R373",
+    "id": "R379",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -13123,16 +13271,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 374,
+   "seq": 380,
    "side": "union",
    "turn": 10
   },
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R375",
+   "report_id": "R381",
    "report_kind": "contact",
-   "seq": 375,
+   "seq": 381,
    "side": "union",
    "transport": {
     "address": [
@@ -13143,7 +13291,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R375",
+    "id": "R381",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -13188,16 +13336,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 376,
+   "seq": 382,
    "side": "union",
    "turn": 10
   },
   {
    "arrival_turn": 13,
    "kind": "report_sent",
-   "report_id": "R377",
+   "report_id": "R383",
    "report_kind": "contact",
-   "seq": 377,
+   "seq": 383,
    "side": "union",
    "transport": {
     "address": [
@@ -13208,7 +13356,7 @@
     "expected_turn": 13,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R377",
+    "id": "R383",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -13253,16 +13401,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 378,
+   "seq": 384,
    "side": "union",
    "turn": 10
   },
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R379",
+   "report_id": "R385",
    "report_kind": "contact",
-   "seq": 379,
+   "seq": 385,
    "side": "union",
    "transport": {
     "address": [
@@ -13273,7 +13421,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R379",
+    "id": "R385",
     "last_progress_turn": 10,
     "method": "courier",
     "origin": [
@@ -13318,16 +13466,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 380,
+   "seq": 386,
    "side": "confederate",
    "turn": 10
   },
   {
    "arrival_turn": 10,
    "kind": "report_sent",
-   "report_id": "R381",
+   "report_id": "R387",
    "report_kind": "contact",
-   "seq": 381,
+   "seq": 387,
    "side": "confederate",
    "transport": {
     "address": [
@@ -13338,7 +13486,7 @@
     "expected_turn": 10,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R381",
+    "id": "R387",
     "last_progress_turn": 9,
     "method": "voice",
     "origin": [
@@ -13359,42 +13507,42 @@
   {
    "kind": "report_received",
    "observed_turn": 10,
-   "report_id": "R365",
+   "report_id": "R371",
    "report_kind": "friendly",
-   "seq": 382,
+   "seq": 388,
    "side": "confederate",
    "turn": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 10,
-   "report_id": "R368",
+   "report_id": "R374",
    "report_kind": "friendly",
-   "seq": 383,
+   "seq": 389,
    "side": "union",
    "turn": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 10,
-   "report_id": "R381",
+   "report_id": "R387",
    "report_kind": "contact",
-   "seq": 384,
+   "seq": 390,
    "side": "confederate",
    "turn": 10
   },
   {
    "kind": "turn_completed",
-   "seq": 385,
+   "seq": 391,
    "turn": 10,
    "turn_number": 10
   },
   {
    "kind": "report_received",
    "observed_turn": 4,
-   "report_id": "R93",
+   "report_id": "R98",
    "report_kind": "friendly",
-   "seq": 386,
+   "seq": 392,
    "side": "confederate",
    "turn": 11
   },
@@ -13409,7 +13557,7 @@
     "expected_turn": 11,
     "expires_turn": 25,
     "forwardings": 1,
-    "id": "R107",
+    "id": "R112",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -13425,34 +13573,25 @@
     "sent_turn": 5,
     "status": "en_route"
    },
-   "seq": 387,
+   "seq": 393,
    "turn": 11
   },
   {
    "kind": "report_received",
    "observed_turn": 6,
-   "report_id": "R164",
+   "report_id": "R169",
    "report_kind": "friendly",
-   "seq": 388,
+   "seq": 394,
    "side": "confederate",
    "turn": 11
   },
   {
    "kind": "report_received",
    "observed_turn": 7,
-   "report_id": "R194",
+   "report_id": "R199",
    "report_kind": "reaction",
-   "seq": 389,
+   "seq": 395,
    "side": "union",
-   "turn": 11
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 7,
-   "report_id": "R206",
-   "report_kind": "friendly",
-   "seq": 390,
-   "side": "confederate",
    "turn": 11
   },
   {
@@ -13460,52 +13599,61 @@
    "observed_turn": 7,
    "report_id": "R211",
    "report_kind": "friendly",
-   "seq": 391,
-   "side": "union",
-   "turn": 11
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 7,
-   "report_id": "R215",
-   "report_kind": "contact",
-   "seq": 392,
+   "seq": 396,
    "side": "confederate",
    "turn": 11
   },
   {
    "kind": "report_received",
    "observed_turn": 7,
-   "report_id": "R217",
-   "report_kind": "contact",
-   "seq": 393,
-   "side": "union",
-   "turn": 11
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 8,
-   "report_id": "R259",
+   "report_id": "R216",
    "report_kind": "friendly",
-   "seq": 394,
+   "seq": 397,
+   "side": "union",
+   "turn": 11
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 7,
+   "report_id": "R220",
+   "report_kind": "contact",
+   "seq": 398,
+   "side": "confederate",
+   "turn": 11
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 7,
+   "report_id": "R222",
+   "report_kind": "contact",
+   "seq": 399,
    "side": "union",
    "turn": 11
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R269",
-   "report_kind": "contact",
-   "seq": 395,
+   "report_id": "R265",
+   "report_kind": "friendly",
+   "seq": 400,
    "side": "union",
    "turn": 11
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R271",
+   "report_id": "R275",
    "report_kind": "contact",
-   "seq": 396,
+   "seq": 401,
+   "side": "union",
+   "turn": 11
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 8,
+   "report_id": "R277",
+   "report_kind": "contact",
+   "seq": 402,
    "side": "union",
    "turn": 11
   },
@@ -13513,23 +13661,23 @@
    "kind": "mission_superseded",
    "order_version": 1,
    "replaced_by": 2,
-   "seq": 397,
+   "seq": 403,
    "turn": 11,
    "unit_id": "C1"
   },
   {
    "kind": "mission_started",
-   "order_id": "O5",
+   "order_id": "O6",
    "order_version": 2,
-   "seq": 398,
+   "seq": 404,
    "template": "move",
    "turn": 11,
    "unit_id": "C1"
   },
   {
    "kind": "order_delivered",
-   "order_id": "O5",
-   "seq": 399,
+   "order_id": "O6",
+   "seq": 405,
    "turn": 11,
    "unit_id": "C1",
    "version": 2
@@ -13537,9 +13685,9 @@
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R400",
+   "report_id": "R406",
    "report_kind": "ack",
-   "seq": 400,
+   "seq": 406,
    "side": "confederate",
    "transport": {
     "address": [
@@ -13550,7 +13698,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R400",
+    "id": "R406",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -13579,7 +13727,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 4,
-    "id": "O6",
+    "id": "O7",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -13595,7 +13743,7 @@
     "sent_turn": 3,
     "status": "en_route"
    },
-   "seq": 401,
+   "seq": 407,
    "turn": 11
   },
   {
@@ -13609,7 +13757,7 @@
     "expected_turn": 11,
     "expires_turn": 26,
     "forwardings": 1,
-    "id": "O7",
+    "id": "O8",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -13625,7 +13773,7 @@
     "sent_turn": 6,
     "status": "en_route"
    },
-   "seq": 402,
+   "seq": 408,
    "turn": 11
   },
   {
@@ -13639,7 +13787,7 @@
     "expected_turn": 11,
     "expires_turn": 26,
     "forwardings": 1,
-    "id": "O8",
+    "id": "O9",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -13655,7 +13803,7 @@
     "sent_turn": 6,
     "status": "en_route"
    },
-   "seq": 403,
+   "seq": 409,
    "turn": 11
   },
   {
@@ -13690,7 +13838,7 @@
    "mission_version": 2,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 404,
+   "seq": 410,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -13718,7 +13866,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 405,
+   "seq": 411,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -13758,7 +13906,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 406,
+   "seq": 412,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -13769,9 +13917,9 @@
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R407",
+   "report_id": "R413",
    "report_kind": "reaction",
-   "seq": 407,
+   "seq": 413,
    "side": "confederate",
    "transport": {
     "address": [
@@ -13782,7 +13930,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R407",
+    "id": "R413",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -13844,7 +13992,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 408,
+   "seq": 414,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -13859,7 +14007,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 409,
+   "seq": 415,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -13896,10 +14044,10 @@
     }
    ],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 410,
+   "seq": 416,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -13911,7 +14059,7 @@
    "exposure": 63,
    "kind": "volley",
    "rounds": 37,
-   "seq": 411,
+   "seq": 417,
    "target_id": "U1",
    "turn": 11,
    "unit_id": "C1"
@@ -13920,7 +14068,7 @@
    "exposure": 79,
    "kind": "volley",
    "rounds": 34,
-   "seq": 412,
+   "seq": 418,
    "target_id": "U1",
    "turn": 11,
    "unit_id": "C2"
@@ -13929,7 +14077,7 @@
    "exposure": 72,
    "kind": "volley",
    "rounds": 40,
-   "seq": 413,
+   "seq": 419,
    "target_id": "U1",
    "turn": 11,
    "unit_id": "C3"
@@ -13938,7 +14086,7 @@
    "exposure": 70,
    "kind": "volley",
    "rounds": 32,
-   "seq": 414,
+   "seq": 420,
    "target_id": "C2",
    "turn": 11,
    "unit_id": "U1"
@@ -13947,14 +14095,14 @@
    "exposure": 90,
    "kind": "volley",
    "rounds": 40,
-   "seq": 415,
+   "seq": 421,
    "target_id": "C1",
    "turn": 11,
    "unit_id": "U3"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 416,
+   "seq": 422,
    "turn": 11,
    "unit_id": "U1"
   },
@@ -13962,13 +14110,13 @@
    "count": 2,
    "kind": "casualties",
    "remaining": 30,
-   "seq": 417,
+   "seq": 423,
    "turn": 11,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 418,
+   "seq": 424,
    "turn": 11,
    "unit_id": "C1"
   },
@@ -13976,13 +14124,13 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 36,
-   "seq": 419,
+   "seq": 425,
    "turn": 11,
    "unit_id": "C1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 420,
+   "seq": 426,
    "turn": 11,
    "unit_id": "C2"
   },
@@ -13990,16 +14138,16 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 33,
-   "seq": 421,
+   "seq": 427,
    "turn": 11,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R422",
+   "report_id": "R428",
    "report_kind": "friendly",
-   "seq": 422,
+   "seq": 428,
    "side": "confederate",
    "transport": {
     "address": [
@@ -14010,7 +14158,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R422",
+    "id": "R428",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14031,9 +14179,9 @@
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R423",
+   "report_id": "R429",
    "report_kind": "friendly",
-   "seq": 423,
+   "seq": 429,
    "side": "confederate",
    "transport": {
     "address": [
@@ -14044,7 +14192,7 @@
     "expected_turn": 11,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R423",
+    "id": "R429",
     "last_progress_turn": 10,
     "method": "voice",
     "origin": [
@@ -14065,9 +14213,9 @@
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R424",
+   "report_id": "R430",
    "report_kind": "friendly",
-   "seq": 424,
+   "seq": 430,
    "side": "confederate",
    "transport": {
     "address": [
@@ -14078,7 +14226,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R424",
+    "id": "R430",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14099,9 +14247,9 @@
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R425",
+   "report_id": "R431",
    "report_kind": "friendly",
-   "seq": 425,
+   "seq": 431,
    "side": "union",
    "transport": {
     "address": [
@@ -14112,7 +14260,7 @@
     "expected_turn": 14,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R425",
+    "id": "R431",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14133,9 +14281,9 @@
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R426",
+   "report_id": "R432",
    "report_kind": "friendly",
-   "seq": 426,
+   "seq": 432,
    "side": "union",
    "transport": {
     "address": [
@@ -14146,7 +14294,7 @@
     "expected_turn": 11,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R426",
+    "id": "R432",
     "last_progress_turn": 10,
     "method": "voice",
     "origin": [
@@ -14167,9 +14315,9 @@
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R427",
+   "report_id": "R433",
    "report_kind": "friendly",
-   "seq": 427,
+   "seq": 433,
    "side": "union",
    "transport": {
     "address": [
@@ -14180,7 +14328,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R427",
+    "id": "R433",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14225,16 +14373,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 428,
+   "seq": 434,
    "side": "confederate",
    "turn": 11
   },
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R429",
+   "report_id": "R435",
    "report_kind": "contact",
-   "seq": 429,
+   "seq": 435,
    "side": "confederate",
    "transport": {
     "address": [
@@ -14245,7 +14393,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R429",
+    "id": "R435",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14290,16 +14438,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 430,
+   "seq": 436,
    "side": "confederate",
    "turn": 11
   },
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R431",
+   "report_id": "R437",
    "report_kind": "contact",
-   "seq": 431,
+   "seq": 437,
    "side": "confederate",
    "transport": {
     "address": [
@@ -14310,7 +14458,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R431",
+    "id": "R437",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14355,16 +14503,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 432,
+   "seq": 438,
    "side": "union",
    "turn": 11
   },
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R433",
+   "report_id": "R439",
    "report_kind": "contact",
-   "seq": 433,
+   "seq": 439,
    "side": "union",
    "transport": {
     "address": [
@@ -14375,7 +14523,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R433",
+    "id": "R439",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14420,16 +14568,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 434,
+   "seq": 440,
    "side": "union",
    "turn": 11
   },
   {
    "arrival_turn": 14,
    "kind": "report_sent",
-   "report_id": "R435",
+   "report_id": "R441",
    "report_kind": "contact",
-   "seq": 435,
+   "seq": 441,
    "side": "union",
    "transport": {
     "address": [
@@ -14440,7 +14588,7 @@
     "expected_turn": 14,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R435",
+    "id": "R441",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14485,16 +14633,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 436,
+   "seq": 442,
    "side": "union",
    "turn": 11
   },
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R437",
+   "report_id": "R443",
    "report_kind": "contact",
-   "seq": 437,
+   "seq": 443,
    "side": "union",
    "transport": {
     "address": [
@@ -14505,7 +14653,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R437",
+    "id": "R443",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -14550,16 +14698,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 438,
+   "seq": 444,
    "side": "confederate",
    "turn": 11
   },
   {
    "arrival_turn": 11,
    "kind": "report_sent",
-   "report_id": "R439",
+   "report_id": "R445",
    "report_kind": "contact",
-   "seq": 439,
+   "seq": 445,
    "side": "confederate",
    "transport": {
     "address": [
@@ -14570,7 +14718,7 @@
     "expected_turn": 11,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R439",
+    "id": "R445",
     "last_progress_turn": 10,
     "method": "voice",
     "origin": [
@@ -14591,60 +14739,51 @@
   {
    "kind": "report_received",
    "observed_turn": 11,
-   "report_id": "R423",
+   "report_id": "R429",
    "report_kind": "friendly",
-   "seq": 440,
+   "seq": 446,
    "side": "confederate",
    "turn": 11
   },
   {
    "kind": "report_received",
    "observed_turn": 11,
-   "report_id": "R426",
+   "report_id": "R432",
    "report_kind": "friendly",
-   "seq": 441,
+   "seq": 447,
    "side": "union",
    "turn": 11
   },
   {
    "kind": "report_received",
    "observed_turn": 11,
-   "report_id": "R439",
+   "report_id": "R445",
    "report_kind": "contact",
-   "seq": 442,
+   "seq": 448,
    "side": "confederate",
    "turn": 11
   },
   {
    "kind": "turn_completed",
-   "seq": 443,
+   "seq": 449,
    "turn": 11,
    "turn_number": 11
   },
   {
    "kind": "report_received",
    "observed_turn": 5,
-   "report_id": "R107",
+   "report_id": "R112",
    "report_kind": "ack",
-   "seq": 444,
+   "seq": 450,
    "side": "confederate",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 7,
-   "report_id": "R208",
+   "report_id": "R213",
    "report_kind": "friendly",
-   "seq": 445,
-   "side": "confederate",
-   "turn": 12
-  },
-  {
-   "kind": "report_received",
-   "observed_turn": 8,
-   "report_id": "R238",
-   "report_kind": "reaction",
-   "seq": 446,
+   "seq": 451,
    "side": "confederate",
    "turn": 12
   },
@@ -14653,34 +14792,43 @@
    "observed_turn": 8,
    "report_id": "R244",
    "report_kind": "reaction",
-   "seq": 447,
+   "seq": 452,
+   "side": "confederate",
+   "turn": 12
+  },
+  {
+   "kind": "report_received",
+   "observed_turn": 8,
+   "report_id": "R250",
+   "report_kind": "reaction",
+   "seq": 453,
    "side": "union",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R256",
+   "report_id": "R262",
    "report_kind": "friendly",
-   "seq": 448,
+   "seq": 454,
    "side": "confederate",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R258",
+   "report_id": "R264",
    "report_kind": "friendly",
-   "seq": 449,
+   "seq": 455,
    "side": "confederate",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R261",
+   "report_id": "R267",
    "report_kind": "friendly",
-   "seq": 450,
+   "seq": 456,
    "side": "union",
    "turn": 12
   },
@@ -14689,7 +14837,7 @@
    "observed_turn": 8,
    "position_and_strength_preserved": true,
    "report_kind": "contact",
-   "seq": 451,
+   "seq": 457,
    "side": "confederate",
    "target_id": "U1",
    "turn": 12
@@ -14697,45 +14845,45 @@
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R263",
+   "report_id": "R269",
    "report_kind": "contact",
-   "seq": 452,
+   "seq": 458,
    "side": "confederate",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R265",
+   "report_id": "R271",
    "report_kind": "contact",
-   "seq": 453,
+   "seq": 459,
    "side": "confederate",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 8,
-   "report_id": "R267",
+   "report_id": "R273",
    "report_kind": "contact",
-   "seq": 454,
+   "seq": 460,
    "side": "union",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 9,
-   "report_id": "R310",
+   "report_id": "R316",
    "report_kind": "friendly",
-   "seq": 455,
+   "seq": 461,
    "side": "union",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 9,
-   "report_id": "R320",
+   "report_id": "R326",
    "report_kind": "contact",
-   "seq": 456,
+   "seq": 462,
    "side": "union",
    "turn": 12
   },
@@ -14743,23 +14891,23 @@
    "kind": "mission_superseded",
    "order_version": 1,
    "replaced_by": 2,
-   "seq": 457,
+   "seq": 463,
    "turn": 12,
    "unit_id": "C3"
   },
   {
    "kind": "mission_started",
-   "order_id": "O6",
+   "order_id": "O7",
    "order_version": 2,
-   "seq": 458,
+   "seq": 464,
    "template": "move",
    "turn": 12,
    "unit_id": "C3"
   },
   {
    "kind": "order_delivered",
-   "order_id": "O6",
-   "seq": 459,
+   "order_id": "O7",
+   "seq": 465,
    "turn": 12,
    "unit_id": "C3",
    "version": 2
@@ -14767,9 +14915,9 @@
   {
    "arrival_turn": 16,
    "kind": "report_sent",
-   "report_id": "R460",
+   "report_id": "R466",
    "report_kind": "ack",
-   "seq": 460,
+   "seq": 466,
    "side": "confederate",
    "transport": {
     "address": [
@@ -14780,7 +14928,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R460",
+    "id": "R466",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -14830,7 +14978,7 @@
    "mission_version": 2,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 461,
+   "seq": 467,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -14858,7 +15006,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 462,
+   "seq": 468,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -14898,7 +15046,7 @@
    "mission_version": 2,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 463,
+   "seq": 469,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -14950,7 +15098,7 @@
    "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "We are withdrawing because incoming fire is pinning the detachment.",
-   "seq": 464,
+   "seq": 470,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": [
@@ -14964,9 +15112,9 @@
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R465",
+   "report_id": "R471",
    "report_kind": "reaction",
-   "seq": 465,
+   "seq": 471,
    "side": "union",
    "transport": {
     "address": [
@@ -14977,7 +15125,7 @@
     "expected_turn": 15,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R465",
+    "id": "R471",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15002,7 +15150,7 @@
    "mission_version": 0,
    "policy": "common-orders-v3",
    "reason": "No enemy within effective range; maintain the assigned mission.",
-   "seq": 466,
+   "seq": 472,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -15039,10 +15187,10 @@
     }
    ],
    "kind": "local_decision",
-   "mission_version": 0,
+   "mission_version": 1,
    "policy": "common-orders-v3",
    "reason": "Enemy within effective range; halt locally, use cover and return fire.",
-   "seq": 467,
+   "seq": 473,
    "standing_profile": "balanced",
    "standing_version": 0,
    "target": null,
@@ -15054,7 +15202,7 @@
    "exposure": 61,
    "kind": "volley",
    "rounds": 36,
-   "seq": 468,
+   "seq": 474,
    "target_id": "U1",
    "turn": 12,
    "unit_id": "C1"
@@ -15063,7 +15211,7 @@
    "exposure": 76,
    "kind": "volley",
    "rounds": 33,
-   "seq": 469,
+   "seq": 475,
    "target_id": "U1",
    "turn": 12,
    "unit_id": "C2"
@@ -15072,7 +15220,7 @@
    "exposure": 72,
    "kind": "volley",
    "rounds": 40,
-   "seq": 470,
+   "seq": 476,
    "target_id": "U1",
    "turn": 12,
    "unit_id": "C3"
@@ -15081,7 +15229,7 @@
    "exposure": 58,
    "kind": "volley",
    "rounds": 30,
-   "seq": 471,
+   "seq": 477,
    "target_id": "C2",
    "turn": 12,
    "unit_id": "U1"
@@ -15090,14 +15238,14 @@
    "exposure": 90,
    "kind": "volley",
    "rounds": 40,
-   "seq": 472,
+   "seq": 478,
    "target_id": "C1",
    "turn": 12,
    "unit_id": "U3"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 473,
+   "seq": 479,
    "turn": 12,
    "unit_id": "U1"
   },
@@ -15105,13 +15253,13 @@
    "count": 3,
    "kind": "casualties",
    "remaining": 27,
-   "seq": 474,
+   "seq": 480,
    "turn": 12,
    "unit_id": "U1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 475,
+   "seq": 481,
    "turn": 12,
    "unit_id": "C1"
   },
@@ -15119,22 +15267,22 @@
    "count": 1,
    "kind": "casualties",
    "remaining": 35,
-   "seq": 476,
+   "seq": 482,
    "turn": 12,
    "unit_id": "C1"
   },
   {
    "kind": "unit_under_fire",
-   "seq": 477,
+   "seq": 483,
    "turn": 12,
    "unit_id": "C2"
   },
   {
    "arrival_turn": 16,
    "kind": "report_sent",
-   "report_id": "R478",
+   "report_id": "R484",
    "report_kind": "friendly",
-   "seq": 478,
+   "seq": 484,
    "side": "confederate",
    "transport": {
     "address": [
@@ -15145,7 +15293,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R478",
+    "id": "R484",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15166,9 +15314,9 @@
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R479",
+   "report_id": "R485",
    "report_kind": "friendly",
-   "seq": 479,
+   "seq": 485,
    "side": "confederate",
    "transport": {
     "address": [
@@ -15179,7 +15327,7 @@
     "expected_turn": 12,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R479",
+    "id": "R485",
     "last_progress_turn": 11,
     "method": "voice",
     "origin": [
@@ -15200,9 +15348,9 @@
   {
    "arrival_turn": 16,
    "kind": "report_sent",
-   "report_id": "R480",
+   "report_id": "R486",
    "report_kind": "friendly",
-   "seq": 480,
+   "seq": 486,
    "side": "confederate",
    "transport": {
     "address": [
@@ -15213,7 +15361,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R480",
+    "id": "R486",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15234,9 +15382,9 @@
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R481",
+   "report_id": "R487",
    "report_kind": "friendly",
-   "seq": 481,
+   "seq": 487,
    "side": "union",
    "transport": {
     "address": [
@@ -15247,7 +15395,7 @@
     "expected_turn": 15,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R481",
+    "id": "R487",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15268,9 +15416,9 @@
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R482",
+   "report_id": "R488",
    "report_kind": "friendly",
-   "seq": 482,
+   "seq": 488,
    "side": "union",
    "transport": {
     "address": [
@@ -15281,7 +15429,7 @@
     "expected_turn": 12,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R482",
+    "id": "R488",
     "last_progress_turn": 11,
     "method": "voice",
     "origin": [
@@ -15302,9 +15450,9 @@
   {
    "arrival_turn": 16,
    "kind": "report_sent",
-   "report_id": "R483",
+   "report_id": "R489",
    "report_kind": "friendly",
-   "seq": 483,
+   "seq": 489,
    "side": "union",
    "transport": {
     "address": [
@@ -15315,7 +15463,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R483",
+    "id": "R489",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15360,16 +15508,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 484,
+   "seq": 490,
    "side": "confederate",
    "turn": 12
   },
   {
    "arrival_turn": 16,
    "kind": "report_sent",
-   "report_id": "R485",
+   "report_id": "R491",
    "report_kind": "contact",
-   "seq": 485,
+   "seq": 491,
    "side": "confederate",
    "transport": {
     "address": [
@@ -15380,7 +15528,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R485",
+    "id": "R491",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15425,16 +15573,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 486,
+   "seq": 492,
    "side": "confederate",
    "turn": 12
   },
   {
    "arrival_turn": 16,
    "kind": "report_sent",
-   "report_id": "R487",
+   "report_id": "R493",
    "report_kind": "contact",
-   "seq": 487,
+   "seq": 493,
    "side": "confederate",
    "transport": {
     "address": [
@@ -15445,7 +15593,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R487",
+    "id": "R493",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15490,16 +15638,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 488,
+   "seq": 494,
    "side": "union",
    "turn": 12
   },
   {
    "arrival_turn": 16,
    "kind": "report_sent",
-   "report_id": "R489",
+   "report_id": "R495",
    "report_kind": "contact",
-   "seq": 489,
+   "seq": 495,
    "side": "union",
    "transport": {
     "address": [
@@ -15510,7 +15658,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R489",
+    "id": "R495",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15555,16 +15703,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 490,
+   "seq": 496,
    "side": "union",
    "turn": 12
   },
   {
    "arrival_turn": 15,
    "kind": "report_sent",
-   "report_id": "R491",
+   "report_id": "R497",
    "report_kind": "contact",
-   "seq": 491,
+   "seq": 497,
    "side": "union",
    "transport": {
     "address": [
@@ -15575,7 +15723,7 @@
     "expected_turn": 15,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R491",
+    "id": "R497",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15620,16 +15768,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 492,
+   "seq": 498,
    "side": "union",
    "turn": 12
   },
   {
    "arrival_turn": 16,
    "kind": "report_sent",
-   "report_id": "R493",
+   "report_id": "R499",
    "report_kind": "contact",
-   "seq": 493,
+   "seq": 499,
    "side": "union",
    "transport": {
     "address": [
@@ -15640,7 +15788,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R493",
+    "id": "R499",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -15685,16 +15833,16 @@
     ]
    },
    "kind": "contact_observed",
-   "seq": 494,
+   "seq": 500,
    "side": "confederate",
    "turn": 12
   },
   {
    "arrival_turn": 12,
    "kind": "report_sent",
-   "report_id": "R495",
+   "report_id": "R501",
    "report_kind": "contact",
-   "seq": 495,
+   "seq": 501,
    "side": "confederate",
    "transport": {
     "address": [
@@ -15705,7 +15853,7 @@
     "expected_turn": 12,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R495",
+    "id": "R501",
     "last_progress_turn": 11,
     "method": "voice",
     "origin": [
@@ -15726,39 +15874,39 @@
   {
    "kind": "report_received",
    "observed_turn": 12,
-   "report_id": "R479",
+   "report_id": "R485",
    "report_kind": "friendly",
-   "seq": 496,
+   "seq": 502,
    "side": "confederate",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 12,
-   "report_id": "R482",
+   "report_id": "R488",
    "report_kind": "friendly",
-   "seq": 497,
+   "seq": 503,
    "side": "union",
    "turn": 12
   },
   {
    "kind": "report_received",
    "observed_turn": 12,
-   "report_id": "R495",
+   "report_id": "R501",
    "report_kind": "contact",
-   "seq": 498,
+   "seq": 504,
    "side": "confederate",
    "turn": 12
   },
   {
    "kind": "turn_completed",
-   "seq": 499,
+   "seq": 505,
    "turn": 12,
    "turn_number": 12
   }
  ],
  "formation_ops": [],
- "game_id": "9ae0fbb0ce0241c5",
+ "game_id": "f1c7f1c7f1c7f1c7",
  "headquarters": {
   "confederate": [
    11,
@@ -16022,7 +16170,7 @@
  "messages": [
   {
    "content": "Report the state of the command.",
-   "game_id": "9ae0fbb0ce0241c5",
+   "game_id": "f1c7f1c7f1c7f1c7",
    "id": 1,
    "proposals": [],
    "role": "user",
@@ -16031,7 +16179,7 @@
   },
   {
    "content": "General, our command comprises 3 detachments, with 0 enemy sightings reported to headquarters. Our charge is to hold the marked summit until five o'clock. Send your instructions by runner; the latest reports may already be out of date.",
-   "game_id": "9ae0fbb0ce0241c5",
+   "game_id": "f1c7f1c7f1c7f1c7",
    "id": 2,
    "proposals": [],
    "role": "assistant",
@@ -16167,12 +16315,48 @@
    "version": 1
   },
   {
+   "arrival_turn": 4,
+   "id": "O2",
+   "sent_turn": 0,
+   "side": "union",
+   "source": "human",
+   "stance": "hold",
+   "status": "delivered",
+   "transport": {
+    "address": [
+     10,
+     13
+    ],
+    "credit": 90,
+    "expected_turn": 4,
+    "expires_turn": 20,
+    "forwardings": 0,
+    "id": "O2",
+    "last_progress_turn": 4,
+    "method": "courier",
+    "origin": [
+     13,
+     15
+    ],
+    "pos": [
+     10,
+     13
+    ],
+    "ready_turn": 1,
+    "recipient_id": "U3",
+    "sent_turn": 0,
+    "status": "arrived"
+   },
+   "unit_id": "U3",
+   "version": 1
+  },
+  {
    "arrival_turn": 3,
    "destination": [
     11,
     15
    ],
-   "id": "O2",
+   "id": "O3",
    "sent_turn": 0,
    "side": "confederate",
    "source": "scripted",
@@ -16187,7 +16371,7 @@
     "expected_turn": 3,
     "expires_turn": 20,
     "forwardings": 0,
-    "id": "O2",
+    "id": "O3",
     "last_progress_turn": 3,
     "method": "courier",
     "origin": [
@@ -16212,7 +16396,7 @@
     12,
     15
    ],
-   "id": "O3",
+   "id": "O4",
    "sent_turn": 0,
    "side": "confederate",
    "source": "scripted",
@@ -16227,7 +16411,7 @@
     "expected_turn": 1,
     "expires_turn": 20,
     "forwardings": 0,
-    "id": "O3",
+    "id": "O4",
     "last_progress_turn": 1,
     "method": "voice",
     "origin": [
@@ -16252,7 +16436,7 @@
     10,
     15
    ],
-   "id": "O4",
+   "id": "O5",
    "sent_turn": 0,
    "side": "confederate",
    "source": "scripted",
@@ -16267,7 +16451,7 @@
     "expected_turn": 5,
     "expires_turn": 20,
     "forwardings": 0,
-    "id": "O4",
+    "id": "O5",
     "last_progress_turn": 5,
     "method": "courier",
     "origin": [
@@ -16292,7 +16476,7 @@
     11,
     15
    ],
-   "id": "O5",
+   "id": "O6",
    "sent_turn": 3,
    "side": "confederate",
    "source": "scripted",
@@ -16307,7 +16491,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 1,
-    "id": "O5",
+    "id": "O6",
     "last_progress_turn": 11,
     "method": "courier",
     "origin": [
@@ -16332,7 +16516,7 @@
     10,
     15
    ],
-   "id": "O6",
+   "id": "O7",
    "sent_turn": 3,
    "side": "confederate",
    "source": "scripted",
@@ -16347,7 +16531,7 @@
     "expected_turn": 8,
     "expires_turn": 23,
     "forwardings": 4,
-    "id": "O6",
+    "id": "O7",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16372,7 +16556,7 @@
     11,
     15
    ],
-   "id": "O7",
+   "id": "O8",
    "sent_turn": 6,
    "side": "confederate",
    "source": "scripted",
@@ -16387,7 +16571,7 @@
     "expected_turn": 11,
     "expires_turn": 26,
     "forwardings": 1,
-    "id": "O7",
+    "id": "O8",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16412,7 +16596,7 @@
     10,
     15
    ],
-   "id": "O8",
+   "id": "O9",
    "sent_turn": 6,
    "side": "confederate",
    "source": "scripted",
@@ -16427,7 +16611,7 @@
     "expected_turn": 11,
     "expires_turn": 26,
     "forwardings": 1,
-    "id": "O8",
+    "id": "O9",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16452,7 +16636,7 @@
     10,
     15
    ],
-   "id": "O9",
+   "id": "O10",
    "sent_turn": 9,
    "side": "confederate",
    "source": "scripted",
@@ -16467,7 +16651,7 @@
     "expected_turn": 14,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "O9",
+    "id": "O10",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16630,7 +16814,7 @@
    },
    "received_turn": 6,
    "side": "union",
-   "status": "delivered",
+   "status": "superseded",
    "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
    "unit_id": "U3"
   }
@@ -16652,7 +16836,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R292",
+    "id": "R298",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16727,7 +16911,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R307",
+    "id": "R313",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16802,7 +16986,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R309",
+    "id": "R315",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16829,9 +17013,17 @@
     "initial": 40,
     "local_action": "defend",
     "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
+    "mission_result": {
+     "order_version": 1,
+     "reason": "Instructions received.",
+     "started_turn": 4,
+     "status": "active",
+     "template": "hold",
+     "updated_turn": 4
+    },
     "morale": 90,
     "name": "20th Maine \u00b7 C",
-    "order_version": 0,
+    "order_version": 1,
     "pos": [
      10,
      13
@@ -16845,6 +17037,7 @@
     "standing_version": 0,
     "status": "ready",
     "strength": 40,
+    "supply_site": null,
     "suppression": 0,
     "tactical_target": null,
     "target": null,
@@ -16865,7 +17058,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R312",
+    "id": "R318",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16921,7 +17114,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R314",
+    "id": "R320",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -16977,7 +17170,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R316",
+    "id": "R322",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17033,7 +17226,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R318",
+    "id": "R324",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17089,7 +17282,7 @@
     "expected_turn": 13,
     "expires_turn": 29,
     "forwardings": 0,
-    "id": "R322",
+    "id": "R328",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17164,7 +17357,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R364",
+    "id": "R370",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17239,7 +17432,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R366",
+    "id": "R372",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17311,7 +17504,7 @@
     "expected_turn": 13,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R367",
+    "id": "R373",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17338,9 +17531,17 @@
     "initial": 40,
     "local_action": "defend",
     "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
+    "mission_result": {
+     "order_version": 1,
+     "reason": "Instructions received.",
+     "started_turn": 4,
+     "status": "active",
+     "template": "hold",
+     "updated_turn": 4
+    },
     "morale": 90,
     "name": "20th Maine \u00b7 C",
-    "order_version": 0,
+    "order_version": 1,
     "pos": [
      10,
      13
@@ -17354,6 +17555,7 @@
     "standing_version": 0,
     "status": "ready",
     "strength": 40,
+    "supply_site": null,
     "suppression": 0,
     "tactical_target": null,
     "target": null,
@@ -17374,7 +17576,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R369",
+    "id": "R375",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17430,7 +17632,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R371",
+    "id": "R377",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17486,7 +17688,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R373",
+    "id": "R379",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17542,7 +17744,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R375",
+    "id": "R381",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17598,7 +17800,7 @@
     "expected_turn": 13,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R377",
+    "id": "R383",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17654,7 +17856,7 @@
     "expected_turn": 14,
     "expires_turn": 30,
     "forwardings": 0,
-    "id": "R379",
+    "id": "R385",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17674,13 +17876,13 @@
   {
    "arrival_turn": 15,
    "data": {
-    "order_id": "O5",
+    "order_id": "O6",
     "status": "delivered"
    },
    "kind": "ack",
    "observed_turn": 11,
    "side": "confederate",
-   "text": "C1: order O5 delivered.",
+   "text": "C1: order O6 delivered.",
    "transport": {
     "address": [
      11,
@@ -17690,7 +17892,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R400",
+    "id": "R406",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17723,7 +17925,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R407",
+    "id": "R413",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17798,7 +18000,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R422",
+    "id": "R428",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17873,7 +18075,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R424",
+    "id": "R430",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17945,7 +18147,7 @@
     "expected_turn": 14,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R425",
+    "id": "R431",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -17972,9 +18174,17 @@
     "initial": 40,
     "local_action": "defend",
     "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
+    "mission_result": {
+     "order_version": 1,
+     "reason": "Instructions received.",
+     "started_turn": 4,
+     "status": "active",
+     "template": "hold",
+     "updated_turn": 4
+    },
     "morale": 90,
     "name": "20th Maine \u00b7 C",
-    "order_version": 0,
+    "order_version": 1,
     "pos": [
      10,
      13
@@ -17988,6 +18198,7 @@
     "standing_version": 0,
     "status": "ready",
     "strength": 40,
+    "supply_site": null,
     "suppression": 0,
     "tactical_target": null,
     "target": null,
@@ -18008,7 +18219,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R427",
+    "id": "R433",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18064,7 +18275,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R429",
+    "id": "R435",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18120,7 +18331,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R431",
+    "id": "R437",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18176,7 +18387,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R433",
+    "id": "R439",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18232,7 +18443,7 @@
     "expected_turn": 14,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R435",
+    "id": "R441",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18288,7 +18499,7 @@
     "expected_turn": 15,
     "expires_turn": 31,
     "forwardings": 0,
-    "id": "R437",
+    "id": "R443",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18308,13 +18519,13 @@
   {
    "arrival_turn": 16,
    "data": {
-    "order_id": "O6",
+    "order_id": "O7",
     "status": "delivered"
    },
    "kind": "ack",
    "observed_turn": 12,
    "side": "confederate",
-   "text": "C3: order O6 delivered.",
+   "text": "C3: order O7 delivered.",
    "transport": {
     "address": [
      11,
@@ -18324,7 +18535,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R460",
+    "id": "R466",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18357,7 +18568,7 @@
     "expected_turn": 15,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R465",
+    "id": "R471",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18432,7 +18643,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R478",
+    "id": "R484",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18507,7 +18718,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R480",
+    "id": "R486",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18582,7 +18793,7 @@
     "expected_turn": 15,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R481",
+    "id": "R487",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18609,9 +18820,17 @@
     "initial": 40,
     "local_action": "defend",
     "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
+    "mission_result": {
+     "order_version": 1,
+     "reason": "Instructions received.",
+     "started_turn": 4,
+     "status": "active",
+     "template": "hold",
+     "updated_turn": 4
+    },
     "morale": 90,
     "name": "20th Maine \u00b7 C",
-    "order_version": 0,
+    "order_version": 1,
     "pos": [
      10,
      13
@@ -18625,6 +18844,7 @@
     "standing_version": 0,
     "status": "ready",
     "strength": 40,
+    "supply_site": null,
     "suppression": 0,
     "tactical_target": null,
     "target": null,
@@ -18645,7 +18865,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R483",
+    "id": "R489",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18701,7 +18921,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R485",
+    "id": "R491",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18757,7 +18977,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R487",
+    "id": "R493",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18813,7 +19033,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R489",
+    "id": "R495",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18869,7 +19089,7 @@
     "expected_turn": 15,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R491",
+    "id": "R497",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -18925,7 +19145,7 @@
     "expected_turn": 16,
     "expires_turn": 32,
     "forwardings": 0,
-    "id": "R493",
+    "id": "R499",
     "last_progress_turn": 12,
     "method": "courier",
     "origin": [
@@ -19067,7 +19287,7 @@
    "initial": 40,
    "last_attacked_turn": 12,
    "local_action": "withdraw",
-   "local_decision_seq": 464,
+   "local_decision_seq": 470,
    "local_reason": "We are withdrawing because incoming fire is pinning the detachment.",
    "loss_credit": 0,
    "mission_result": {
@@ -19117,7 +19337,7 @@
    "initial": 40,
    "last_attacked_turn": -99,
    "local_action": "hold",
-   "local_decision_seq": 466,
+   "local_decision_seq": 472,
    "local_reason": "No enemy within effective range; maintain the assigned mission.",
    "loss_credit": 0,
    "morale": 90,
@@ -19155,14 +19375,22 @@
    "initial": 40,
    "last_attacked_turn": -99,
    "local_action": "defend",
-   "local_decision_seq": 467,
+   "local_decision_seq": 473,
    "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
    "loss_credit": 0,
+   "mission_result": {
+    "order_version": 1,
+    "reason": "Instructions received.",
+    "started_turn": 4,
+    "status": "active",
+    "template": "hold",
+    "updated_turn": 4
+   },
    "morale": 90,
    "move_credit": 0,
    "name": "20th Maine \u00b7 C",
    "observed_turn": 12,
-   "order_version": 0,
+   "order_version": 1,
    "pos": [
     10,
     13
@@ -19177,6 +19405,7 @@
    "standing_version": 0,
    "status": "ready",
    "strength": 40,
+   "supply_site": null,
    "suppression": 0,
    "tactical_target": null,
    "target": null,
@@ -19193,7 +19422,7 @@
    "initial": 40,
    "last_attacked_turn": 12,
    "local_action": "defend",
-   "local_decision_seq": 461,
+   "local_decision_seq": 467,
    "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
    "loss_credit": 40,
    "mission_result": {
@@ -19243,7 +19472,7 @@
    "initial": 40,
    "last_attacked_turn": 12,
    "local_action": "defend",
-   "local_decision_seq": 462,
+   "local_decision_seq": 468,
    "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
    "loss_credit": 64,
    "mission_result": {
@@ -19293,7 +19522,7 @@
    "initial": 40,
    "last_attacked_turn": -99,
    "local_action": "defend",
-   "local_decision_seq": 463,
+   "local_decision_seq": 469,
    "local_reason": "Enemy within effective range; halt locally, use cover and return fire.",
    "loss_credit": 0,
    "mission_result": {
