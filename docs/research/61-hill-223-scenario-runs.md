@@ -58,7 +58,7 @@ The entry is in `poc-13` (`RULES_VERSION`), the edition these rules need.
 | Facing | All four German groups face 45° (north-east, down the valley toward the American attack), arc 120°, turn 1 interval | Sourced as posture: S40 (guns "masked and the muzzles pointed down into the valley", "rapidly turning them around"); S57 p. 60 ("quickly reversed their guns") |
 | Surrender (G1, `D1` only) | Reach 3, odds 50 %, support within 1 hex, rear only | Inferred: S57 p. 60 ("supposing" a large American force); 59 §1 mapping |
 | Departure order | `A1` starts with a move order to the ravine beside the shack, already received | Reconstruction: S57 p. 60, S58 (Parson); 56 §6, intent set at departure |
-| Return | `exploit`, trigger `arrival`, press to the post hex, recall binding, loss limit 100 % | Reconstruction: S57 p. 61-62, S40 diary (the prisoners brought back) |
+| Return | `exploit`, trigger `arrival`, press to the post hex, recall binding, loss limit 100 %, `resume_after_withdrawal` true | Reconstruction: S57 p. 61-62, S40 diary (the prisoners brought back); the resume is per D7b ruling 2026-11-07 |
 | Victory | `raid-and-return`: within 1 hex of the shack for 1 interval, then 5 men (25 % of 17, rounded up) within 1 hex of the post holding at least 1 captive, by 10:30 | 56 §5; the thresholds are authored; no count is scored against S57 (doc 37) |
 | Command | Succession `AHQ` to `A2` to `A3`; no German successor | Authored; S57 p. 61 names none |
 
@@ -83,6 +83,8 @@ The entry is in `poc-13` (`RULES_VERSION`), the edition these rules need.
 
 ## 5. Results (model results)
 
+**Superseded, pending re-run (D7b ruling 2026-11-07).** The results in this section and in §6 were produced on `c733662`, before the return resumed after a local withdrawal. Per D7b ruling 2026-11-07 the entry now declares `resume_after_withdrawal` (§7 row 5; 60 §2), so the patrol's press home pauses at a withdrawal and resumes when it clears. The 12 runs must be repeated on EVO; until then the tables below describe the old rule only, and no new result is claimed here.
+
 All 12 runs: German win at the deadline, 10:30:00 (interval 450), reason "The German kept the raiders from returning by the deadline." Every replay is `identical`. Interval *t* is 06:45 plus *t* × 30 s.
 
 | Run | `D1` yields (turn, to, count) | Raid made | Gun turns (unit: start→ready) | Patrol first struck / first volley (return fire) | Return press: start, stop | Patrol at end | US / German losses |
@@ -106,6 +108,8 @@ All 12 runs: German win at the deadline, 10:30:00 (interval 450), reason "The Ge
 
 ## 6. Reading the results
 
+Superseded pending re-run, as §5: these readings are of the `c733662` runs.
+
 - **What decides every run is the stop of the return press.** In each run with a surrender, the patrol takes 75 prisoners within 5 minutes of the start. A withdrawal decision then ends its return for good, and it holds where the withdrawal leaves it. That rule is in 60 §2. It was built for Gergovia's exploiting legions, not for a patrol bringing prisoners home. The model result follows from that reuse. It does not follow from the historical record (§9).
 - **The valley width changes nothing,** because the patrol never reaches the valley. The three valley runs differ only in event counts (11,093, 11,097 and 11,088).
 - **G2 never yields.** At interval 9 the patrol is 2 hexes off, beyond reach 1. At 10 it is adjacent, but `D1` has now watched it for a second interval: the estimate's quality is 26 and its high end has fallen to 30 (3,000 against 5,750). The patrol's own trigger (`D1` estimated at 50 to 90, `D2` at 20 to 100) ends the press at 10. No shot is fired in the battle. Under these rules a yield needs surprise: the first, poorest estimate.
@@ -122,7 +126,7 @@ All 12 runs: German win at the deadline, 10:30:00 (interval 450), reason "The Ge
 | 2 | Sight 3 in woods; 7 across the open valley | 3 everywhere | `observation_range` is one value per unit; the engine has no per-terrain sight |
 | 3 | `shield` variant | Not built | No prisoner shield in the engine (56 §10, later; 59 §7) |
 | 4 | §8 lists G1, delay 1 and no shield as variants | Registered as entries identical to the default apart from their labels | So that every §8 name validates and runs |
-| 5 | Return "by the way it came" (S1); no mechanism named | `exploit` doctrine (60 §2), trigger `arrival`; the engine's shortest path | The only engine rule that lets a unit carry an intent past its first order. `return_on_approach_route` is false in every run, since no run returns |
+| 5 | Return "by the way it came" (S1); no mechanism named | `exploit` doctrine (60 §2), trigger `arrival`, with `resume_after_withdrawal` true per D7b ruling 2026-11-07: a local withdrawal pauses the press home, which resumes once the withdrawal clears; the engine's shortest path | The only engine rule that lets a unit carry an intent past its first order. Before D7b a withdrawal ended the return for good, and `return_on_approach_route` was false in every `c733662` run, since no run returned. Results under D7b are pending the EVO re-run (§5) |
 | 6 | Departure order not specified | A move order already received at the start (`mission_result` in the unit's overrides) | A runner order at turn 0 would leave the patrol idle for intervals it was not idle |
 | 7 | Guns face the valley | 45° (north-east) for `D1` to `D4`; `D1` also turns in 1 interval in every variant | `rear_only` needs a declared facing on `D1`; `gun-turn-delay` changes the gun groups only |
 | 8 | `valley-wide` 18 hexes | Hill 223 keeps one column | The map has 24 columns; the German hill takes 5 |
@@ -134,9 +138,9 @@ All 12 runs: German win at the deadline, 10:30:00 (interval 450), reason "The Ge
 
 ## 8. Tests
 
-`tests/test_hill_223.py` (12 tests):
+`tests/test_hill_223.py` (13 tests):
 
-- Registration and dry run: `test_entry_registers_in_the_headless_catalog_after_a_dry_run`, `test_entry_takes_the_doc_56_defaults`, `test_every_basis_carries_a_kind_and_each_open_question_cites_the_ruling`.
+- Registration and dry run: `test_entry_registers_in_the_headless_catalog_after_a_dry_run`, `test_entry_takes_the_doc_56_defaults`, `test_every_basis_carries_a_kind_and_each_open_question_cites_the_ruling`, `test_the_return_resumes_after_a_local_withdrawal_per_the_d7b_ruling` (the default and every variant declare the field; the provenance cites D7b).
 - Variants: `test_each_named_variant_differs_only_in_its_own_question`.
 - The aliasing fix: `test_a_sides_report_does_not_share_nested_unit_data` (red before the fix, §2).
 - Controls: `test_policies_are_registered_and_chosen_for_their_sides`, `test_every_order_carries_a_source_locator_or_a_label`, `test_only_the_reinforcement_variant_sends_an_order_and_only_once`.
@@ -147,7 +151,7 @@ No test asserts a winner. No run digest is pinned: `facing.bearing` rounds float
 
 ## 9. Limits and next steps
 
-- **The return.** The patrol's return ends at its first withdrawal. A return doctrine that resumes once the withdrawal trigger clears, or a commander's runner order on the captives report, would test the return. Either would change the American intent register (56 §3), so it is an owner decision.
+- **The return.** Decided by D7b ruling 2026-11-07: "Return resumes after a local withdrawal clears." The entry now declares `resume_after_withdrawal` (60 §2; §7 row 5). The commander's runner order on the captives report was not taken. A press that pauses and resumes can repeat the cycle each time the patrol comes back into sight of a stronger group. The re-run results are pending (§5).
 - **The surrender cascade.** S57 has the commander yield his command and more prisoners taken on the north and northeast slopes. Each group yields only on its own sightings here.
 - **Map.** Authored and schematic. The valley is never entered in any run, so its width is untested by these runs.
 - **Run cost.** About 45 s per 450-interval run on the workstation (Mac), 12 runs in about 9 minutes. No run went to EVO.

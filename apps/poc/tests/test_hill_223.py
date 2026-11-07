@@ -101,6 +101,14 @@ class Hill223EntryTests(unittest.TestCase):
         self.assertEqual({u["id"] for u in s["units"] if "facing" in u}, {"D1", "D2", "D3", "D4"})
         self.assertEqual(s["victory"]["return_needed"], 5)  # A quarter of 17, rounded up.
 
+    def test_the_return_resumes_after_a_local_withdrawal_per_the_d7b_ruling(self):
+        # D7b ruling 2026-11-07: "Return resumes after a local withdrawal clears."
+        for entry in [ENTRY] + [v.entry for v in VARIANTS.values()]:
+            with self.subTest(entry.id):
+                self.assertIs(unit(build_state(entry), "A1")["exploit"]["resume_after_withdrawal"], True)
+        self.assertIn("per D7b ruling 2026-11-07", ENTRY.provenance["return"])
+        self.assertIn("per D7b ruling 2026-11-07", next(o for o in AMERICAN_ORDERS if o["id"] == "return")["provenance"])
+
     def test_every_basis_carries_a_kind_and_each_open_question_cites_the_ruling(self):
         self.assertTrue(all(v.startswith(PROVENANCE) for v in ENTRY.provenance.values()))
         cited = " ".join(v for v in ENTRY.provenance.values() if DC0 in v)

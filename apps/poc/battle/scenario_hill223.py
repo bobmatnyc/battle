@@ -130,8 +130,9 @@ def american_units(valley=VALLEY_HEXES):
                   # The order given at departure, before the start (doc 56 §6: intent is set then).
                   mission_result={"template": "move", "status": "active", "order_version": 0, "started_turn": 0,
                                   "updated_turn": 0, "reason": "Instructions received."},
+                  # D7b ruling 2026-11-07: the return resumes after a local withdrawal clears.
                   exploit={"trigger": "arrival", "press_to": list(post(valley)), "recall_binding": True,
-                           "max_loss_pct": 100})
+                           "max_loss_pct": 100, "resume_after_withdrawal": True})
     return (
         # rout_strength 0: a 6-man post would rout at once under the 12-man default (docs/research/58).
         UnitEntry("AHQ", "american", "Company G post", (east, 9), _men(6, RIFLES, rout_strength=0)),
@@ -224,7 +225,8 @@ PROVENANCE = {
                      "docs/research/58 §2",
     "return": "reconstruction: on reaching the rear the patrol presses back to the company post (exploit "
               "doctrine, docs/research/60 §2, trigger arrival); S57 p. 61-62 and S40 record the return; the "
-              "engine takes the shortest path, not the approach route",
+              "engine takes the shortest path, not the approach route; the return resumes after a local "
+              "withdrawal clears (resume_after_withdrawal), per D7b ruling 2026-11-07",
     "officers": "authored: 4 for the patrol's 4 NCOs (S57 p. 60), so three fall in 9 losses, as S57 p. 61 "
                 "records (doc 56 §6)",
     "shield": "authored: prisoners are not a fire shield; the engine has none (doc 56 §10 later; "
