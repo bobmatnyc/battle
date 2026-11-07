@@ -19,8 +19,9 @@ from battle.scenario_entry import MapEntry, UnitEntry, build_state, validate
 from battle.victory_encircle import enclosure
 from test_pegasus_engine import advance
 
-# Every poc-13 headless entry after 40 engine-only intervals, recorded at 5704c40
-# (before the army-scale rules): the rules are opt-in, so these must not move.
+# Every poc-13 headless entry after 40 engine-only intervals, recorded on base code without the
+# army-scale rules: at 5704c40, and Gergovia at 2aa2523 (D85 moved its recall to interval 20).
+# The rules are opt-in, so these must not move.
 RECORDED = {
     "little-round-top": "2de7dd04565fdb202749d0fcc8272cfc9630878f2735802c1b5f79d6b5dbe305",
     "hougoumont-north-gate": "c419bdb263f092a6bf8cc14460bc174a044fcfa64c1163e225739a2d0f6375ad",
@@ -28,7 +29,7 @@ RECORDED = {
     "concord-north-bridge-v1": "b1e3a7dc4a570618b15ae5c33c9056bbe3cb608366e0f5a4993ef5f61e31de9e",
     "pegasus-bridge": "793f482a9b2767fd62757764789cbdb0e5930bc9d57bf825468e37ad0b5ced95",
     "hill-223-patrol": "6974db68984ac4a637279ff2c9c66aac779c4c21efe7aeee50d11f38493d4432",
-    "gergovia-recall": "2229a151d8ecad5467d85f503197c810f61c7e6ead554e27446ed397449aee3b",
+    "gergovia-recall": "dc77091070ea056a2157774f1d20c53ab1d30d60d71a06ea2de7765a7e176cd1",
 }
 KEEP = ("SC1", "C4")  # The two command detachments; reports need a recipient.
 
