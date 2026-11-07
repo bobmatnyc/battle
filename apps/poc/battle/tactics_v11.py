@@ -3,7 +3,9 @@
 docs/research/55: as tactics_v10, except that a contact makes a unit halt and
 react within the longer of the unit's own weapon range and the contact's
 range, read from what the unit observes (``recon.estimate``), so a short-range
-unit no longer walks into a longer-range enemy it can see. Served only to a
+unit no longer walks into a longer-range enemy it can see. docs/research/58:
+a unit that declares ``press_assault`` keeps to its move order in open ground
+as an assault on walls does. Served only to a
 ``poc-13`` snapshot whose entry selects it (``s['tactics']``); tactics_v10
 stays frozen for every other ``poc-13`` battle.
 """
@@ -31,6 +33,15 @@ def assault(s,u):
     inside={grid.key(p) for p in f['compound']}
     return any(grid.key(c['pos']) in inside for c in s['contacts'].get(u['side'],{}).values()
                if s['turn']-c['observed_turn']<=recon.CONTACT_MAX_AGE)
+
+def presses(u):
+    """Why: an attack in open ground halted at its first unidentified contact,
+    which tactics_v11 counts at the table's longest range (docs/research/58).
+    What: True when ``u`` declares ``press_assault`` and is on a ``move`` order
+    with a destination. Reads only the unit, never enemy truth or contacts.
+    Test: `test_with_the_key_the_unit_presses_toward_its_objective`,
+    `test_the_key_needs_a_move_order`."""
+    return u.get('press_assault') is True and u.get('stance')=='move' and u.get('target') is not None
 
 def own_range(s,u):
     """The farthest hex ``u`` fires at: its class's ``range_hexes`` in the
@@ -88,10 +99,12 @@ def decide(s,u,contacts):
         if enemy_strength>u['strength']*doctrine['enemy_ratio'] or (doctrine['id']=='screen' and enemy_strength>=u['strength']):triggers.append('credible sightings indicate a much stronger enemy')
         if u.get('recon_role')=='scout' and enemy_strength>=u['strength'] and any(grid.distance(u['pos'],c['pos'])<=3 for c in nearby):triggers.append('the scouting mission calls for avoiding a close, costly engagement')
         if u.get('local_action')=='withdraw' and s['turn']<u.get('withdraw_until',0):triggers.append('the withdrawal must be completed before reconsidering the mission')
-        pressing=not triggers and assault(s,u)
+        walls=not triggers and assault(s,u)
+        pressing=walls or (not triggers and presses(u))  # docs/research/58: declared only.
         action='withdraw' if triggers else 'continue' if pressing else 'defend'
         reason=('We are withdrawing because '+ '; '.join(triggers)+'.' if triggers
-                else 'Enemy within effective range; pressing the assault on the walls and returning fire.' if pressing
+                else 'Enemy within effective range; pressing the assault on the walls and returning fire.' if walls
+                else 'Enemy within effective range; pressing the assault toward the objective and returning fire.' if pressing
                 else 'Enemy within effective range; halt locally, use cover and return fire.')
         # Movement orders remain the mission. A local reaction temporarily overrides
         # execution without erasing the destination or issuing a fictitious HQ order.
