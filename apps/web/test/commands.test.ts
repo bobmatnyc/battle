@@ -25,6 +25,8 @@ function fakeApi(overrides: Partial<DeskApi>): DeskApi & {calls: string[]} {
     orders: track("orders", overrides.orders ?? never("orders")),
     clock: track("clock", overrides.clock ?? never("clock")),
     newBattle: track("newBattle", overrides.newBattle ?? never("newBattle")),
+    history: track("history", overrides.history ?? never("history")),
+    replay: track("replay", overrides.replay ?? never("replay")),
   };
 }
 
@@ -117,10 +119,16 @@ test("after a new battle whose map read fails, the next re-read fetches the new 
     state: async () => otherGame(start.view),
     map: async () => { maps++; if (maps === 1) throw refused(); return otherMap(); },
   });
-  await assert.rejects(startBattle(api, start, {id: "hougoumont-north-gate", title: "Hougoumont: the north gate"}), /not reachable/);
-  // Whatever the desk holds now (here the worst case: the new game's view over the old terrain),
-  // the re-read in act's catch must fetch the terrain of the view's game.
-  const next = await reread(api, {...start, view: otherGame(start.view)});
+  // Slice 2 review: the battle did start, so this is no refusal; the desk holds the new view,
+  // keeps the old terrain tagged with the old game, and says the map will be read again.
+  const step = await startBattle(api, start, {id: "hougoumont-north-gate", title: "Hougoumont: the north gate"});
+  assert.equal(step.notice.kind, "accepted");
+  // The title is the new view's own brief (this fake new game reuses the fixture's).
+  assert.match(step.notice.text, new RegExp(`^New battle started: ${step.loaded.view.scenario_brief!.title}\\. `));
+  assert.match(step.notice.text, /could not be read \(The local simulation is not reachable[^)]*\); the desk will read it again/);
+  assert.equal(step.loaded.view.game_id, "hougoumont-game");
+  assert.equal(step.loaded.terrainGame, start.view.game_id, "the old terrain is never taken for the new game's");
+  const next = await reread(api, step.loaded);
   assert.equal(next.view.game_id, "hougoumont-game");
   assert.equal(next.terrainGame, "hougoumont-game");
   assert.equal(next.terrain.setting.location, "Hougoumont · Waterloo, Belgium");
