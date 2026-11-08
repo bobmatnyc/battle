@@ -12,13 +12,14 @@ type Point = [number, number];
 type Hex = readonly [number, number];
 type Center = (pos: Hex) => Point;
 
-/** `radius` is the map document's; `cells` are its briefing cells (bridge crossings); `sources` the status table. */
-export interface FeatureOptions { metresPerHex: number; cells: readonly MapCell[]; sources: StatusTable; radius: number }
+/** `radius` is the map document's; `cells` are its briefing cells (bridge crossings); `sources` the status table;
+ * `obstacles` (optional) the boxes the counters cover, which no label may sit under (docs/research/80). */
+export interface FeatureOptions { metresPerHex: number; cells: readonly MapCell[]; sources: StatusTable; radius: number; obstacles?: readonly Rect[] }
 /** A status as drawn: the table's, or "reported" / "unlisted" when the table has none. */
 interface Info { status: string; source: string; name?: string; footprint_m?: [number, number] }
 export type MarkKind = "road" | "bridge" | "wall" | "gate" | "building" | "works";
 /** One drawn mark: its status key, legend kind and name, and the hexes whose tooltip names it. */
-export interface Mark { key: string; kind: MarkKind; name: string; hexes: Hex[]; info: Info; draw(): string }
+export interface Mark { key: string; kind: MarkKind; name: string; hexes: Hex[]; info: Info; label?: LabelSpec; draw(place?: LabelPlace | null): string }
 
 const MIN_SIDE = 6;  // px: the smallest legible footprint side
 const ROAD = {casing: "#ae997b", fill: "#fff4d5", casingWidth: 10, fillWidth: 6};
@@ -58,6 +59,60 @@ class Grid {
   }
 }
 
+// bt-T16 (docs/research/80): a label keeps its text clear of every other label and of the counters.
+export interface Rect { x0: number; y0: number; x1: number; y1: number }
+export interface LabelPlace { x: number; y: number; anchor: "start" | "middle" | "end" }
+/** A label to place: `candidates` in preference order (the first is where it has always sat). */
+export interface LabelSpec { key: string; priority: number; text: string; candidates: LabelPlace[] }
+const GLYPH = 6.4, CAPITAL = 8.2, PAD = 2;  // px a character at 11 px, deliberately wide; padding for the 3 px halo
+const PRIORITY: Record<MarkKind, number> = {bridge: 0, gate: 1, building: 2, works: 3, road: 4, wall: 5};
+
+/** The box a label's text occupies at `place`, with a safety margin. */
+export function labelBox(text: string, place: LabelPlace): Rect {
+  const width = [...text].reduce((n, ch) => n + ((ch >= "A" && ch <= "Z") || ch === "%" ? CAPITAL : GLYPH), 0);
+  const x0 = place.anchor === "middle" ? place.x - width / 2 : place.anchor === "end" ? place.x - width : place.x;
+  return {x0: x0 - PAD, y0: place.y - 12, x1: x0 + width + PAD, y1: place.y + 4};
+}
+const meets = (a: Rect, b: Rect): boolean => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+
+/** Places around a symbol of half-extents (`hw`, `hh`) at (`cx`, `cy`): below, above, right, left,
+ * then the same shifted up and down in 14 px steps. */
+export function around(cx: number, cy: number, hw: number, hh: number): LabelPlace[] {
+  const out: LabelPlace[] = [{x: cx, y: cy + hh + 13, anchor: "middle"}, {x: cx, y: cy - hh - 6, anchor: "middle"},
+    {x: cx + hw + 8, y: cy + 4, anchor: "start"}, {x: cx - hw - 8, y: cy + 4, anchor: "end"}];
+  for (const k of [1, 2, 3]) {
+    const d = 14 * k;
+    out.push({x: cx, y: cy + hh + 13 + d, anchor: "middle"}, {x: cx, y: cy - hh - 6 - d, anchor: "middle"},
+      {x: cx + hw + 8, y: cy + 4 + d, anchor: "start"}, {x: cx + hw + 8, y: cy + 4 - d, anchor: "start"},
+      {x: cx - hw - 8, y: cy + 4 + d, anchor: "end"}, {x: cx - hw - 8, y: cy + 4 - d, anchor: "end"});
+  }
+  return out;
+}
+
+/** Why: labels sat wherever each mark's drawing put them, so they overlapped each other and the counters
+ * (docs/research/75 §8). What: the place of each label, or null where none fits. Labels go in order of
+ * `priority` (lower first), then `key`; each takes its first candidate whose box meets no obstacle and no
+ * label placed before it. A label with no such candidate is hidden; its mark keeps its tooltip and legend line.
+ * Test: `label placement is deterministic, takes the first free place and hides a label with none`. */
+export function placeLabels(specs: readonly LabelSpec[], obstacles: readonly Rect[] = []): Map<string, LabelPlace | null> {
+  const taken: Rect[] = [...obstacles], out = new Map<string, LabelPlace | null>();
+  const order = [...specs].sort((a, b) => a.priority - b.priority || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  for (const spec of order) {
+    const place = spec.candidates.find((c) => { const box = labelBox(spec.text, c); return !taken.some((t) => meets(t, box)); });
+    if (place) taken.push(labelBox(spec.text, place));
+    out.set(spec.key, place ?? null);
+  }
+  return out;
+}
+const tidy = (v: number): number => Math.round(v * 100) / 100;
+// The label's <text>; `dx`, `dy` shift absolute coordinates into a translated group. Nothing when hidden.
+function labelText(place: LabelPlace | null, text: string, dx = 0, dy = 0): string {
+  if (!place) return "";
+  const anchor = place.anchor === "start" ? "" : ` text-anchor="${place.anchor}"`;
+  return `<text x="${tidy(place.x - dx)}" y="${tidy(place.y - dy)}"${anchor} class="feature-label">${esc(text)}</text>`;
+}
+const hiddenIf = (place: LabelPlace | null): string => (place ? "" : " data-label=\"hidden\"");
+
 function title(name: string, info: Info, extra = ""): string {
   return `<title>${esc(name)}${extra ? " · " + esc(extra) : ""} — ${label(info.status)}: ${esc(info.source)}</title>`;
 }
@@ -65,28 +120,39 @@ function open(kind: string, key: string, info: Info, extra = ""): string {
   return `<g class="feature-mark feature-${kind}" data-feature="${esc(key)}" data-status="${esc(info.status)}"${extra}>`;
 }
 
-// One continuous cased line through the authored points; the label sits at the first middle
-// point, longest segment first, whose text box keeps 30 px from every other mark's centre (`avoid`).
-function road(f: RoadFeature, info: Info, g: Grid, avoid: Point[]): string {
-  const d = f.points.map((p, i) => (i ? "L" : "M") + pt(g.center(p))).join(" ");
+// The places a road's label may take: along its segments, longest first, the spots whose text box keeps
+// 30 px from every other mark's centre (`avoid`) before the others.
+function roadPlaces(f: RoadFeature, g: Grid, avoid: Point[]): LabelPlace[] {
   const legs = f.points.slice(1).map((p, i): [Point, Point] => [g.center(f.points[i]!), g.center(p)]);
   const length = ([a, b]: [Point, Point]): number => Math.hypot(b[0] - a[0], b[1] - a[1]);
-  const spots = [...legs].sort((l, m) => length(m) - length(l))
-    .flatMap(([a, b]) => [.5, .35, .65, .25, .75].map((t): Point => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]));
+  const along = (ts: number[]): Point[] => [...legs].sort((l, m) => length(m) - length(l))
+    .flatMap(([a, b]) => ts.map((t): Point => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]));
+  const spots = along([.5, .35, .65, .25, .75]);
   const clear = ([sx, sy]: Point): boolean => avoid.every(([qx, qy]) => {
     const dx = Math.max(sx + 12 - qx, 0, qx - (sx + 12 + 6 * f.name.length)), dy = Math.max(sy - 25 - qy, 0, qy - (sy - 10));
     return Math.hypot(dx, dy) > 30;
   });
-  const [x, y] = spots.find(clear) ?? spots[0]!;
-  return open("road", f.id, info) + title(f.name, info)
+  // Above the line (the first spot that is clear of the other marks), then below it, then on it; then the same at more spots.
+  const above = ([x, y]: Point): LabelPlace => ({x: x + 12, y: y - 14, anchor: "start"});
+  const below = ([x, y]: Point): LabelPlace => ({x: x + 12, y: y + 22, anchor: "start"});
+  const on = ([x, y]: Point): LabelPlace => ({x, y: y + 4, anchor: "middle"});
+  const more = along([.1, .15, .2, .3, .4, .45, .55, .6, .7, .8, .85, .9]);
+  return [...spots.filter(clear).map(above), ...spots.filter((s) => !clear(s)).map(above), ...spots.map(below), ...spots.map(on),
+    ...more.flatMap((s) => [above(s), below(s), on(s)])];
+}
+
+// One continuous cased line through the authored points, its label at `place`.
+function road(f: RoadFeature, info: Info, g: Grid, place: LabelPlace | null): string {
+  const d = f.points.map((p, i) => (i ? "L" : "M") + pt(g.center(p))).join(" ");
+  return open("road", f.id, info, hiddenIf(place)) + title(f.name, info)
     + `<path class="road-casing" d="${d}" fill="none" stroke="${ROAD.casing}" stroke-width="${ROAD.casingWidth}" stroke-linejoin="round"/>`
     + `<path class="road-fill" d="${d}" fill="none" stroke="${ROAD.fill}" stroke-width="${ROAD.fillWidth}" stroke-linejoin="round"/>`
-    + `<text x="${x + 12}" y="${y - 14}" class="feature-label">${esc(f.name)}</text></g>`;
+    + labelText(place, f.name) + "</g>";
 }
 
 // Roads stop at each bank; a span drawn like the road runs from each road end beside the bridge
 // through its centre, under a deck with parapets. A destroyed bridge is drawn broken, with no span.
-function bridge(pos: Hex, feature: BridgeFeature | undefined, info: Info, roads: RoadFeature[], g: Grid): string {
+function bridge(pos: Hex, feature: BridgeFeature | undefined, info: Info, roads: RoadFeature[], g: Grid, place: LabelPlace | null): string {
   const c = g.center(pos);
   const ends = roads.flatMap((r) => [r.hexes[0]!, r.hexes.at(-1)!])
     .filter((h) => Math.abs(Math.hypot(g.center(h)[0] - c[0], g.center(h)[1] - c[1]) - g.spacing) < 1e-6)
@@ -101,7 +167,7 @@ function bridge(pos: Hex, feature: BridgeFeature | undefined, info: Info, roads:
     const from = add(add(c, u, -half), n, s * side), to = add(add(c, u, half), n, s * side);
     return `M${pt(add(add(from, u, -5), n, s * 5))}L${pt(from)}L${pt(to)}L${pt(add(add(to, u, 5), n, s * 5))}`;
   }).join("");
-  let svg = open("bridge", feature ? feature.id : `crossing:${pos}`, info, ` data-state="${esc(state)}"`)
+  let svg = open("bridge", feature ? feature.id : `crossing:${pos}`, info, ` data-state="${esc(state)}"${hiddenIf(place)}`)
     + title(name, info, state === "charges" ? "wired with charges, as known" : state);
   if (state === "destroyed") {
     const gap = [add(c, u, -6), add(c, u, 6)] as const;
@@ -114,9 +180,17 @@ function bridge(pos: Hex, feature: BridgeFeature | undefined, info: Info, roads:
       + `<path class="bridge-deck" d="${deck}" fill="none" stroke="#3d3a33" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
     if (state === "charges") svg += `<circle class="bridge-charges" cx="${c[0]}" cy="${c[1]}" r="3.5" fill="#9b2d20"/>`;
   }
-  const text = state === "intact" ? name : `${name} · ${state === "charges" ? "charges" : state}`;
-  return svg + `<text x="${c[0]}" y="${c[1] + g.r + 14}" text-anchor="middle" class="feature-label">${esc(text)}</text></g>`;
+  return svg + labelText(place, bridgeText(feature, info)) + "</g>";
 }
+const bridgeText = (feature: BridgeFeature | undefined, info: Info): string => {
+  const name = feature ? feature.name : info.name || "Bridge", state = feature ? feature.state : "intact";
+  return state === "intact" ? name : `${name} · ${state === "charges" ? "charges" : state}`;
+};
+// Below the bridge, where it has always sat; then round it.
+const bridgePlaces = (pos: Hex, g: Grid): LabelPlace[] => {
+  const [x, y] = g.center(pos);
+  return [{x, y: y + g.r + 14, anchor: "middle"}, ...around(x, y, g.r + 4, g.r)];
+};
 
 interface Edge { inside: Hex; out: Point; a: Point; b: Point }
 // The outward edges of a compound: each neighbour direction whose centre is not a compound hex.
@@ -143,11 +217,18 @@ function walls(f: Compound, info: Info, g: Grid): string {
 }
 
 // The gate in the state the side knows: open (leaves swung out) or shut (a bar on the edge).
-function gate(f: Compound, o: Opening, info: Info, g: Grid): string {
+// The gate label sits just outside its edge, as it always has; then round that point.
+function gatePlaces(f: Compound, o: Opening, g: Grid): LabelPlace[] {
+  const e = perimeter(f.compound, g).find((x) => isGate(x, o, g));
+  if (!e) return [];
+  const at = add([(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2], unit(g.center(o.inside), g.center(o.outside)), 18);
+  return [{x: at[0] + 8, y: at[1], anchor: "start"}, ...around(at[0], at[1] - 4, 4, 6)];
+}
+function gate(f: Compound, o: Opening, info: Info, g: Grid, place: LabelPlace | null): string {
   const e = perimeter(f.compound, g).find((x) => isGate(x, o, g));
   if (!e) return "";  // an opening off the compound's outward edges has no edge to draw on
   const outward = unit(g.center(o.inside), g.center(o.outside)), along = unit(e.a, e.b);
-  let svg = open("gate", `${f.id}#${o.id}`, info, ` data-state="${esc(o.state)}"`) + title(o.name, info, o.state);
+  let svg = open("gate", `${f.id}#${o.id}`, info, ` data-state="${esc(o.state)}"${hiddenIf(place)}`) + title(o.name, info, o.state);
   const edge = ` data-edge="${pt(e.a)} ${pt(e.b)}"`;
   if (PASSABLE.includes(o.state)) {
     const leaf = (post: Point, dir: number): string => `M${pt(post)}L${pt(add(add(post, outward, 9), along, dir * 4))}`;
@@ -157,8 +238,7 @@ function gate(f: Compound, o: Opening, info: Info, g: Grid): string {
     if (o.state === "barred") svg += `<path class="gate-bar" d="M${pt(add(add(e.a, along, 5), outward, 4))}L${pt(add(add(e.b, along, -5), outward, 4))}" stroke="#f1e6c8" stroke-width="2"/>`;
   }
   for (const post of [e.a, e.b]) svg += `<rect class="gate-post" x="${post[0] - 3}" y="${post[1] - 3}" width="6" height="6" fill="#3b2a1e"/>`;
-  const at = add([(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2], outward, 18);
-  return svg + `<text x="${at[0] + 8}" y="${at[1]}" class="feature-label">${esc(o.name)} · ${esc(o.state)}</text></g>`;
+  return svg + labelText(place, `${o.name} · ${o.state}`) + "</g>";
 }
 
 /** Why: a building must read at its true size, not as a fixed symbol (docs/research/72 §2).
@@ -174,25 +254,36 @@ export function footprint(metres: readonly number[], metresPerHex: number, radiu
   return {w, h, capped, enlarged: metres.some((m) => m * scale < MIN_SIDE)};
 }
 
-function building(f: BuildingFeature, info: Info, g: Grid, metresPerHex: number): string {
+// Above the footprint, where the label has always sat; then round it.
+function buildingPlaces(f: BuildingFeature, info: Info, g: Grid, metresPerHex: number): LabelPlace[] {
+  const [x, y] = g.center(f.pos), {w, h} = footprint(info.footprint_m || [30, 20], metresPerHex, g.r);
+  return [{x, y: y - h / 2 - 6, anchor: "middle"}, ...around(x, y, w / 2, h / 2)];
+}
+function building(f: BuildingFeature, info: Info, g: Grid, metresPerHex: number, place: LabelPlace | null): string {
   const [x, y] = g.center(f.pos), metres = info.footprint_m || [30, 20];
   const {w, h, capped, enlarged} = footprint(metres, metresPerHex, g.r);
   const note = `footprint ${metres[0]} x ${metres[1]} m at ${metresPerHex} m a hex${capped ? ", reduced to fit its hex" : ""}${enlarged ? ", enlarged to stay legible" : ""}`;
   const ridge = w >= h ? `M${x - w / 2 + 3},${y}H${x + w / 2 - 3}` : `M${x},${y - h / 2 + 3}V${y + h / 2 - 3}`;
-  return open("building", f.id, info) + title(f.name, info, note)
+  return open("building", f.id, info, hiddenIf(place)) + title(f.name, info, note)
     + `<rect class="footprint-shadow" x="${x - w / 2 + 2}" y="${y - h / 2 + 2}" width="${w}" height="${h}" fill="#3f2f22" fill-opacity=".3"/>`
     + `<rect class="footprint" x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" fill="#a8876a" stroke="#3f2f22" stroke-width="1.5"/>`
     + `<path class="footprint-ridge" d="${ridge}" stroke="#6e5541" stroke-width="1.2"/>`
-    + `<text x="${x}" y="${y - h / 2 - 6}" text-anchor="middle" class="feature-label">${esc(f.name)}</text></g>`;
+    + labelText(place, f.name) + "</g>";
 }
 
-function works(f: FortificationFeature, info: Info, g: Grid): string {
+const worksText = (f: FortificationFeature): string => (f.progress === 100 ? "FIELDWORKS" : String(f.progress) + "% WORKS");
+// Right of the works symbol (drawn 24 px below its hex centre), where the label has always sat; then round it.
+function worksPlaces(f: FortificationFeature, g: Grid): LabelPlace[] {
+  const [x, y] = g.center(f.pos);
+  return [{x: x + 30, y: y + 29, anchor: "start"}, ...around(x, y + 24, 25, 8)];
+}
+function works(f: FortificationFeature, info: Info, g: Grid, place: LabelPlace | null): string {
   const [x, y] = g.center(f.pos), shape = "M-22,8V0L-11,-6L0,0L11,-6L22,0V8";
   const done = f.progress === 100;
-  return open("works", f.id, info, ` transform="translate(${x},${y + 24})" opacity="${done ? 1 : .65}"`)
+  return open("works", f.id, info, ` transform="translate(${x},${y + 24})" opacity="${done ? 1 : .65}"${hiddenIf(place)}`)
     + title(f.name, info, done ? "complete" : `${f.progress}% · cover ${f.cover}`)
     + `<path d="${shape}" fill="none" stroke="#70563a" stroke-width="6"/><path d="${shape}" fill="none" stroke="#cab18b" stroke-width="2"/>`
-    + `<text x="30" y="5" text-anchor="start" class="feature-label">${done ? "FIELDWORKS" : esc(f.progress) + "% WORKS"}</text></g>`;
+    + labelText(place, worksText(f), x, y + 24) + "</g>";
 }
 
 const statusOf = (key: string, feature: MapFeature | undefined, sources: StatusTable): Info =>
@@ -210,25 +301,33 @@ export function featureMarks(features: readonly MapFeature[], options: FeatureOp
   const crossings: Hex[] = options.cells.filter((c) => c["crossing"] === "bridge").map((c) => c.pos);
   for (const f of bridges.values()) if (!crossings.some((p) => same(p, f.pos))) crossings.push(f.pos);
   const list: Mark[] = [];
-  const push = (key: string, kind: MarkKind, name: string, hexes: Hex[], feature: MapFeature | undefined, draw: (info: Info) => string): void => {
+  const push = (key: string, kind: MarkKind, name: string, hexes: Hex[], feature: MapFeature | undefined,
+    draw: (info: Info, place: LabelPlace | null) => string, label?: {text: string; places: LabelPlace[]}): void => {
     const info = statusOf(key, feature, sources);
-    list.push({key, kind, name, hexes, info, draw: () => draw(info)});
+    list.push({key, kind, name, hexes, info, draw: (place = null) => draw(info, place),
+      ...(label ? {label: {key, priority: PRIORITY[kind], text: label.text, candidates: label.places}} : {})});
   };
   const placed = [...crossings, ...features.filter((f) => f.kind === "building" || f.kind === "fortification")
     .map((f) => (f as BuildingFeature | FortificationFeature).pos)].map(g.center);
-  for (const f of roads) push(f.id, "road", f.name, f.hexes, f, (i) => road(f, i, g, placed));
+  for (const f of roads) push(f.id, "road", f.name, f.hexes, f, (i, p) => road(f, i, g, p), {text: f.name, places: roadPlaces(f, g, placed)});
   for (const pos of crossings) {
     const f = bridges.get(String(pos)), key = f ? f.id : `crossing:${pos}`;
-    push(key, "bridge", f ? f.name : sources[key]?.name || "Bridge", [pos], f, (i) => bridge(pos, f, i, roads, g));
+    push(key, "bridge", f ? f.name : sources[key]?.name || "Bridge", [pos], f, (i, p) => bridge(pos, f, i, roads, g, p),
+      {text: bridgeText(f, statusOf(key, f, sources)), places: bridgePlaces(pos, g)});
   }
   const compounds = features.filter(isCompound);
   for (const f of compounds) push(`${f.id}#walls`, "wall", `${f.name}: walls`, f.compound, f, (i) => walls(f, i, g));
   for (const f of compounds) for (const o of f.openings) {
-    push(`${f.id}#${o.id}`, "gate", `${o.name} · ${o.state}`, [o.inside, o.outside], f, (i) => gate(f, o, i, g));
+    push(`${f.id}#${o.id}`, "gate", `${o.name} · ${o.state}`, [o.inside, o.outside], f, (i, p) => gate(f, o, i, g, p),
+      {text: `${o.name} · ${o.state}`, places: gatePlaces(f, o, g)});
   }
-  for (const f of features) if (f.kind === "building") push(f.id, "building", f.name, [f.pos], f, (i) => building(f, i, g, options.metresPerHex));
+  for (const f of features) if (f.kind === "building") {
+    push(f.id, "building", f.name, [f.pos], f, (i, p) => building(f, i, g, options.metresPerHex, p),
+      {text: f.name, places: buildingPlaces(f, statusOf(f.id, f, sources), g, options.metresPerHex)});
+  }
   for (const f of features) if (f.kind === "fortification") {
-    push(f.id, "works", f.name + (f.progress === 100 ? "" : ` ${f.progress}% · cover ${f.cover}`), [f.pos], f, (i) => works(f, i, g));
+    push(f.id, "works", f.name + (f.progress === 100 ? "" : ` ${f.progress}% · cover ${f.cover}`), [f.pos], f, (i, p) => works(f, i, g, p),
+      {text: worksText(f), places: worksPlaces(f, g)});
   }
   return list;
 }
@@ -236,7 +335,9 @@ export function featureMarks(features: readonly MapFeature[], options: FeatureOp
 /** What: one SVG group of every mark, each with a status tooltip; independent of the grid toggle.
  * Test: `every catalog entry's feature layer, legend and hex notes match the POC desk's`. */
 export function featureLayer(features: readonly MapFeature[], options: FeatureOptions): string {
-  return "<g class=\"battle-features\" pointer-events=\"none\">" + featureMarks(features, options).map((m) => m.draw()).join("") + "</g>";
+  const marks = featureMarks(features, options);
+  const placed = placeLabels(marks.flatMap((m) => (m.label ? [m.label] : [])), options.obstacles);
+  return "<g class=\"battle-features\" pointer-events=\"none\">" + marks.map((m) => m.draw(placed.get(m.key) ?? null)).join("") + "</g>";
 }
 
 /** Tooltip lines for hex `pos`: each mark over it, with its status and basis. */

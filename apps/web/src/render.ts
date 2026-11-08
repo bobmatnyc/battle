@@ -15,6 +15,7 @@ const TERRAIN_FILL: Record<string, string> = {open: "#e7e0c4", woods: "#b9c99a",
 const SYMBOLS: Record<string, string> = {infantry: "INF", cavalry: "CAV", artillery: "ART"};
 // bt-T11: the POC desk's ring is r=53 on its 25.5 hex radius (apps/poc/static/app.js renderMap).
 const RING_PER_RADIUS = 53 / 25.5;
+const COUNTER_W = 74, COUNTER_H = 34;  // px: a counter's box, centred on its hex
 
 const percent = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : null;
@@ -41,8 +42,8 @@ function counter(kind: "friendly" | "contact", id: string, point: [number, numbe
   const [x, y] = point;
   const data = kind === "friendly" ? `data-unit="${esc(id)}"` : `data-contact="${esc(id)}"`;
   const pressed = kind === "friendly" ? ` role="button" tabindex="0" aria-pressed="${selected}"` : "";
-  return `<g class="counter ${kind}${selected ? " selected" : ""}" ${data}${pressed} transform="translate(${(x - 37).toFixed(1)},${(y - 17).toFixed(1)})">`
-    + `<title>${esc(title)}</title><rect width="74" height="34" rx="3"/>`
+  return `<g class="counter ${kind}${selected ? " selected" : ""}" ${data}${pressed} transform="translate(${(x - COUNTER_W / 2).toFixed(1)},${(y - COUNTER_H / 2).toFixed(1)})">`
+    + `<title>${esc(title)}</title><rect width="${COUNTER_W}" height="${COUNTER_H}" rx="3"/>`
     + `<text x="4" y="11" class="counter-id">${esc(id)}</text>`
     + `<text x="4" y="21">${esc(lines[0])}</text><text x="4" y="31">${esc(lines[1])}</text></g>`;
 }
@@ -89,7 +90,10 @@ export function mapMarkup(view: CommanderView, map: MapDocument, selection: Sele
     `${c.id} · ${c.estimate} · ${c.confidence} confidence`, false)).join("");
   const own = view.units.map((u) => counter("friendly", u.id, hexCenter(u.pos, r), unitLines(u),
     `${u.id} · ${u.name} · ${u.status}`, u.id === selection.unitId)).join("");
-  return `<g class="hexes">${hexes}</g>${objective}${featureLayer(view.map_features, options)}${route}`
+  // bt-T16: a feature label keeps clear of every counter, which is drawn above it.
+  const obstacles = [...view.contacts, ...view.units].map((u) => hexCenter(u.pos, r))
+    .map(([x, y]) => ({x0: x - COUNTER_W / 2, y0: y - COUNTER_H / 2, x1: x + COUNTER_W / 2, y1: y + COUNTER_H / 2}));
+  return `<g class="hexes">${hexes}</g>${objective}${featureLayer(view.map_features, {...options, obstacles})}${route}`
     + `<g class="contacts">${contacts}</g><g class="units">${own}</g>`;
 }
 

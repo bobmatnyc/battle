@@ -67,19 +67,22 @@ function polygons(options){return mapData.cells.map(c=>{const[x,y]=center(c.pos)
 // Features come from the commander view; static/map-features.js draws them at the map's scale,
 // with each mark's status from the presentation-only static/feature-sources.js (docs/research/72).
 function featureOptions(){return {metresPerHex:mapData.metres_per_hex,cells:mapData.cells,sources:BattleFeatureSources.forScenario(state.scenario_brief?.id)};}
-function renderFeatures(options=featureOptions()){return BattleFeatures.render(state.map_features,center,esc,options);}
-function renderFeatureLegend(options){$('feature-legend').innerHTML=BattleFeatures.legend(state.map_features,esc,options);}
-function renderMap(){const[ox,oy]=center(state.objective);const obj=state.scenario_brief?.objective||{place:'',label:'OBJECTIVE',ring:false};const features=featureOptions();let shapes=BattleMap.render(mapData.cells,terrain,BattleMapView.active())+`<g>${polygons(features)}</g><g pointer-events="none" class="summit">${obj.ring?`<circle cx="${ox}" cy="${oy}" r="53" fill="#fff" fill-opacity=".25" stroke="#b19752" stroke-width="2" stroke-dasharray="5 5"/>`:''}<circle cx="${ox}" cy="${oy}" r="15" fill="#fff" stroke="#b19752" stroke-width="2"/><path d="M${ox-4},${oy+8}v-17l11,4 -11,4" fill="none" stroke="#94772e" stroke-width="2"/><text x="${ox}" y="${oy-118}" class="place-label">${esc(obj.place)}</text><text x="${ox}" y="${oy-97}" class="place-subtitle">${esc(obj.label)}</text></g>`;
-shapes+=renderFeatures(features);renderFeatureLegend(features);
-for(const depot of state.supply_sites||[]){const[x,y]=center(depot.pos);shapes+=`<g pointer-events="none"><rect x="${x-12}" y="${y-12}" width="24" height="24" rx="3" fill="#fff5d5" stroke="#8f7134" stroke-width="2"/><path d="M${x-7},${y-7}l14,14m0,-14l-14,14" stroke="#8f7134"/><text x="${x}" y="${y+29}" text-anchor="middle" font-size="11" fill="#634e27">${godMode?esc(depot.side)+' · ':''}AMMUNITION</text></g>`;}
-const selectedUnit=state.units.find(u=>u.id===selected);
-if(selectedUnit){const target=destination||selectedUnit.target;if(target){const[a,b]=center(selectedUnit.pos),[c,d]=center(target);shapes+=`<path d="M${a},${b}L${c},${d}" stroke="#23445b" stroke-width="3" stroke-dasharray="7 5" pointer-events="none"/><circle cx="${c}" cy="${d}" r="10" fill="none" stroke="#23445b" stroke-width="3" pointer-events="none"/>`;}}
-shapes+=unitIcons.render([
+// bt-T16 (docs/research/80): the counters, laid out first, so a feature label keeps clear of their cards.
+function counterEntries(){return [
   ...state.contacts.map(c=>({unit:c,contact:true,enemy:true,selected:selected==='contact:'+c.id,
     point:center(c.pos),report:`Estimate · ${c.age*state.seconds_per_turn}s old · ${c.confidence||'unconfirmed'} confidence`})),
   ...state.units.map(u=>({unit:u,contact:false,enemy:u.side!==state.side,selected:selected===u.id,
     point:center(u.pos),report:godMode?'Exact observer state':`Reported ${clock(u.observed_turn)}`})),
-]);
+];}
+function renderFeatures(options=featureOptions()){return BattleFeatures.render(state.map_features,center,esc,{...options,obstacles:unitIcons.obstacles(counterEntries())});}
+function renderFeatureLegend(options){$('feature-legend').innerHTML=BattleFeatures.legend(state.map_features,esc,options);}
+function renderMap(){const[ox,oy]=center(state.objective);const obj=state.scenario_brief?.objective||{place:'',label:'OBJECTIVE',ring:false};const features=featureOptions();let shapes=BattleMap.render(mapData.cells,terrain,BattleMapView.active())+`<g>${polygons(features)}</g><g pointer-events="none" class="summit">${obj.ring?`<circle cx="${ox}" cy="${oy}" r="53" fill="#fff" fill-opacity=".25" stroke="#b19752" stroke-width="2" stroke-dasharray="5 5"/>`:''}<circle cx="${ox}" cy="${oy}" r="15" fill="#fff" stroke="#b19752" stroke-width="2"/><path d="M${ox-4},${oy+8}v-17l11,4 -11,4" fill="none" stroke="#94772e" stroke-width="2"/><text x="${ox}" y="${oy-118}" class="place-label">${esc(obj.place)}</text><text x="${ox}" y="${oy-97}" class="place-subtitle">${esc(obj.label)}</text></g>`;
+const counters=counterEntries();
+shapes+=renderFeatures(features);renderFeatureLegend(features);
+for(const depot of state.supply_sites||[]){const[x,y]=center(depot.pos);shapes+=`<g pointer-events="none"><rect x="${x-12}" y="${y-12}" width="24" height="24" rx="3" fill="#fff5d5" stroke="#8f7134" stroke-width="2"/><path d="M${x-7},${y-7}l14,14m0,-14l-14,14" stroke="#8f7134"/><text x="${x}" y="${y+29}" text-anchor="middle" font-size="11" fill="#634e27">${godMode?esc(depot.side)+' · ':''}AMMUNITION</text></g>`;}
+const selectedUnit=state.units.find(u=>u.id===selected);
+if(selectedUnit){const target=destination||selectedUnit.target;if(target){const[a,b]=center(selectedUnit.pos),[c,d]=center(target);shapes+=`<path d="M${a},${b}L${c},${d}" stroke="#23445b" stroke-width="3" stroke-dasharray="7 5" pointer-events="none"/><circle cx="${c}" cy="${d}" r="10" fill="none" stroke="#23445b" stroke-width="3" pointer-events="none"/>`;}}
+shapes+=unitIcons.render(counters);
 for(const r of state.recommendations||[]){
   if(r.status!=='delivered')continue;
   const u=state.units.find(u=>u.id===r.unit_id);if(!u)continue;
