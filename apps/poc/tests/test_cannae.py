@@ -172,7 +172,7 @@ class CannaeEntryTests(unittest.TestCase):
                 self.assertEqual(differences(VARIANTS[name].entry), paths)
         for d in CAVALRY_DELAYS:
             entry = VARIANTS[f"cavalry-delayed-{d}"].entry
-            self.assertEqual((differences(entry), entry.scripted["carthaginian"]), (set(), cavalry_delay_policy(d)))
+            self.assertEqual((differences(entry), entry.scripted["carthaginian"]), (set(), cavalry_delay_policy(d, 2)))
         self.assertIn("units.L2.pos", differences(VARIANTS["wide-front"].entry))
         for name, v in VARIANTS.items():
             dry_run(validate(v.entry))
@@ -275,7 +275,7 @@ class CannaePolicyTests(unittest.TestCase):
                           if o["unit_id"] in HASDRUBAL])
 
     def test_a_cavalry_delay_holds_the_ride_for_its_intervals(self):
-        units, delayed = self._carthaginians(), POLICIES[cavalry_delay_policy(10)]
+        units, delayed = self._carthaginians(), POLICIES[cavalry_delay_policy(10)]  # v1: HC1 only.
         rides = lambda orders: [o for o in orders if o["unit_id"] in HASDRUBAL]
         self.assertEqual(rides(delayed(observation(20, units, orders=FALLS))[1]),
                          [{"unit_id": "HC1", "stance": "hold", "destination": None}])

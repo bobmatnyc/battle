@@ -25,7 +25,8 @@ Test: `test_every_order_carries_a_source_locator_or_a_label`,
 `test_hasdrubal_rides_only_after_the_roman_right_cavalry_leaves_the_view`,
 `test_the_horse_pursues_the_roman_right_cavalry_while_it_is_in_view_and_unrouted`,
 `test_the_charge_follows_a_reported_arrival_and_targets_the_roman_rear`,
-`test_a_cavalry_delay_holds_the_ride_for_its_intervals`.
+`test_a_cavalry_delay_holds_the_ride_for_its_intervals`,
+`test_q5_the_cavalry_delayed_variants_hold_all_three_horse_units`.
 """
 
 from . import grid
@@ -91,7 +92,8 @@ CARTHAGINIAN_ORDERS = (
      "provenance": "reconstruction: D34 (Bob 2026-11-08 14:22Z), ride fix option (i) of docs/research/68 §9; policy "
                    "only, the Dd8 q5 view rule unchanged (docs/research/77)"},
     {"id": "ride", "unit": HASDRUBAL, "trigger": f"after interval {CONTACT_MAX_AGE + 1}, no contact of EQ in the "
-     "view (it routed out of sight or was lost); later by 10, 20 or 40 in cavalry-delayed", "stance": "move",
+     "view (it routed out of sight or was lost); later by 10, 20 or 40 in cavalry-delayed, whose v2 controls "
+     "hold all three horse units for the delay (D38 Q5, docs/research/82)", "stance": "move",
      "hex": RIDE, "source": "S65 III.116: having cut up the Roman horse, Hasdrubal rides to the Numidians",
      "provenance": "reconstruction: C1's trigger, the Roman right cavalry routed or lost (doc 63 §8 row 20), read "
                    "from the delivered view; the hexes behind the Roman left are authored"},
@@ -209,7 +211,7 @@ def _rear(observation, n):
     return [tuple(c["pos"]) for c in heavy[:n]]
 
 
-def _carthaginian(observation, *, delay=0, deserters=False):
+def _carthaginian(observation, *, delay=0, deserters=False, hold_all=False):
     if not _operational(observation):
         return [], []
     turn, sent, units, wanted = observation["turn"], _sent(observation), _units(observation), []
@@ -219,10 +221,12 @@ def _carthaginian(observation, *, delay=0, deserters=False):
     if not rode and quarry:  # D34: the horse pursues EQ while it is in view and unrouted (policy only).
         horse = _pursue(observation, sent, quarry)
     elif not rode and _horse_gone(observation):
-        marker = [t for s, d, t in sent.get("HC1", ()) if s == "hold"]
-        if delay and not marker:
-            wanted.append(("HC1", "hold", None))  # The horse halts: the start of the delay.
-        elif not delay or turn >= marker[0] + delay:
+        held = HASDRUBAL if hold_all else ("HC1",)  # D38 Q5 (docs/research/82): v2 holds all three.
+        marker = [t for uid in held for s, d, t in sent.get(uid, ()) if s == "hold"]
+        if delay and (not marker or (hold_all and turn < min(marker) + delay)):
+            # The horse halts: the start of the delay. v2 asks again for a hold the order cap left out.
+            wanted += [(uid, "hold", None) for uid in held]
+        elif not delay or turn >= min(marker) + delay:
             # D34: sent outside _once, whose one-move-per-unit check would refuse the ride after a pursuit.
             horse = [{"unit_id": uid, "stance": "move", "destination": list(RIDE[uid])} for uid in HASDRUBAL
                      if uid in units and _able(units[uid])]
@@ -267,15 +271,18 @@ def deserters_actions(observation):
     return _carthaginian(observation, deserters=True)
 
 
-def _delayed(delay):
+def _delayed(delay, version=1):
     def actions(observation):
-        return _carthaginian(observation, delay=delay)
-    actions.__doc__ = f"Doc 63 §8 cavalry-delayed: C1 with the ride {delay} intervals after its trigger."
+        return _carthaginian(observation, delay=delay, hold_all=version == 2)
+    held = "all three horse units are held" if version == 2 else "HC1 is held"
+    actions.__doc__ = (f"Doc 63 §8 cavalry-delayed: C1 with the ride {delay} intervals after its trigger; "
+                       f"{held} (v2: D38 Q5, docs/research/82).")
     return actions
 
 
+# v1 stays registered so games recorded under it keep their recorded control (docs/research/82).
 POLICIES = {ROMAN_POLICY: roman_actions, ROMAN_RESERVE_POLICY: roman_reserve_actions,
             CARTHAGINIAN_POLICY: carthaginian_actions, DESERTERS_POLICY: deserters_actions,
-            **{cavalry_delay_policy(d): _delayed(d) for d in CAVALRY_DELAYS}}
+            **{cavalry_delay_policy(d, v): _delayed(d, v) for d in CAVALRY_DELAYS for v in (1, 2)}}
 # Policy id -> the side it fits (command_policy.NAMED_POLICIES).
 NEEDS = {p: f"the {'Roman' if 'roman' in p else 'Carthaginian'} side of the Cannae scenario" for p in POLICIES}

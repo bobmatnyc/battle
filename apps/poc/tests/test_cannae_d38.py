@@ -9,7 +9,10 @@ import unittest
 from dataclasses import replace
 
 from battle import grid, victory
-from battle.scenario_cannae import CANNAE_ENVELOPMENT as ENTRY, PRESS_ROW, VARIANTS, cannae_entry
+from battle.cannae_policy import POLICIES
+from battle.scenario_cannae import (
+    CANNAE_ENVELOPMENT as ENTRY, CAVALRY_DELAYS, HASDRUBAL, PRESS_ROW, RIDE, VARIANTS, cannae_entry,
+)
 from battle.scenario_entry import build_state, validate
 from battle.victory_encircle import D38
 
@@ -167,6 +170,46 @@ class Q1SustainedTests(unittest.TestCase):
         results = self.play(s, range(1, 40), below={20})  # 19 held, one below, then 19 held again.
         self.assertEqual(set(results[:39]), {(None, None)})
         self.assertEqual(self.play(s, [40])[0][0], "carthaginian")  # The 20th after the break.
+
+
+def observation(turn, units, orders=()):
+    """A Carthaginian commander view with no contact of EQ: the Roman right cavalry is gone."""
+    return {"turn": turn, "command": {"operational": True}, "contacts": [], "orders": list(orders),
+            "units": [dict({"status": "ready", "accepts_orders": True}, **u) for u in units]}
+
+
+def sent(uid, stance, destination, turn):
+    return {"unit_id": uid, "stance": stance, "destination": destination, "sent_turn": turn}
+
+
+class Q5HoldTests(unittest.TestCase):
+    """D38 Q5: the cavalry-delayed variant holds all three horse units, not HC1 only."""
+
+    FALLS = [sent(u, "retreat", [0, 3], 10) for u in ("LT1", "LT2", "LT3")]  # Already sent: no order competes.
+
+    def setUp(self):
+        self.units = [dict(u) for u in build_state(ENTRY)["units"] if u["side"] == "carthaginian"]
+
+    def horse(self, policy, turn, orders):
+        return [o for o in policy(observation(turn, self.units, orders))[1] if o["unit_id"] in HASDRUBAL]
+
+    def test_q5_the_cavalry_delayed_variants_hold_all_three_horse_units(self):
+        for d in CAVALRY_DELAYS:
+            with self.subTest(d):
+                policy = POLICIES[VARIANTS[f"cavalry-delayed-{d}"].entry.scripted["carthaginian"]]
+                self.assertEqual(self.horse(policy, 20, self.FALLS),
+                                 [{"unit_id": u, "stance": "hold", "destination": None} for u in HASDRUBAL])
+                held = self.FALLS + [sent(u, "hold", None, 20) for u in HASDRUBAL]
+                self.assertEqual(self.horse(policy, 20 + d - 1, held), [])
+                self.assertEqual([o["destination"] for o in self.horse(policy, 20 + d, held)],
+                                 [list(RIDE[u]) for u in HASDRUBAL])
+
+    def test_q5_a_hold_left_out_is_sent_later_and_the_delay_counts_from_the_first(self):
+        policy = POLICIES[VARIANTS["cavalry-delayed-10"].entry.scripted["carthaginian"]]
+        held = self.FALLS + [sent("HC2", "hold", None, 20)]
+        self.assertEqual([o["unit_id"] for o in self.horse(policy, 21, held)], ["HC1", "HC3"])
+        held += [sent(u, "hold", None, 21) for u in ("HC1", "HC3")]
+        self.assertEqual(len(self.horse(policy, 30, held)), 3)  # The ride, 10 after the first hold.
 
 
 if __name__ == "__main__":

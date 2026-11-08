@@ -61,8 +61,9 @@ CARTHAGINIAN_POLICY = "scripted-cannae-carthaginian-v1"
 DESERTERS_POLICY = "scripted-cannae-carthaginian-deserters-v1"
 
 
-def cavalry_delay_policy(delay):
-    return f"scripted-cannae-carthaginian-cavalry-delay-{delay}-v1"
+def cavalry_delay_policy(delay, version=1):
+    """The delay control's id; v2 holds all three horse units (D38 Q5, docs/research/82)."""
+    return f"scripted-cannae-carthaginian-cavalry-delay-{delay}-v{version}"
 
 
 LEGIONS = tuple(f"L{i}" for i in range(1, 9))
@@ -294,7 +295,8 @@ PROVENANCE = {
 D38 = "cannae-d38"
 D38_PROVENANCE = ("authored: D38 (Bob 2026-11-08 17:41Z), the cannae-d38 edition of docs/research/82 on doc 79 §7: "
                   "a routed defender is no wall (Q2); a Roman unit at the row-0 edge has broken through (Q3); "
-                  "the share held for 20 consecutive intervals wins at once (Q1)")
+                  "the share held for 20 consecutive intervals wins at once (Q1); cavalry-delayed holds all "
+                  "three horse units (Q5)")
 
 
 def cannae_entry(variant=None, *, design=True, wheels=AFRICANS, horse=1, dust=False, wide=False, reserve=False,
@@ -366,7 +368,7 @@ def _variants():
     ) + tuple(
         (f"cavalry-delayed-{d}", "doc 63 §8 cavalry-delayed (10, 20, 40)",
          f"Hasdrubal's horse waits {d} intervals after its trigger before it rides", "doc 36; authored",
-         dict(scripted={"roman": ROMAN_POLICY, "carthaginian": cavalry_delay_policy(d)})) for d in CAVALRY_DELAYS
+         dict(scripted={"roman": ROMAN_POLICY, "carthaginian": cavalry_delay_policy(d, 2)})) for d in CAVALRY_DELAYS
     ) + tuple(
         (f"one-wing-fixed-{uid.lower()}", "doc 63 §8 one-wing-fixed", f"{uid} has no wheel trigger", "doc 36",
          dict(wheels=tuple(a for a in AFRICANS if a != uid))) for uid in AFRICANS
