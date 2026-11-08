@@ -80,12 +80,15 @@ export function contactsMarkup(view: CommanderView, clock: (turn: number) => str
     + `${esc(c.confidence)} confidence · hex ${c.pos.join(",")} · seen ${esc(clock(c.observed_turn))}</li>`).join("");
 }
 
-/** Own orders, newest first, timed by battlefield clock. */
+/** Own orders, newest first: the template, the status headquarters knows, and battlefield
+ * send and expected delivery times (the delivery estimate only while en route). */
 export function ordersMarkup(view: CommanderView, clock: (turn: number) => string): string {
   if (!view.orders.length) return "<li>No orders sent.</li>";
   return [...view.orders].reverse().map((o) => {
     const where = o.destination ? ` → hex ${o.destination.join(",")}` : "";
+    const label = view.order_templates.find((t) => t.id === o.stance)?.label;
+    const due = o.status === "en_route" && o.arrival_turn !== null ? ` · due ${esc(clock(o.arrival_turn))}` : "";
     return `<li data-order="${esc(o.id)}" data-order-unit="${esc(o.unit_id)}">${esc(o.unit_id)} · ${esc(o.stance)}${where}`
-      + ` · ${esc(o.status.replaceAll("_", " "))} · sent ${esc(clock(o.sent_turn))}</li>`;
+      + `${label ? ` · ${esc(label)}` : ""} · ${esc(o.status.replaceAll("_", " "))} · sent ${esc(clock(o.sent_turn))}${due}</li>`;
   }).join("");
 }

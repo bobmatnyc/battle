@@ -53,6 +53,26 @@ test("a refusal without a JSON error still reports the status", async () => {
     error instanceof DeskRefusal && error.status === 502 && /502/.test(error.message));
 });
 
+test("a relay reply marked outcome unknown is a refusal the desk can tell apart", async () => {
+  const unknown = createDeskApi(transport(504, {error: "The local simulation did not answer within 120000 ms.", outcome: "unknown"}));
+  await assert.rejects(unknown.orders(body), (error: unknown) =>
+    error instanceof DeskRefusal && error.status === 504 && error.outcomeUnknown && /did not answer/.test(error.message));
+  const plain = createDeskApi(transport(400, {error: "Choose an available order template."}));
+  await assert.rejects(plain.orders(body), (error: unknown) => error instanceof DeskRefusal && !error.outcomeUnknown);
+});
+
+test("the scenario catalog is read through its contract, and a new battle posts the chosen id at the cursor", async () => {
+  const sent: Sent[] = [];
+  const list = await createDeskApi(transport(200, raw("scenarios"), sent)).scenarios();
+  assert.deepEqual(list.scenarios.map((s) => s.id), ["little-round-top", "hougoumont-north-gate"]);
+  await assert.rejects(createDeskApi(transport(200, {default: "x", scenarios: []})).scenarios(), ContractError);
+  const state = await createDeskApi(transport(200, raw("state-commander"), sent)).newBattle("hougoumont-north-gate", {game_id: "g", revision: 4});
+  assert.equal(state.side, "union");
+  assert.equal(sent[0]!.url, "/api/scenarios");
+  assert.equal(sent[1]!.url, "/api/new");
+  assert.deepEqual(JSON.parse(String(sent[1]!.init?.body)), {scenario: "hougoumont-north-gate", game_id: "g", revision: 4});
+});
+
 test("an order body that breaks the contract is not sent", async () => {
   const sent: Sent[] = [];
   const api = createDeskApi(transport(200, raw("state-commander"), sent));

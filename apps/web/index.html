@@ -9,6 +9,11 @@
 <body>
 <header class="desk-header">
   <div><span id="campaign"></span><h1 id="title">Command desk</h1></div>
+  <div class="scenario-choice">
+    <label for="scenario-select">Scenario</label>
+    <select id="scenario-select" disabled></select>
+    <button id="new-battle" disabled>Start battle</button>
+  </div>
   <div class="battle-clock" aria-live="polite">
     <strong id="battle-time">--:--</strong>
     <span id="battle-date"></span>
@@ -24,11 +29,17 @@
     <section>
       <h2>Selected</h2>
       <p id="selection">Select one of your counters on the map.</p>
-      <button id="send-order" disabled>Send move order</button>
+      <div id="unit-card" class="unit-card"></div>
+      <label for="order-kind">Order</label>
+      <select id="order-kind" disabled></select>
+      <div id="order-help" class="order-help"></div>
+      <button id="send-order" disabled>Send order</button>
       <button id="clock-toggle" disabled>Start clock</button>
     </section>
     <section><h2>Orders</h2><ol id="orders"></ol></section>
+    <section><h2>Dispatches</h2><ol id="dispatches" class="dispatches"></ol></section>
     <section><h2>Enemy sightings</h2><ul id="contacts"></ul></section>
+    <section><h2>Mission</h2><div id="mission"></div></section>
   </aside>
 </main>
 </body>

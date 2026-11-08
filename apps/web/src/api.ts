@@ -2,17 +2,21 @@
 // Every response is read through the commander-view contract, so a God view
 // (or any omniscient field) is refused rather than drawn.
 import {
-  orderSubmission, parse, readCommanderState, readMapDocument,
-  type CommanderState, type MapDocument, type OrderSubmission,
+  orderSubmission, parse, readCommanderState, readMapDocument, readScenarioList,
+  type BattleCursor, type CommanderState, type MapDocument, type OrderSubmission, type ScenarioList,
 } from "@battle/contracts";
 
-/** A request the server refused: its HTTP status and the server's own text. */
+/** A request the server refused: its HTTP status and the server's own text.
+ * `outcomeUnknown`: the desk server gave up on a request the POC may have committed
+ * (a 504 or a dropped reply marked `outcome: "unknown"`, docs/research/71). */
 export class DeskRefusal extends Error {
   readonly status: number;
-  constructor(status: number, message: string) {
+  readonly outcomeUnknown: boolean;
+  constructor(status: number, message: string, outcomeUnknown = false) {
     super(message);
     this.name = "DeskRefusal";
     this.status = status;
+    this.outcomeUnknown = outcomeUnknown;
   }
 }
 
@@ -21,8 +25,10 @@ export type ClockCommand = "start" | "pause";
 export interface DeskApi {
   state(): Promise<CommanderState>;
   map(): Promise<MapDocument>;
+  scenarios(): Promise<ScenarioList>;
   orders(body: OrderSubmission): Promise<CommanderState>;
   clock(command: ClockCommand, gameId: string): Promise<CommanderState>;
+  newBattle(scenario: string, cursor: BattleCursor): Promise<CommanderState>;
 }
 
 async function body(response: Response): Promise<unknown> {
@@ -33,15 +39,19 @@ async function body(response: Response): Promise<unknown> {
     if (data === null) throw new DeskRefusal(response.status, "The server sent no readable battle data.");
     return data;
   }
-  const error = typeof data === "object" && data !== null ? (data as Record<string, unknown>)["error"] : undefined;
+  const fields = typeof data === "object" && data !== null ? data as Record<string, unknown> : {};
+  const error = fields["error"];
   throw new DeskRefusal(response.status,
-    typeof error === "string" && error ? error : `The server refused the request (HTTP ${response.status}).`);
+    typeof error === "string" && error ? error : `The server refused the request (HTTP ${response.status}).`,
+    fields["outcome"] === "unknown");
 }
 
 /** Why: refusals must reach the player, and the desk must never hold a God view.
- * What: GET /api/state and /api/map, POST /api/orders and /api/clock; a non-2xx reply
- * throws DeskRefusal with the server's `error` text; replies pass the contracts.
- * Test: `a server refusal keeps its status and text`, `a God view is refused, so the desk cannot draw omniscient state`. */
+ * What: GET /api/state, /api/map and /api/scenarios; POST /api/orders, /api/clock and /api/new.
+ * A non-2xx reply throws DeskRefusal with the server's `error` text; replies pass the contracts.
+ * Test: `a server refusal keeps its status and text`, `a God view is refused, so the desk cannot draw omniscient state`,
+ * `a relay reply marked outcome unknown is a refusal the desk can tell apart`,
+ * `the scenario catalog is read through its contract, and a new battle posts the chosen id at the cursor`. */
 export function createDeskApi(request: typeof fetch, base = ""): DeskApi {
   const get = async (path: string): Promise<unknown> => body(await request(base + path));
   const post = async (path: string, payload: unknown): Promise<unknown> => body(await request(base + path, {
@@ -50,11 +60,14 @@ export function createDeskApi(request: typeof fetch, base = ""): DeskApi {
   return Object.freeze({
     state: async () => readCommanderState(await get("/api/state")),
     map: async () => readMapDocument(await get("/api/map")),
+    scenarios: async () => readScenarioList(await get("/api/scenarios")),
     orders: async (submission: OrderSubmission) => {
       const checked = parse(orderSubmission, submission);
       return readCommanderState(await post("/api/orders", checked));
     },
     clock: async (command: ClockCommand, gameId: string) =>
       readCommanderState(await post("/api/clock", {command, game_id: gameId})),
+    newBattle: async (scenario: string, cursor: BattleCursor) =>
+      readCommanderState(await post("/api/new", {scenario, game_id: cursor.game_id, revision: cursor.revision})),
   });
 }

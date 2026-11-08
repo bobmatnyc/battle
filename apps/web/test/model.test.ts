@@ -4,7 +4,8 @@ import {test} from "node:test";
 import {orderSubmission, parse} from "@battle/contracts";
 import {battleClock} from "../src/timeline.ts";
 import {hexCenter} from "../src/geometry.ts";
-import {clickMap, emptySelection, moveOrder} from "../src/selection.ts";
+import {clickMap, emptySelection} from "../src/selection.ts";
+import {orderBody} from "../src/orders.ts";
 import {commander, map} from "./fixtures.ts";
 
 test("battlefield time is the scenario's local time in every browser time zone", () => {
@@ -46,11 +47,11 @@ test("a friendly counter selects, a hex sets the destination, and the order body
 
   step = clickMap(view, step.selection, {kind: "unit", id: own.id});
   assert.deepEqual(step.selection, {unitId: own.id, destination: null});
-  assert.equal(moveOrder(view, step.selection), null, "no destination yet");
+  assert.equal(orderBody(view, step.selection, "move"), null, "no destination yet");
 
   step = clickMap(view, step.selection, {kind: "hex", pos: [12, 14]});
   assert.deepEqual(step.selection.destination, [12, 14]);
-  const body = moveOrder(view, step.selection);
+  const body = orderBody(view, step.selection, "move");
   assert.deepEqual(body, {
     orders: [{unit_id: own.id, stance: "move", destination: [12, 14]}],
     game_id: view.game_id, revision: view.revision,
@@ -75,5 +76,5 @@ test("a routed or lost unit takes no move order", () => {
   const own = {...view.units[0]!, status: "routed"};
   const routed = {...view, units: [own, ...view.units.slice(1)]};
   const selection = {unitId: own.id, destination: [12, 14] as [number, number]};
-  assert.equal(moveOrder(routed, selection), null);
+  assert.equal(orderBody(routed, selection, "move"), null);
 });

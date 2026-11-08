@@ -24,4 +24,17 @@ button { margin: 4px 4px 0 0; padding: 6px 10px; }
 .notice { padding: 6px 10px; border-radius: 3px; background: #e8e3d2; }
 .notice[data-kind="refusal"] { background: #f6d5cf; color: #6b1f15; font-weight: bold; }
 .notice[data-kind="accepted"] { background: #d6ecd2; color: #1f4d17; }
+.notice[data-kind="unknown"] { background: #f6ebc4; color: #5b4400; font-weight: bold; }
+.scenario-choice { display: flex; gap: 6px; align-items: center; }
+.scenario-choice button { margin: 0; }
+.unit-card h3 { margin: 6px 0 2px; font-size: 14px; }
+.unit-card .unit-age, .unit-card .unit-judgment { margin: 2px 0; font-size: 12px; color: #555; }
+.unit-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin: 4px 0; }
+.unit-stats div { display: flex; justify-content: space-between; border-bottom: 1px dotted #c9c1a8; }
+.unit-stats dt, .unit-stats dd { margin: 0; font-size: 12px; }
+.unit-stats dd { font-weight: bold; }
+.order-help { font-size: 12px; margin: 4px 0; }
+.order-help p { margin: 2px 0; }
+.dispatches { max-height: 220px; overflow-y: auto; font-size: 12px; }
+select { padding: 4px; max-width: 100%; }
 @media (max-width: 760px) { .desk { grid-template-columns: 1fr; } }
