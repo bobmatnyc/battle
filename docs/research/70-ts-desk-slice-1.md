@@ -64,6 +64,16 @@ Use `make poc` instead of `make poc-offline` for the usual commander; the desk i
 
 **Limit:** the opening Little Round Top state has no contacts, so the browser run draws no enemy marker. Contact markers and the contact list are checked only against the recorded 12-interval fixture, in `render.test.ts`.
 
+**Evidence for main `c345e4d`.** The run logs and screenshots are kept locally in the git-ignored `apps/poc/artifacts/ts-desk-1-c345e4d/`; they are not published. `MANIFEST.txt` lists each file, what produced it and its exit code.
+
+| Path | Contents |
+|---|---|
+| `gates-initial/g1.log` … `g5.log` | First gate run on main: typecheck (failed: the main checkout lacked the installed `@types/node`, fixed by `npm ci --offline`), `npm test`, `make test-poc` (744 OK), `make headless-poc` (replay identical), `make smoke-web` (passed) |
+| `gates-final/typecheck.log`, `npm-test.log`, `smoke-web.log` | Rerun after the install: typecheck exit 0, 28 + 56 tests pass, `SMOKE PASSED` |
+| `smoke-main/desk-accepted.png`, `gates-final/smoke-artifacts/desk-accepted.png`, `builder-desk-accepted.png` | Browser screenshots after the accepted move order |
+| `fault-cleanup/fault-poc-never-ready.log` | `SMOKE_POC_READY="never printed"`: exit 1 within 3 s, then a process check with no POC or Chrome left |
+| `fault-cleanup/fault-browser-hang.log` | A browser that gives no DevTools endpoint: exit 3 (`SMOKE BLOCKED`) within 3 s, then the same process check |
+
 ## Deferred
 
 - Other scenarios. A Hougoumont map passes the contract, but no desk check covers it. Switching scenarios (`/api/new`, `/api/scenarios`) is not in the desk.
