@@ -59,13 +59,15 @@ for sid in catalog.ids():
         'walls': walls(s, side),
         'closed': {'features': present_view(sim.view(closed), entry)['map_features'], 'walls': walls(closed, side)},
         'unseen': present_view(sim.view(secret), entry)['map_features'],
+        'units': [{'id': u['id'], 'pos': u['pos']} for u in shown['units']],
+        'contacts': [{'id': c['id'], 'pos': c['pos']} for c in shown['contacts']],
     }
 print(json.dumps(out))`;
 const generated=spawnSync('python3',['-c',fixtureScript],{cwd:root,encoding:'utf8',maxBuffer:64<<20});
 assert.equal(generated.status,0,generated.stderr);
 const scenarios=JSON.parse(generated.stdout);
 const context=vm.createContext({});
-for(const file of ['feature-sources.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
+for(const file of ['feature-sources.js','map-features.js','unit-icons.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
 const R=25.5,SPACING=Math.sqrt(3)*R,inner=SPACING/2,eps=1e-6;
 const center=p=>[(p[0]+.5*(p[1]&1))*SPACING+24,p[1]*38.25+26];  // static/app.js center
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -97,6 +99,9 @@ function group(svg,key){
   return m&&{open:m[0].slice(0,m[0].indexOf('>')+1),body:m[1]};
 }
 const attr=(open,name)=>open.match(new RegExp(` ${name}="([^"]*)"`))?.[1];
+// A mark drawn alone is the mark drawn in the full layer, except where its label sits: bt-T16 moves a label off a collision.
+const bare=s=>s.replace(/<text [^>]*class="feature-label">[^<]*<\/text>/g,'');
+const inLayer=(layer,body)=>bare(layer).includes(bare(body));
 // Grid off adds only the no-grid class to #map; every rule it selects must style hex outlines alone.
 const css=readFileSync(new URL('../static/style.css',import.meta.url),'utf8');
 const gridRules=[...css.matchAll(/([^{}]*no-grid[^{}]*)\{([^}]*)\}/g)];
@@ -168,7 +173,7 @@ for(const [sid,data] of Object.entries(scenarios)){
       buildings++;footprints++;keys.add(f.id);
       const g=group(svg,f.id);
       assert.ok(g,`${sid} ${f.id}: a building group`);
-      assert.ok(layer.includes(g.body));
+      assert.ok(inLayer(layer,g.body));
       checkStatus(sid,f.id,g);
       const [x,y]=center(f.pos);
       const rect=g.body.match(/<rect class="footprint" x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)" fill="([^"]+)" stroke="([^"]+)" stroke-width="([^"]+)"/);
@@ -197,7 +202,7 @@ for(const [sid,data] of Object.entries(scenarios)){
     }else if(f.kind==='fortification'){
       keys.add(f.id);
       const g=group(svg,f.id);
-      assert.ok(g&&layer.includes(g.body),`${sid} ${f.id}: works drawn`);
+      assert.ok(g&&inLayer(layer,g.body),`${sid} ${f.id}: works drawn`);
       checkStatus(sid,f.id,g);
       assert.match(g.body,/class="feature-label">(FIELDWORKS|\d+% WORKS)/);
     }
@@ -257,7 +262,7 @@ function checkCompound(sid,data,f,svg,layer,keys){
     const wallKey=`${f.id}#walls`;keys.add(wallKey);
     const g=group(drawn,wallKey);
     assert.ok(g,`${sid} ${wallKey}: compound drawn (${label})`);
-    if(label==='briefed'){assert.ok(layer.includes(g.body));checkStatus(sid,wallKey,g);}
+    if(label==='briefed'){assert.ok(inLayer(layer,g.body));checkStatus(sid,wallKey,g);}
     const yard=g.body.match(/<path class="compound-yard" d="([^"]+)"/);
     assert.ok(yard,`${sid}: compound yard`);
     assert.equal((yard[1].match(/M/g)||[]).length,building.compound.length,`${sid}: one yard ring per compound hex`);
@@ -267,7 +272,7 @@ function checkCompound(sid,data,f,svg,layer,keys){
     const barrier=[...segments(wallPath)];
     for(const [o,gate] of gatesDrawn){
       assert.ok(gate,`${sid} ${o.id}: gate drawn (${label})`);
-      if(label==='briefed'){assert.ok(layer.includes(gate.body));checkStatus(sid,`${f.id}#${o.id}`,gate);}
+      if(label==='briefed'){assert.ok(inLayer(layer,gate.body));checkStatus(sid,`${f.id}#${o.id}`,gate);}
       assert.equal(attr(gate.open,'data-state'),o.state,`${sid} ${o.id}: drawn in the state the side knows`);
       assert.ok(gate.body.includes(`class="feature-label">${esc(o.name)} · ${esc(o.state)}</text>`),`${sid} ${o.id}: labelled with its state`);
       const leaf=gate.body.match(/<path class="gate-(open|shut)" d="([^"]+)"/);
@@ -283,6 +288,68 @@ function checkCompound(sid,data,f,svg,layer,keys){
     for(const m of engine)assert.ok(mids.some(d=>near(d,m)),`${sid}: engine wall at ${m} drawn (${label})`);
     for(const [a,b] of barrier)assert.ok(Math.abs(dist(a,b)-R)<1e-3,`${sid}: a barrier is one hex edge long`);
   }
+}
+// bt-T16 (docs/research/80): no feature label meets another, and no counter covers one. The check reads the
+// drawn SVG with its own, narrower text-width estimate (6 px a character, 7.8 for capitals), so it does not
+// share the placement rule's margin. The counters are the real cards (unit-icons.js) of the scenario's start.
+const PLAYABLE=['little-round-top','hougoumont-north-gate','concord-north-bridge','pegasus-bridge','hill-223-patrol'];
+const unescape=s=>s.replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+function drawnLabels(layer){
+  const out=[];
+  for(const m of layer.matchAll(/<g class="feature-mark[^>]*data-feature="([^"]*)"([^>]*)>(.*?)<\/g>/g)){
+    const t=m[3].match(/<text x="([-\d.]+)" y="([-\d.]+)"(?: text-anchor="(\w+)")? class="feature-label">([^<]*)<\/text>/);
+    if(!t)continue;
+    const move=m[2].match(/translate\(([-\d.]+),([-\d.]+)\)/),x=+t[1]+(move?+move[1]:0),y=+t[2]+(move?+move[2]:0),text=unescape(t[4]);
+    const w=[...text].reduce((n,c)=>n+(/[A-Z%]/.test(c)?7.8:6),0),x0=t[3]==='middle'?x-w/2:t[3]==='end'?x-w:x;
+    out.push({key:m[1],text,x0:x0-1,y0:y-10,x1:x0+w+1,y1:y+3});
+  }
+  return out;
+}
+const meet=(a,b)=>a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1;
+function countersOf(data){
+  const entries=[...data.contacts.map(c=>({unit:{id:c.id},contact:true,enemy:true,point:center(c.pos),report:''})),
+    ...data.units.map(u=>({unit:{id:u.id,unit_type:'infantry'},contact:false,enemy:false,point:center(u.pos),report:''}))];
+  context.entries=entries;
+  const html=vm.runInContext('UnitIcons.create({esc}).render(entries)',context);
+  const cards=[...html.matchAll(/<g transform="translate\(([-\d.]+),([-\d.]+)\)"><rect class="counter-body" width="(\d+)" height="(\d+)"/g)]
+    .map(m=>({x0:+m[1],y0:+m[2],x1:+m[1]+ +m[3],y1:+m[2]+ +m[4]}));
+  const dots=[...html.matchAll(/<circle class="counter-anchor" cx="([-\d.]+)" cy="([-\d.]+)" r="(\d+)"/g)]
+    .map(m=>({x0:+m[1]-m[3],y0:+m[2]-m[3],x1:+m[1]+ +m[3],y1:+m[2]+ +m[3]}));
+  assert.equal(cards.length,entries.length,'one card parsed per counter');
+  return {entries,cards,dots,obstacles:vm.runInContext('UnitIcons.create({esc}).obstacles(entries)',context)};
+}
+let labelsChecked=0;
+for(const sid of PLAYABLE){
+  const data=scenarios[sid];
+  const counters=countersOf(data);
+  const layer=render(data.features,sid,data,{obstacles:counters.obstacles});
+  const labels=drawnLabels(layer);
+  assert.ok(labels.length>0,`${sid}: labels drawn`);
+  assert.doesNotMatch(layer,/data-label="hidden"/,`${sid}: no label is hidden at the scenario's start`);
+  for(let i=0;i<labels.length;i++){
+    for(let j=i+1;j<labels.length;j++)assert.ok(!meet(labels[i],labels[j]),`${sid}: "${labels[i].text}" meets "${labels[j].text}"`);
+    for(const c of [...counters.cards,...counters.dots])assert.ok(!meet(labels[i],c),`${sid}: a counter covers "${labels[i].text}"`);
+  }
+  labelsChecked+=labels.length;
+}
+// The rule: lower priority number first, then key; the first candidate whose box is free; none free hides it.
+{
+  const place=(specs,obstacles)=>{
+    context.args=[specs,obstacles];
+    return JSON.parse(vm.runInContext('JSON.stringify([...BattleFeatures.placeLabels(args[0],args[1]).entries()])',context));
+  };
+  const spot=(x,y)=>({x,y,anchor:'start'});
+  const a={key:'a',priority:1,text:'Alpha',candidates:[spot(10,20),spot(10,60)]};
+  const b={key:'b',priority:0,text:'Bravo',candidates:[spot(10,20),spot(10,60)]};
+  assert.deepEqual(place([a,b],[]),[['b',spot(10,20)],['a',spot(10,60)]],'the lower priority number takes the shared first place; the other moves on');
+  assert.deepEqual(place([b,a],[]),place([a,b],[]),'the input order does not matter');
+  const tie={key:'c',priority:1,text:'Charlie',candidates:[spot(10,20),spot(10,60)]};
+  assert.deepEqual(place([tie,a],[]),[['a',spot(10,20)],['c',spot(10,60)]],'equal priority: the lower key goes first');
+  const wall={x0:0,y0:0,x1:200,y1:30};
+  assert.deepEqual(place([a],[wall]),[['a',spot(10,60)]],'an obstacle sends the label to its next place');
+  assert.deepEqual(place([a],[wall,{x0:0,y0:40,x1:200,y1:90}]),[['a',null]],'no free place hides the label');
+  assert.deepEqual(place([{...a,candidates:[spot(10,20)]},{...b,candidates:[spot(10,20)]}],[]),[['b',spot(10,20)],['a',null]],
+    'of two labels that want one place the higher-numbered priority is hidden');
 }
 assert.ok(summary.some(s=>/hougoumont.* [1-9] buildings/.test(s)));
 assert.equal(compounds,1,'the Hougoumont compound is checked');

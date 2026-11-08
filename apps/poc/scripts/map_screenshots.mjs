@@ -99,6 +99,24 @@ class Page{
   close(){this.ws.close();}
 }
 
+// bt-T16 (docs/research/80): no feature label meets another label or a counter (card or anchor dot), measured
+// on the page in screen pixels at the camera in use.
+const LABEL_BOXES=`(()=>{
+  const box=(n,kind,name)=>{const b=n.getBoundingClientRect();return {kind,name,x0:b.left,y0:b.top,x1:b.right,y1:b.bottom};};
+  return {labels:[...document.querySelectorAll('#map .battle-features .feature-label')].map(n=>box(n,'label',n.textContent)),
+    counters:[...document.querySelectorAll('#map .unit-counter .counter-body, #map .unit-counter .counter-anchor')].map(n=>box(n,'counter',n.closest('.unit-counter').getAttribute('data-unit')||n.closest('.unit-counter').getAttribute('data-contact'))),
+    hidden:document.querySelectorAll('#map .battle-features [data-label=hidden]').length};
+})()`;
+const meets=(a,b)=>a.x0<b.x1-.5&&b.x0<a.x1-.5&&a.y0<b.y1-.5&&b.y0<a.y1-.5;
+async function checkLabels(page,label,view,log){
+  const found=await page.eval(LABEL_BOXES);
+  const all=[...found.labels,...found.counters];
+  assert.ok(found.labels.length>0,`${label} ${view}: feature labels are drawn`);
+  for(let i=0;i<found.labels.length;i++)for(let j=i+1;j<all.length;j++)
+    assert.ok(!meets(found.labels[i],all[j]),`${label} ${view}: ${all[j].kind} "${all[j].name}" meets label "${found.labels[i].name}"`);
+  log.push(`${label} ${view}: ${found.labels.length} feature labels, ${found.counters.length} counter boxes, none meet; ${found.hidden} label(s) hidden by the rule`);
+}
+
 async function desk(page,port,sid,label,log){
   if(sid!=='little-round-top'){
     await page.eval(`(()=>{const s=document.getElementById('scenario-select');s.value=${JSON.stringify(sid)};s.onchange();document.getElementById('new-game').click();return true;})()`);
@@ -116,6 +134,7 @@ async function desk(page,port,sid,label,log){
         await page.until('2x zoom',`/^2\\.0/.test(document.getElementById('map-zoom').textContent)`);await sleep(400);
       }else log.push(`${label}: SVG fallback has no camera; the zoomed shots are the fit view`);
     }
+    await checkLabels(page,label,zoomed?'2x':'fit',log);
     for(const grid of ['on','off']){
       const off=await page.eval(`document.getElementById('map').classList.contains('no-grid')`);
       if((grid==='off')!==off)await page.eval(`document.getElementById('hex-toggle').click(),true`);
