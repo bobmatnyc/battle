@@ -203,7 +203,14 @@ class KeyLimitTest(unittest.TestCase):
                 self.assertFalse(refused["ok"])
                 self.assertEqual(refused["unlimited"], name.startswith("unlimited"))  # As read, not the verdict.
         # A missing field is not a null one: absent limit fields, or no data, fail closed.
-        for info in (absent, {**absent, "limit": None}, {}, "junk"):
+        # bt-T21 review: a reply missing is_free_tier or limit_reset is refused, unlimited or not.
+        both_null = {**good, "limit": None, "limit_remaining": None}
+        without = lambda info, *names: {k: v for k, v in info.items() if k not in names}  # noqa: E731
+        shapes = (without(both_null, "limit_reset", "is_free_tier", "usage"),
+                  without(both_null, "is_free_tier"), without(both_null, "limit_reset"),
+                  without(good, "is_free_tier"), without(good, "limit_reset"),
+                  without(good, "limit_reset", "is_free_tier", "usage"))
+        for info in (absent, {**absent, "limit": None}, {}, "junk", *shapes):
             with self.subTest(info=info):
                 self.assertFalse(key_limit_check(info, 14.0)["ok"])
 
