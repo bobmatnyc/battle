@@ -8,9 +8,14 @@ import {reread, sendOrder, startBattle, type Loaded} from "./commands.ts";
 import {statusTableFor} from "./feature-sources.ts";
 import {featureLegend} from "./features.ts";
 import {orderBody, templateFor} from "./orders.ts";
-import {dispatchesMarkup, missionMarkup, outcomeText, scenarioOptions, templateHelp, templateOptions, unitCardMarkup} from "./panels.ts";
-import {contactsMarkup, featureOptions, mapMarkup, ordersMarkup} from "./render.ts";
-import {openReplay, ordersOpen, replayAt, replayLabel, type Replay} from "./replay.ts";
+import {
+  dispatchesMarkup, missionMarkup, outcomeText, scenarioOptions, signalsMarkup, templateHelp, templateOptions, unitCardMarkup,
+} from "./panels.ts";
+import {contactsMarkup, esc, featureOptions, mapMarkup, ordersMarkup} from "./render.ts";
+import {
+  browserTimers, openReplay, ordersClosedReason, ordersOpen, Playback, replayAt, replayHelp, replayLabel, speedOptions,
+  type Replay,
+} from "./replay.ts";
 import {clickMap, emptySelection, ownUnit, type MapTarget, type Notice, type Selection} from "./selection.ts";
 import {battleClock, timeAt} from "./timeline.ts";
 
@@ -47,7 +52,9 @@ function target(node: EventTarget | null): MapTarget | null {
  * of every offered kind, the clock, the grid toggle, starting a scenario and the commander replay;
  * polls while the clock runs or a new battle's map still needs reading. A command whose outcome
  * the relay could not confirm is followed by a re-read. While replaying, the map, header and
- * panels show the recorded view, and orders, the clock and new battles are disabled.
+ * panels show the recorded view, and orders, the clock and new battles are disabled. Playback
+ * (docs/research/81) runs at a speed from the live clock's `speeds`; any step, scrub, Return to
+ * live or reopening stops it first, so no timer outlives the replay it was started for.
  * Test: `apps/web/scripts/smoke-browser.ts` (real clicks in a browser against the POC). */
 export async function startDesk(doc: Document, api: DeskApi, featureSources: unknown = null): Promise<void> {
   const svg = element<SVGSVGElement>(doc, "map");
@@ -64,6 +71,8 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
   const backButton = element<HTMLButtonElement>(doc, "replay-back");
   const forwardButton = element<HTMLButtonElement>(doc, "replay-forward");
   const liveButton = element<HTMLButtonElement>(doc, "replay-live");
+  const playButton = element<HTMLButtonElement>(doc, "replay-play");
+  const speedSelect = element<HTMLSelectElement>(doc, "replay-speed");
   let view: CommanderState;
   let terrain: MapDocument;
   let terrainGame = "";  // the game `terrain` belongs to
@@ -74,6 +83,12 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
   let current: Notice | null = null;
   let busy = false;
   let polling = false;
+  const playback = new Playback({
+    current: () => replay,
+    load: (from, index) => replayAt(api, from, index),
+    show: (next) => { replay = next; render(); },
+    stopped: (error) => { if (error !== null) current = {kind: "refusal", text: message(error)}; render(); },
+  }, browserTimers, 1);
 
   // While replaying, everything drawn is the recorded view; orders go to `view` (live) only.
   const shown = (): CommanderView => replay?.view ?? view;
@@ -89,7 +104,10 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     if (kindSelect.dataset["options"] !== options) { kindSelect.innerHTML = options; kindSelect.dataset["options"] = options; }
     kindSelect.value = kind;
     const template = templateFor(seen, kind);
-    element(doc, "order-help").innerHTML = template ? templateHelp(seen, template) : "This battle offers no orders.";
+    // docs/research/81 §2: the help says when and why orders are closed; while replaying, only that.
+    const closed = fresh() ? ordersClosedReason(view, replay) : null;
+    element(doc, "order-help").innerHTML = (closed ? `<p class="order-closed">${esc(closed)}</p>` : "")
+      + (replay ? "" : template ? templateHelp(seen, template) : "This battle offers no orders.");
     const unit = ownUnit(seen, selection.unitId);
     element(doc, "unit-card").innerHTML = unit ? unitCardMarkup(seen, unit, clock) : "";
     element(doc, "selection").textContent = !unit ? "Select one of your counters on the map."
@@ -113,6 +131,12 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     backButton.disabled = busy || replay.index === 0;
     forwardButton.disabled = busy || replay.index === replay.entries.length - 1;
     liveButton.disabled = busy;
+    playButton.textContent = playback.playing ? "Pause" : "Play";
+    playButton.disabled = busy;
+    const speeds = speedOptions(view.clock.speeds, playback.speed);
+    if (speedSelect.dataset["options"] !== speeds) { speedSelect.innerHTML = speeds; speedSelect.dataset["options"] = speeds; }
+    speedSelect.value = String(playback.speed);
+    element(doc, "replay-help").textContent = replayHelp();
   }
 
   function render(): void {
@@ -136,6 +160,9 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     }
     element(doc, "orders").innerHTML = ordersMarkup(seen, clock);
     element(doc, "dispatches").innerHTML = dispatchesMarkup(seen, clock);
+    const signals = signalsMarkup(seen, clock);  // docs/research/81 §4: delivered codewords only
+    element<HTMLElement>(doc, "signals-panel").hidden = signals === null;
+    element(doc, "signals").innerHTML = signals ?? "";
     element(doc, "contacts").innerHTML = contactsMarkup(seen, clock);
     renderOrderForm();
     renderReplay();
@@ -242,20 +269,31 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
   // docs/research/73: the replay reads recorded revisions of this game; the live clock is paused first,
   // as the POC desk does, so the live battle does not run on unseen.
   replayButton.addEventListener("click", () => act(async () => {
+    playback.stop();
     await paused();
+    playback.setSpeed(view.clock.speed);  // as the POC desk: the live clock's speed
     replay = await openReplay(api, view);
     selection = {unitId: selection.unitId, destination: null};
     return {kind: "info", text: REPLAYING};
   }));
   const step = (index: number): void => {
     if (!replay || busy) return;
+    playback.stop();
     void act(async () => { replay = replay ? await replayAt(api, replay, index) : null; return {kind: "info", text: REPLAYING}; });
   };
   backButton.addEventListener("click", () => step((replay?.index ?? 0) - 1));
   forwardButton.addEventListener("click", () => step((replay?.index ?? 0) + 1));
   slider.addEventListener("input", () => step(Number(slider.value)));
   slider.addEventListener("change", () => step(Number(slider.value)));
+  playButton.addEventListener("click", () => {
+    if (!replay || busy) return;
+    if (playback.playing) playback.stop();
+    else { current = {kind: "info", text: REPLAYING}; playback.play(); }
+    render();
+  });
+  speedSelect.addEventListener("change", () => { playback.setSpeed(Number(speedSelect.value)); render(); });
   liveButton.addEventListener("click", () => act(async () => {
+    playback.stop();
     replay = null;
     selection = {unitId: selection.unitId, destination: null};
     await refresh();

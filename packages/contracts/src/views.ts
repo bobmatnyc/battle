@@ -100,7 +100,7 @@ export const commanderFormationOp: Check<FormationOp> = object(
   {rest: "keep", forbidden: ["ready_turn", "completed_turn"]});
 
 /** A delivered codeword (signals.receive): the report data plus its arrival turn.
- * UNCONFIRMED by fixture (Pegasus Bridge only); keys from signals.py. */
+ * Confirmed by fixture `replay-commander-pegasus.json` (Pegasus Bridge, docs/research/81 §4). */
 export interface ReceivedSignal {
   codeword: string; meaning: string; bridge: string; sender_id: string; receiver_id: string;
   sent_turn: number; delivered_turn: number;

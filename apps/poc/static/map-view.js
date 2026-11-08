@@ -2,7 +2,31 @@
 const BattleMapView = (() => {
   const metresPerPixel=50/(Math.sqrt(3)*25.5), radius=6378137;
   let fitZoom=15;
-  let sceneCells, map, ready=false, failed=false, detail=false, resizeObserver, startupTimer;
+  let sceneCells, map, ready=false, failed=false, detail=false, resizeObserver, startupTimer, focus=null;
+  // bt-T18 (docs/research/81 §3): the centre for a zoom-in, in scene pixels, given the current centre, the
+  // new frame's half size and the focus {core, all}: boxes [x0,y0,x1,y1] of the objective with its label
+  // (core) and of the objective with every point mark (all). Per axis: the least move that keeps `all` in
+  // frame; if it is larger than the frame, the least move that keeps `core` in frame; if that is larger
+  // too, the middle of `core`. Then the frame is kept on the 1080 x 840 scene. No focus: the current
+  // centre (the zoom as before).
+  function focusCentre(centre,half,focus){
+    if(!focus)return centre;
+    const fit=(c,h,lo,hi)=>hi-lo<=2*h?Math.min(Math.max(c,hi-h),lo+h):null;
+    const axis=(i,size)=>{
+      const c=centre[i],h=half[i],{core,all}=focus;
+      const v=fit(c,h,all[i],all[i+2])??fit(c,h,core[i],core[i+2])??(core[i]+core[i+2])/2;
+      return 2*h>=size?size/2:Math.min(Math.max(v,h),size-h);
+    };
+    return [axis(0,1080),axis(1,840)];
+  }
+  // One zoom step in about the focus; the fit view and the zoom-out step are unchanged.
+  function zoomIn(){
+    const zoom=Math.min(map.getZoom()+1,map.getMaxZoom()),k=Math.pow(2,zoom-map.getZoom());
+    const a=map.project(coordinate([0,0])),b=map.project(coordinate([1080,840]));
+    const sx=1080/(b.x-a.x),sy=840/(b.y-a.y),{clientWidth:w,clientHeight:h}=map.getContainer();
+    const centre=focusCentre([(w/2-a.x)*sx,(h/2-a.y)*sy],[w/2*sx/k,h/2*sy/k],focus);
+    map.easeTo({zoom,center:coordinate(centre),duration:180});
+  }
   const coordinate=([x,y])=>{
     const east=(x-540)*metresPerPixel,north=(420-y)*metresPerPixel;
     return [east/radius*180/Math.PI,(2*Math.atan(Math.exp(north/radius))-Math.PI/2)*180/Math.PI];
@@ -70,7 +94,7 @@ const BattleMapView = (() => {
         badge.textContent='MapLibre · local vector tiles';
         document.getElementById('live-map-scale').classList.remove('hidden');
         document.getElementById('map-camera').classList.remove('hidden');
-        document.getElementById('map-in').onclick=()=>map.zoomIn({duration:180});
+        document.getElementById('map-in').onclick=zoomIn;
         document.getElementById('map-out').onclick=()=>map.zoomOut({duration:180});
         document.getElementById('map-fit').onclick=fit;
         map.on('move',syncOverlay);
@@ -81,6 +105,6 @@ const BattleMapView = (() => {
       startupTimer=setTimeout(fallback,12000);
     }catch{fallback();}
   }
-  function update(elevation){if(detail!==elevation){detail=elevation;applyStyle();}syncOverlay();}
-  return {init,setCells,update,coordinate,active:()=>ready};
+  function update(elevation,box=null){focus=box;if(detail!==elevation){detail=elevation;applyStyle();}syncOverlay();}
+  return {init,setCells,update,coordinate,focusCentre,active:()=>ready};
 })();

@@ -7,6 +7,8 @@ destination key), one staff chat message, then INTERVALS clock intervals,
 under a second of CPU. Each response is written as ``HttpApi`` returns it to
 the HTTP handler (no server is started). The game id is pinned (``GAME_ID``)
 so a refresh rewrites only what the Python app changed.
+``record_pegasus_signal`` then writes one Pegasus Bridge commander replay holding a
+delivered codeword (docs/research/81 §4), from a headless run of about ten seconds.
 """
 import json
 import sys
@@ -84,6 +86,38 @@ def catalog_features():
     return out
 
 
+def record_pegasus_signal(tmp):
+    """docs/research/81 §4: a commander view holding a delivered codeword. The catalog's
+    Pegasus Bridge blows its bridge at interval 5 (bt-D09) before Ham can be sent, so this
+    runs the headless-only guard-only entry (no demolition) with relief at one hour, the
+    short run ``test_a_held_bridge_run_sends_ham_by_report_and_replays_identically`` uses,
+    scripted on both sides. It writes the British commander replay (``GET /api/replay``,
+    ``BattleQueries.replay``) at the first revision whose view holds a received codeword."""
+    from battle import analysis
+    from battle.adapters.rules import RulesSimulation, ScenarioRegistry
+    from battle.bootstrap import build_headless
+    from battle.presentation import present_view
+    from battle.scenario_pegasus import CROSSED_SENSITIVITY
+    from battle.services.queries import BattleQueries
+    from battle.services.replay import ReplayService
+
+    entry = CROSSED_SENSITIVITY["guard-only+relief-1h"].entry
+    scenarios = ScenarioRegistry([entry])
+    db = Path(tmp) / "pegasus.sqlite"
+    with mock.patch.object(storage.uuid, "uuid4", return_value=GAME_ID_UUID):
+        game_id = build_headless(db, scenario_id=entry.id, scenarios=scenarios).run()["game_id"]
+    store = storage.Store(db)
+    simulation = RulesSimulation()
+    queries = BattleQueries(store, simulation, ReplayService(store, simulation),
+                            assess=analysis.assess, present=present_view, scenarios=scenarios)
+    for step in queries.history(game_id):
+        view = queries.replay(game_id, step["revision"])
+        if view.get("signals"):
+            write("replay-commander-pegasus.json", view)
+            return
+    raise SystemExit("The Pegasus run delivered no codeword; replay-commander-pegasus.json not written.")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         with mock.patch.object(storage.uuid, "uuid4", return_value=GAME_ID_UUID):
@@ -93,6 +127,7 @@ def main():
             record(HttpApi(app))
         finally:
             app.close()
+        record_pegasus_signal(tmp)
 
 
 if __name__ == "__main__":

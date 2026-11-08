@@ -32,7 +32,11 @@
       <button id="replay-back">◀ Step back</button>
       <input id="replay-slider" type="range" min="0" max="0" value="0" aria-label="Battle timeline">
       <button id="replay-forward">Step forward ▶</button>
+      <button id="replay-play">Play</button>
+      <label for="replay-speed">Speed</label>
+      <select id="replay-speed"></select>
       <button id="replay-live">Return to live</button>
+      <p id="replay-help" class="replay-help"></p>
     </div>
     <svg id="map" role="img" aria-label="Hex map of the battlefield"></svg>
     <p id="notice" class="notice" role="status" data-kind="info">Connecting to the local simulation…</p>
@@ -54,6 +58,7 @@
       <button id="clock-toggle" disabled>Start clock</button>
     </section>
     <section><h2>Orders</h2><ol id="orders"></ol></section>
+    <section id="signals-panel" hidden><h2>Signals</h2><ol id="signals" class="signals"></ol></section>
     <section><h2>Dispatches</h2><ol id="dispatches" class="dispatches"></ol></section>
     <section><h2>Enemy sightings</h2><ul id="contacts"></ul></section>
     <section><h2>Mission</h2><div id="mission"></div></section>

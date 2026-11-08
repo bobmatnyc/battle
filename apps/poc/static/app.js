@@ -66,6 +66,14 @@ async function getPost(path,body){const data=await api.post(path,body);return go
 function polygons(options){return mapData.cells.map(c=>{const[x,y]=center(c.pos),points=Array.from({length:6},(_,i)=>{const a=(60*i-30)*Math.PI/180;return `${x+25.5*Math.cos(a)},${y+25.5*Math.sin(a)}`;}).join(' ');const chosen=destination&&String(c.pos)===String(destination);return `<polygon class="hex ${chosen?'selected-hex':''}" data-c="${c.pos[0]}" data-r="${c.pos[1]}" points="${points}"><title>Hex ${c.pos.join(',')} · ${c.terrain} · ${c.elevation} m (authored)${BattleFeatures.notes(state.map_features,c.pos,options).map(n=>' · '+esc(n)).join('')}</title></polygon>`;}).join('');}
 // Features come from the commander view; static/map-features.js draws them at the map's scale,
 // with each mark's status from the presentation-only static/feature-sources.js (docs/research/72).
+// bt-T18 (docs/research/81 §3): what a zoom-in keeps in frame (BattleMapView.focusCentre), in scene
+// pixels: `core`, the objective hex with its place label (21 px text, about 11 px a character, drawn
+// 118 px above); `all`, that and every mark with a hex.
+function mapFocus(obj,ox,oy){
+  const r=25.5,half=Math.max(r,obj.place.length*5.5),core=[ox-half,oy-135,ox+half,oy+r],all=[...core];
+  for(const f of state.map_features||[])if(Array.isArray(f.pos)){const[x,y]=center(f.pos);all[0]=Math.min(all[0],x-r);all[1]=Math.min(all[1],y-r);all[2]=Math.max(all[2],x+r);all[3]=Math.max(all[3],y+r);}
+  return {core,all};
+}
 function featureOptions(){return {metresPerHex:mapData.metres_per_hex,cells:mapData.cells,sources:BattleFeatureSources.forScenario(state.scenario_brief?.id)};}
 // bt-T16 (docs/research/80): the counters, laid out first, so a feature label keeps clear of their cards.
 function counterEntries(){return [
@@ -91,7 +99,7 @@ for(const r of state.recommendations||[]){
 const hqs=godMode?Object.entries(state.headquarters||{}):[[state.side,state.hq]];
 for(const[side,pos] of hqs){const[hx,hy]=center(pos);const offset=state.command||state.commands?.[side]?-31:0;shapes+=`<g pointer-events="none"><rect x="${hx-18}" y="${hy-12+offset}" width="36" height="22" rx="3" fill="${side===state.side?'#244f76':'#873e36'}" stroke="#f0e2b7"/><text x="${hx}" y="${hy+3+offset}" text-anchor="middle" font-size="10" fill="#fff">${side===state.side?'YOU':'HQ'}</text></g>`;}
 if(godMode){for(const packet of [...[...state.orders,...(state.standing_orders||[])].filter(o=>o.status==='en_route').map(o=>o.transport),...(state.reports||[]).map(r=>r.transport)].filter(Boolean)){const[x,y]=center(packet.pos),[a,b]=center(packet.address);shapes+=`<g pointer-events="none"><path d="M${x},${y}L${a},${b}" stroke="#856830" stroke-width="1.5" stroke-dasharray="3 5" opacity=".6"/><rect x="${x-4}" y="${y-3}" width="8" height="6" fill="#fff4cb" stroke="#856830"/></g>`;}}
-$('map').innerHTML=shapes;$('map').classList.toggle('no-grid',!hexes);BattleMapView.update(terrain);
+$('map').innerHTML=shapes;$('map').classList.toggle('no-grid',!hexes);BattleMapView.update(terrain,mapFocus(obj,ox,oy));
 }
 function renderUnits(){$('unit-list').innerHTML=state.units.map(u=>`<button class="unit-card ${u.side!==state.side?'enemy-card':''} ${u.id===selected?'selected':''}" data-unit="${u.id}" aria-pressed="${u.id===selected}"><div class="unit-top"><b>${u.id} · ${esc(u.status.toUpperCase())}${(state.recommendations||[]).some(r=>r.unit_id===u.id&&r.status==='delivered')?' · ⚑ ADVICE':''}</b><span>${godMode?"EXACT · "+u.side.toUpperCase():(state.turn-u.observed_turn)*state.seconds_per_turn+"s AGO"}</span></div><span class="unit-strength">${u.strength}<small> / ${u.initial}</small></span><span class="unit-name">${esc(u.name)}${u.recon_role==="scout"?" · SCOUT":""}${u.id===state.command?.unit_id?" · YOUR HQ":godMode&&Object.values(state.commands||{}).some(c=>c.unit_id===u.id)?" · HQ":""}</span><div class="unit-action" title="${esc(u.local_reason||"Standing orders")}">${esc((u.stance==='dig_in'&&['hold','observe'].includes(u.local_action)?'digging in':u.local_action||'standing orders').replaceAll('_',' '))}${u.tactical_target?" → "+u.tactical_target.join(","):""}</div>${unitIcons.metrics(u)}<div class="unit-bottom"><span>${u.ammo} rounds</span></div></button>`).join('');}
 function renderContacts(){

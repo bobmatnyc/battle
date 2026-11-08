@@ -113,6 +113,22 @@ test("commander view accepts own formation operations, codewords and broadcasts"
   assert.deepEqual(parse(commanderState, doc), doc);
 });
 
+// docs/research/81 §4: a recorded Pegasus Bridge commander view (the guard-only entry, whose
+// bridge is not blown) after the codeword Ham arrived; record.py writes it.
+test("a recorded Pegasus commander view holds a delivered codeword, with exactly the typed keys", () => {
+  const recorded = fixture("replay-commander-pegasus");
+  assert.deepEqual(parse(commanderReplay, recorded), recorded);
+  assert.deepEqual(parse(replayResponse, recorded), recorded);
+  assert.equal(recorded["side"], "british");
+  assert.deepEqual(recorded["signals"], [{
+    bridge: "canal-bridge", codeword: "Ham", delivered_turn: 12, meaning: "Canal bridge taken intact.",
+    receiver_id: "DHQ", sender_id: "D25", sent_turn: 11,
+  }]);
+  assert.ok(recorded["signals"][0].delivered_turn > recorded["signals"][0].sent_turn, "delivered after it was sent");
+  fails(commanderReplay, {...recorded, signals: [{...recorded["signals"][0], radius: 1}]}, "$.signals[0].radius");
+  fails(commanderReplay, {...recorded, signals: [{...recorded["signals"][0], delivered_turn: undefined}]}, "$.signals[0].delivered_turn");
+});
+
 const cases: [string, Check<unknown>, keyof typeof fixtures, (doc: Doc) => void, string][] = [
   ["unit of another side", commanderState, "commanderState", (d) => { d["units"][0].side = enemy(d); }, "$.units[0].side"],
   ["order transport", commanderState, "commanderState", (d) => { d["orders"][0].transport = {}; }, "$.orders[0].transport"],

@@ -1,0 +1,1204 @@
+{
+ "analysis": {
+  "basis": "Headquarters reports and direct observation of the command detachment. Totals combine reports of different ages; they are not current battlefield truth.",
+  "command_operational": true,
+  "contacts": [
+   {
+    "age_seconds": 60,
+    "confidence": "good",
+    "id": "G1",
+    "strength_range": [
+     5,
+     25
+    ]
+   },
+   {
+    "age_seconds": 90,
+    "confidence": "moderate",
+    "id": "G3",
+    "strength_range": [
+     1,
+     30
+    ]
+   }
+  ],
+  "limitations": "Authored readiness heuristics, not a historical combat rating or victory prediction. Enemy sightings may overlap or be stale; unseen troops are unknown.",
+  "revision": 13,
+  "side": "british",
+  "standing_templates": [
+   {
+    "enemy_ratio": 2.5,
+    "fire_range": 5,
+    "id": "balanced",
+    "intent": "Carry out the mission, use cover and fall back when the detachment is in serious danger.",
+    "label": "Balanced",
+    "message_key": "standing.template.balanced",
+    "morale_floor": 45,
+    "reserve_volleys": 1,
+    "suppression_limit": 70,
+    "version": "standing-orders-v1"
+   },
+   {
+    "enemy_ratio": 1.5,
+    "fire_range": 5,
+    "id": "cautious",
+    "intent": "Avoid costly engagements. Fall back earlier when pressed, low on cartridges or shaken.",
+    "label": "Preserve the force",
+    "message_key": "standing.template.cautious",
+    "morale_floor": 60,
+    "reserve_volleys": 3,
+    "suppression_limit": 50,
+    "version": "standing-orders-v1"
+   },
+   {
+    "enemy_ratio": 3.5,
+    "fire_range": 5,
+    "id": "firm",
+    "intent": "Accept greater pressure to hold the ground. Seek cover; withdraw if the formation can no longer stand.",
+    "label": "Hold ground firmly",
+    "message_key": "standing.template.firm",
+    "morale_floor": 35,
+    "reserve_volleys": 1,
+    "suppression_limit": 85,
+    "version": "standing-orders-v1"
+   },
+   {
+    "enemy_ratio": 1.0,
+    "fire_range": 3,
+    "id": "screen",
+    "intent": "Watch and report; avoid equal or stronger opposition. Reserve fire for close threats within three hexes.",
+    "label": "Observe and screen",
+    "message_key": "standing.template.screen",
+    "morale_floor": 60,
+    "reserve_volleys": 3,
+    "suppression_limit": 50,
+    "version": "standing-orders-v1"
+   }
+  ],
+  "summary": {
+   "assigned_strength": 105,
+   "available_formations": 4,
+   "formations": 4,
+   "oldest_report_seconds": 30,
+   "reported_ammo": 3532,
+   "reported_strength": 100
+  },
+  "turn": 12,
+  "units": [
+   {
+    "age_seconds": 30,
+    "ammo": 1050,
+    "concerns": [
+     "This report is 30 seconds old; conditions may have changed."
+    ],
+    "fatigue": 0,
+    "id": "B14",
+    "initial": 30,
+    "mission": "move",
+    "morale": 85,
+    "name": "14 Platoon (B Company) \u00b7 Smith",
+    "observed_turn": 11,
+    "pending_standing": [],
+    "received_turn": 12,
+    "recommendation": {
+     "display_reason": "Major, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable.",
+     "profile_id": "balanced",
+     "reason": "General, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable."
+    },
+    "role": "line",
+    "skill": 70,
+    "standing_profile": "balanced",
+    "standing_version": 0,
+    "status": "ready",
+    "strength": 30,
+    "suppression": 0,
+    "target": [
+     8,
+     9
+    ],
+    "volleys": 35,
+    "weapons": "1944 small arms"
+   },
+   {
+    "age_seconds": 30,
+    "ammo": 934,
+    "concerns": [
+     "This report is 30 seconds old; conditions may have changed."
+    ],
+    "fatigue": 3,
+    "id": "D24",
+    "initial": 30,
+    "mission": "move",
+    "morale": 77,
+    "name": "24 Platoon \u00b7 Wood, with Capt Neilson RE",
+    "observed_turn": 11,
+    "pending_standing": [],
+    "received_turn": 12,
+    "recommendation": {
+     "display_reason": "Major, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable.",
+     "profile_id": "balanced",
+     "reason": "General, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable."
+    },
+    "role": "line",
+    "skill": 70,
+    "standing_profile": "balanced",
+    "standing_version": 0,
+    "status": "ready",
+    "strength": 28,
+    "suppression": 0,
+    "target": [
+     9,
+     10
+    ],
+    "volleys": 33,
+    "weapons": "1944 small arms"
+   },
+   {
+    "age_seconds": 30,
+    "ammo": 948,
+    "concerns": [
+     "This report is 30 seconds old; conditions may have changed."
+    ],
+    "fatigue": 3,
+    "id": "D25",
+    "initial": 30,
+    "mission": "move",
+    "morale": 73,
+    "name": "25 Platoon \u00b7 Brotheridge",
+    "observed_turn": 11,
+    "pending_standing": [],
+    "received_turn": 12,
+    "recommendation": {
+     "display_reason": "Major, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable.",
+     "profile_id": "balanced",
+     "reason": "General, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable."
+    },
+    "role": "line",
+    "skill": 70,
+    "standing_profile": "balanced",
+    "standing_version": 0,
+    "status": "ready",
+    "strength": 27,
+    "suppression": 0,
+    "target": [
+     8,
+     10
+    ],
+    "volleys": 35,
+    "weapons": "1944 small arms"
+   },
+   {
+    "age_seconds": 0,
+    "ammo": 600,
+    "concerns": [],
+    "fatigue": 0,
+    "id": "DHQ",
+    "initial": 15,
+    "mission": "hold",
+    "morale": 90,
+    "name": "D Company headquarters \u00b7 Howard",
+    "observed_turn": 12,
+    "pending_standing": [],
+    "received_turn": 12,
+    "recommendation": {
+     "display_reason": "Major, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable.",
+     "profile_id": "balanced",
+     "reason": "General, the reported condition supports ordinary discretion. Reserve a firmer instruction for ground you judge indispensable."
+    },
+    "role": "line",
+    "skill": 70,
+    "standing_profile": "balanced",
+    "standing_version": 0,
+    "status": "ready",
+    "strength": 15,
+    "suppression": 0,
+    "target": null,
+    "volleys": 40,
+    "weapons": "1944 small arms"
+   }
+  ],
+  "version": "troop-assessment-v1"
+ },
+ "command": {
+  "communications": "wwii-1944-radio-v1",
+  "controller_id": "british-commander",
+  "operational": true,
+  "pos": [
+   10,
+   13
+  ],
+  "profile": {
+   "cost_per_turn": 200,
+   "expiry_turns": 20,
+   "id": "wwii-1944-radio-v1",
+   "label": "1944 \u00b7 radio / voice / runner",
+   "methods": [
+    "voice",
+    "radio",
+    "courier"
+   ],
+   "radio_range": 10,
+   "voice_reach": 2
+  },
+  "status": "ready",
+  "unit_id": "DHQ"
+ },
+ "contacts": [
+  {
+   "age": 2,
+   "composition": {
+    "type": "infantry",
+    "weapons": "long arms"
+   },
+   "confidence": "good",
+   "estimate": "5\u201325 troops \u00b7 infantry",
+   "exposure_intervals": 10,
+   "id": "G1",
+   "identification": {
+    "type": {
+     "observed_turn": 10,
+     "observer_id": "D25",
+     "observer_role": "line",
+     "quality": 50,
+     "value": "infantry"
+    },
+    "weapons": {
+     "observed_turn": 10,
+     "observer_id": "D25",
+     "observer_role": "line",
+     "quality": 50,
+     "value": "long arms"
+    }
+   },
+   "observed_turn": 10,
+   "observer_id": "D25",
+   "observer_role": "line",
+   "phase": "1_before_actions",
+   "pos": [
+    8,
+    10
+   ],
+   "quality": 50,
+   "received_turn": 11,
+   "side": "german",
+   "status": "observed",
+   "strength_range": [
+    5,
+    25
+   ]
+  },
+  {
+   "age": 3,
+   "composition": {
+    "type": "infantry",
+    "weapons": "not established"
+   },
+   "confidence": "moderate",
+   "estimate": "1\u201330 troops \u00b7 infantry",
+   "exposure_intervals": 9,
+   "id": "G3",
+   "identification": {
+    "type": {
+     "observed_turn": 9,
+     "observer_id": "D25",
+     "observer_role": "line",
+     "quality": 47,
+     "value": "infantry"
+    }
+   },
+   "observed_turn": 9,
+   "observer_id": "D25",
+   "observer_role": "line",
+   "phase": "1_before_actions",
+   "pos": [
+    8,
+    9
+   ],
+   "quality": 47,
+   "received_turn": 10,
+   "side": "german",
+   "status": "observed",
+   "strength_range": [
+    1,
+    30
+   ]
+  }
+ ],
+ "dispatches": [
+  {
+   "display_text": "To D25: Move to the new position. Given by word of mouth. Expected delivery in 30 seconds.",
+   "kind": "order",
+   "message_args": {
+    "estimate": "Expected delivery in 30 seconds.",
+    "stance": "move",
+    "unit": "D25"
+   },
+   "message_key": "order.spoken",
+   "observed_turn": 0,
+   "text": "D25: move order dispatched by voice. Expected delivery in 30 seconds.",
+   "turn": 0
+  },
+  {
+   "display_text": "To D24: Move to the new position. Given by word of mouth. Expected delivery in 30 seconds.",
+   "kind": "order",
+   "message_args": {
+    "estimate": "Expected delivery in 30 seconds.",
+    "stance": "move",
+    "unit": "D24"
+   },
+   "message_key": "order.spoken",
+   "observed_turn": 0,
+   "text": "D24: move order dispatched by voice. Expected delivery in 30 seconds.",
+   "turn": 0
+  },
+  {
+   "display_text": "To B14: Move to the new position. Given by word of mouth. Expected delivery in 30 seconds.",
+   "kind": "order",
+   "message_args": {
+    "estimate": "Expected delivery in 30 seconds.",
+    "stance": "move",
+    "unit": "B14"
+   },
+   "message_key": "order.spoken",
+   "observed_turn": 0,
+   "text": "B14: move order dispatched by voice. Expected delivery in 30 seconds.",
+   "turn": 0
+  },
+  {
+   "display_text": "D25 to company headquarters: Order O1 received, sir.",
+   "kind": "ack",
+   "message_args": {
+    "order": "O1",
+    "status": "delivered",
+    "unit": "D25"
+   },
+   "message_key": "order.delivered",
+   "observed_turn": 1,
+   "text": "D25: order O1 delivered.",
+   "turn": 2
+  },
+  {
+   "display_text": "D24 to company headquarters: Order O2 received, sir.",
+   "kind": "ack",
+   "message_args": {
+    "order": "O2",
+    "status": "delivered",
+    "unit": "D24"
+   },
+   "message_key": "order.delivered",
+   "observed_turn": 1,
+   "text": "D24: order O2 delivered.",
+   "turn": 2
+  },
+  {
+   "display_text": "B14 to company headquarters: Order O3 received, sir.",
+   "kind": "ack",
+   "message_args": {
+    "order": "O3",
+    "status": "delivered",
+    "unit": "B14"
+   },
+   "message_key": "order.delivered",
+   "observed_turn": 1,
+   "text": "B14: order O3 delivered.",
+   "turn": 2
+  },
+  {
+   "display_text": "B14 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "kind": "reaction",
+   "observed_turn": 1,
+   "text": "B14 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "turn": 2
+  },
+  {
+   "display_text": "D24 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "kind": "reaction",
+   "observed_turn": 1,
+   "text": "D24 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "turn": 2
+  },
+  {
+   "display_text": "D25 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "kind": "reaction",
+   "observed_turn": 1,
+   "text": "D25 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "turn": 2
+  },
+  {
+   "display_text": "Major, enemy near map reference 8,10: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from D25 (line).",
+   "kind": "contact",
+   "observed_turn": 1,
+   "text": "General, enemy near map reference 8,10: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from D25 (line).",
+   "turn": 2
+  },
+  {
+   "display_text": "Major, enemy near map reference 10,10: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from D24 (line).",
+   "kind": "contact",
+   "observed_turn": 1,
+   "text": "General, enemy near map reference 10,10: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from D24 (line).",
+   "turn": 2
+  },
+  {
+   "display_text": "Major, enemy near map reference 8,9: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from D25 (line).",
+   "kind": "contact",
+   "observed_turn": 1,
+   "text": "General, enemy near map reference 8,9: 1\u201360 troops \u00b7 unidentified troops; low confidence. Report from D25 (line).",
+   "turn": 2
+  },
+  {
+   "display_text": "Major, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "kind": "recommendation",
+   "observed_turn": 2,
+   "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "turn": 2
+  },
+  {
+   "display_text": "Major, enemy near map reference 8,10: 1\u201330 troops \u00b7 infantry; moderate confidence. Report from D25 (line).",
+   "kind": "contact",
+   "observed_turn": 4,
+   "text": "General, enemy near map reference 8,10: 1\u201330 troops \u00b7 infantry; moderate confidence. Report from D25 (line).",
+   "turn": 5
+  },
+  {
+   "display_text": "Major, enemy near map reference 10,10: 1\u201330 troops \u00b7 infantry; moderate confidence. Report from D24 (line).",
+   "kind": "contact",
+   "observed_turn": 4,
+   "text": "General, enemy near map reference 10,10: 1\u201330 troops \u00b7 infantry; moderate confidence. Report from D24 (line).",
+   "turn": 5
+  },
+  {
+   "display_text": "Major, enemy near map reference 8,9: 1\u201330 troops \u00b7 infantry; moderate confidence. Report from D25 (line).",
+   "kind": "contact",
+   "observed_turn": 4,
+   "text": "General, enemy near map reference 8,9: 1\u201330 troops \u00b7 infantry; moderate confidence. Report from D25 (line).",
+   "turn": 5
+  },
+  {
+   "display_text": "D25 to headquarters: Nearby cover is better and does not close with the observed enemy.",
+   "kind": "reaction",
+   "observed_turn": 6,
+   "text": "D25 to headquarters: Nearby cover is better and does not close with the observed enemy.",
+   "turn": 7
+  },
+  {
+   "display_text": "D24 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "kind": "reaction",
+   "observed_turn": 7,
+   "text": "D24 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "turn": 8
+  },
+  {
+   "display_text": "D25 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "kind": "reaction",
+   "observed_turn": 7,
+   "text": "D25 to headquarters: Enemy within effective range; halt locally, use cover and return fire.",
+   "turn": 8
+  },
+  {
+   "display_text": "Major, enemy near map reference 8,10: 5\u201325 troops \u00b7 infantry; good confidence. Report from D25 (line).",
+   "kind": "contact",
+   "observed_turn": 10,
+   "text": "General, enemy near map reference 8,10: 5\u201325 troops \u00b7 infantry; good confidence. Report from D25 (line).",
+   "turn": 11
+  },
+  {
+   "display_text": "D25 to headquarters: Ham. Canal bridge taken intact.",
+   "kind": "signal",
+   "observed_turn": 11,
+   "text": "D25 to headquarters: Ham. Canal bridge taken intact.",
+   "turn": 12
+  }
+ ],
+ "display_locale": "en",
+ "formation_ops": [],
+ "hq": [
+  10,
+  13
+ ],
+ "map_features": [
+  {
+   "briefed": true,
+   "hexes": [
+    [
+     0,
+     10
+    ],
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     10
+    ],
+    [
+     3,
+     10
+    ],
+    [
+     4,
+     10
+    ],
+    [
+     5,
+     10
+    ],
+    [
+     6,
+     10
+    ],
+    [
+     7,
+     10
+    ],
+    [
+     8,
+     10
+    ]
+   ],
+   "id": "benouville-road",
+   "kind": "road",
+   "name": "Road from B\u00e9nouville to the canal bridge",
+   "observed_turn": 0,
+   "points": [
+    [
+     0,
+     10
+    ],
+    [
+     8,
+     10
+    ]
+   ],
+   "provenance": "authored-poc",
+   "received_turn": 0
+  },
+  {
+   "briefed": true,
+   "hexes": [
+    [
+     10,
+     10
+    ],
+    [
+     11,
+     10
+    ],
+    [
+     12,
+     10
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     14,
+     10
+    ],
+    [
+     15,
+     10
+    ],
+    [
+     16,
+     10
+    ],
+    [
+     17,
+     10
+    ],
+    [
+     18,
+     10
+    ]
+   ],
+   "id": "bridges-road",
+   "kind": "road",
+   "name": "Road between the bridges",
+   "observed_turn": 0,
+   "points": [
+    [
+     10,
+     10
+    ],
+    [
+     18,
+     10
+    ]
+   ],
+   "provenance": "authored-poc",
+   "received_turn": 0
+  },
+  {
+   "briefed": true,
+   "id": "canal-bridge",
+   "kind": "bridge",
+   "name": "Caen Canal bridge",
+   "observed_turn": 0,
+   "pos": [
+    9,
+    10
+   ],
+   "provenance": "authored-poc",
+   "received_turn": 0,
+   "state": "charges",
+   "updated_turn": 0
+  },
+  {
+   "briefed": true,
+   "cover": 50,
+   "effort": 400,
+   "id": "east-mg-post",
+   "kind": "fortification",
+   "name": "Machine gun and anti-tank gun, east bank",
+   "observed_turn": 0,
+   "pos": [
+    10,
+    10
+   ],
+   "progress": 100,
+   "provenance": "authored-poc",
+   "received_turn": 0,
+   "required": 400,
+   "updated_turn": 0
+  },
+  {
+   "briefed": true,
+   "cover": 60,
+   "effort": 400,
+   "id": "orne-pillbox",
+   "kind": "fortification",
+   "name": "Pillbox, east bank of the Orne",
+   "observed_turn": 0,
+   "pos": [
+    20,
+    10
+   ],
+   "progress": 100,
+   "provenance": "authored-poc",
+   "received_turn": 0,
+   "required": 400,
+   "updated_turn": 0
+  },
+  {
+   "briefed": true,
+   "hexes": [
+    [
+     20,
+     10
+    ],
+    [
+     21,
+     10
+    ],
+    [
+     22,
+     10
+    ],
+    [
+     23,
+     10
+    ]
+   ],
+   "id": "ranville-road",
+   "kind": "road",
+   "name": "Road from the Orne bridge to Ranville",
+   "observed_turn": 0,
+   "points": [
+    [
+     20,
+     10
+    ],
+    [
+     23,
+     10
+    ]
+   ],
+   "provenance": "authored-poc",
+   "received_turn": 0
+  },
+  {
+   "briefed": true,
+   "cover": 50,
+   "effort": 400,
+   "id": "west-mg-posts",
+   "kind": "fortification",
+   "name": "Machine-gun emplacements, west bank",
+   "observed_turn": 0,
+   "pos": [
+    8,
+    10
+   ],
+   "progress": 100,
+   "provenance": "authored-poc",
+   "received_turn": 0,
+   "required": 400,
+   "updated_turn": 0
+  },
+  {
+   "briefed": true,
+   "cover": 40,
+   "effort": 400,
+   "id": "west-trenches",
+   "kind": "fortification",
+   "name": "Trench system, west bank",
+   "observed_turn": 0,
+   "pos": [
+    8,
+    9
+   ],
+   "progress": 100,
+   "provenance": "authored-poc",
+   "received_turn": 0,
+   "required": 400,
+   "updated_turn": 0
+  }
+ ],
+ "max_turns": 360,
+ "objective": [
+  9,
+  10
+ ],
+ "order_templates": [
+  {
+   "destination": "none",
+   "effect": "Maintain position until relieved. Local commanders may seek cover or withdraw if overwhelmed.",
+   "id": "hold",
+   "intent": "Hold your present ground; defend the position and report enemy contact.",
+   "label": "Hold and defend",
+   "message_key": "order.template.hold",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "hex",
+   "effect": "Travel over terrain. Contact can interrupt movement; the destination remains your mission.",
+   "id": "move",
+   "intent": "Proceed to the appointed map reference, then hold and report your arrival.",
+   "label": "Move to position",
+   "message_key": "order.template.move",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "none",
+   "effect": "Recover fatigue while clear of contact. Finish at zero fatigue. No replacement troops or ammunition.",
+   "id": "rest",
+   "intent": "Halt the detachment and rest the men. Keep watch; defend yourselves if attacked.",
+   "label": "Rest and recover",
+   "message_key": "order.template.rest",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "hex",
+   "effect": "Withdraw toward the selected hex. Avoid closing with observed threats; defend if the way is blocked.",
+   "id": "retreat",
+   "intent": "Fall back to the appointed position, preserving the detachment; report when established.",
+   "label": "Retreat to position",
+   "message_key": "order.template.retreat",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "supply",
+   "effect": "Use the nearest friendly ammunition point. Load from finite stocks only while adjacent and clear of contact.",
+   "id": "resupply",
+   "intent": "Proceed to our ammunition point and replenish your cartridge boxes. Report shortages.",
+   "label": "Replenish ammunition",
+   "message_key": "order.template.resupply",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "hex",
+   "effect": "Move cautiously to the selected hex, then maintain observation. Does not confer scout skill or reveal hidden troops.",
+   "id": "recon",
+   "intent": "Examine the appointed ground, observe the enemy and send word. Avoid a close engagement.",
+   "label": "Reconnoiter position",
+   "message_key": "order.template.recon",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "none",
+   "effect": "Work takes time and increases fatigue. Tools and ground determine progress; fire interrupts construction. Cover remains on this hex when the unit leaves.",
+   "id": "dig_in",
+   "intent": "Strengthen your present position with hasty fieldworks. Keep watch and report when ready.",
+   "label": "Dig in",
+   "message_key": "order.template.dig_in",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "none",
+   "effect": "The detachment does not open fire; it returns fire once enemy fire strikes it. Its mission is unchanged.",
+   "id": "hold_fire",
+   "intent": "Do not fire unless fired upon. Keep your present instructions.",
+   "label": "Hold fire",
+   "message_key": "order.template.hold_fire",
+   "version": "common-orders-v5"
+  },
+  {
+   "destination": "none",
+   "effect": "The detachment fires on the nearest enemy in range. Its mission is unchanged.",
+   "id": "open_fire",
+   "intent": "Engage the enemy within range. Keep your present instructions.",
+   "label": "Open fire",
+   "message_key": "order.template.open_fire",
+   "version": "common-orders-v5"
+  }
+ ],
+ "orders": [
+  {
+   "arrival_turn": 1,
+   "destination": [
+    8,
+    10
+   ],
+   "id": "O1",
+   "sent_turn": 0,
+   "side": "british",
+   "source": "human",
+   "stance": "move",
+   "status": "delivered",
+   "unit_id": "D25",
+   "version": 1
+  },
+  {
+   "arrival_turn": 1,
+   "destination": [
+    9,
+    10
+   ],
+   "id": "O2",
+   "sent_turn": 0,
+   "side": "british",
+   "source": "human",
+   "stance": "move",
+   "status": "delivered",
+   "unit_id": "D24",
+   "version": 1
+  },
+  {
+   "arrival_turn": 1,
+   "destination": [
+    8,
+    9
+   ],
+   "id": "O3",
+   "sent_turn": 0,
+   "side": "british",
+   "source": "human",
+   "stance": "move",
+   "status": "delivered",
+   "unit_id": "B14",
+   "version": 1
+  }
+ ],
+ "reason": null,
+ "recommendations": [
+  {
+   "created_turn": 2,
+   "display_text": "Major, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "evidence": {
+    "ammo": 600,
+    "contact_ids": [],
+    "fatigue": 0,
+    "local_action": "hold",
+    "morale": 87,
+    "pos": [
+     10,
+     13
+    ],
+    "strength": 15
+   },
+   "expires_turn": 14,
+   "id": "A1",
+   "mission_version": 0,
+   "policy": "commander-advice-v1",
+   "proposal": {
+    "destination": null,
+    "stance": "dig_in",
+    "unit_id": "DHQ"
+   },
+   "received_turn": 2,
+   "side": "british",
+   "status": "delivered",
+   "text": "General, while the ground is quiet, I recommend strengthening this position with fieldworks.",
+   "unit_id": "DHQ"
+  }
+ ],
+ "revision": 13,
+ "rules": "poc-13",
+ "scenario_brief": {
+  "campaign": "CAEN CANAL BRIDGE \u00b7 B\u00c9NOUVILLE, NORMANDY",
+  "conditions": "SUMMER",
+  "id": "pegasus-bridge-guard-only+relief-1h",
+  "kicker": "PEGASUS BRIDGE (GUARD-ONLY+RELIEF-1H)",
+  "mission": {
+   "text": "You command D Company, 2nd Ox and Bucks, landed by glider beside the Caen Canal bridge at B\u00e9nouville. Your mission: seize the bridge intact and hold the ground within one hex of it until relieved by 7th Parachute Battalion. Report the bridge taken with the codeword Ham.",
+   "title": "Your mission"
+  },
+  "objective": {
+   "key": "CANAL BRIDGE",
+   "label": "CANAL BRIDGE OBJECTIVE",
+   "place": "Canal bridge",
+   "ring": false
+  },
+  "opponent": {
+   "id": "german",
+   "name": "German"
+  },
+  "outcomes": {
+   "draw": "The battle ends in a draw.",
+   "loss": "Defeat.",
+   "win": "Victory."
+  },
+  "side": {
+   "id": "british",
+   "name": "British"
+  },
+  "subhead": "You command the British. The computer commands the German.",
+  "tagline": "the Caen Canal bridge at B\u00e9nouville, June 1944",
+  "title": "Pegasus Bridge (guard-only+relief-1h)",
+  "voice_profile": "wwii-1944-en-v1"
+ },
+ "seconds_per_turn": 30,
+ "side": "british",
+ "signals": [
+  {
+   "bridge": "canal-bridge",
+   "codeword": "Ham",
+   "delivered_turn": 12,
+   "meaning": "Canal bridge taken intact.",
+   "receiver_id": "DHQ",
+   "sender_id": "D25",
+   "sent_turn": 11
+  }
+ ],
+ "standing_orders": [],
+ "standing_templates": [
+  {
+   "enemy_ratio": 2.5,
+   "fire_range": 5,
+   "id": "balanced",
+   "intent": "Carry out the mission, use cover and fall back when the detachment is in serious danger.",
+   "label": "Balanced",
+   "message_key": "standing.template.balanced",
+   "morale_floor": 45,
+   "reserve_volleys": 1,
+   "suppression_limit": 70,
+   "version": "standing-orders-v1"
+  },
+  {
+   "enemy_ratio": 1.5,
+   "fire_range": 5,
+   "id": "cautious",
+   "intent": "Avoid costly engagements. Fall back earlier when pressed, low on cartridges or shaken.",
+   "label": "Preserve the force",
+   "message_key": "standing.template.cautious",
+   "morale_floor": 60,
+   "reserve_volleys": 3,
+   "suppression_limit": 50,
+   "version": "standing-orders-v1"
+  },
+  {
+   "enemy_ratio": 3.5,
+   "fire_range": 5,
+   "id": "firm",
+   "intent": "Accept greater pressure to hold the ground. Seek cover; withdraw if the formation can no longer stand.",
+   "label": "Hold ground firmly",
+   "message_key": "standing.template.firm",
+   "morale_floor": 35,
+   "reserve_volleys": 1,
+   "suppression_limit": 85,
+   "version": "standing-orders-v1"
+  },
+  {
+   "enemy_ratio": 1.0,
+   "fire_range": 3,
+   "id": "screen",
+   "intent": "Watch and report; avoid equal or stronger opposition. Reserve fire for close threats within three hexes.",
+   "label": "Observe and screen",
+   "message_key": "standing.template.screen",
+   "morale_floor": 60,
+   "reserve_volleys": 3,
+   "suppression_limit": 50,
+   "version": "standing-orders-v1"
+  }
+ ],
+ "status": "active",
+ "supply_sites": [],
+ "turn": 12,
+ "units": [
+  {
+   "ammo": 1050,
+   "fatigue": 0,
+   "fire_posture": "open_fire",
+   "id": "B14",
+   "initial": 30,
+   "local_action": "continue",
+   "local_reason": "No enemy within effective range; maintain the assigned mission.",
+   "mission_result": {
+    "order_version": 1,
+    "reason": "Instructions received.",
+    "started_turn": 1,
+    "status": "active",
+    "template": "move",
+    "updated_turn": 1
+   },
+   "morale": 85,
+   "name": "14 Platoon (B Company) \u00b7 Smith",
+   "observed_turn": 11,
+   "order_version": 1,
+   "pos": [
+    10,
+    12
+   ],
+   "received_turn": 12,
+   "recon_role": "line",
+   "recon_skill": 35,
+   "side": "british",
+   "skill": 70,
+   "stance": "move",
+   "standing_profile": "balanced",
+   "standing_version": 0,
+   "status": "ready",
+   "strength": 30,
+   "supply_site": null,
+   "suppression": 0,
+   "tactical_target": null,
+   "target": [
+    8,
+    9
+   ],
+   "tools": 20,
+   "unit_type": "infantry",
+   "weapon_class": "1944 small arms"
+  },
+  {
+   "ammo": 934,
+   "fatigue": 3,
+   "fire_posture": "open_fire",
+   "id": "D24",
+   "initial": 30,
+   "local_action": "continue",
+   "local_reason": "No enemy within effective range; maintain the assigned mission.",
+   "mission_result": {
+    "order_version": 1,
+    "reason": "Instructions received.",
+    "started_turn": 1,
+    "status": "active",
+    "template": "move",
+    "updated_turn": 1
+   },
+   "morale": 77,
+   "name": "24 Platoon \u00b7 Wood, with Capt Neilson RE",
+   "observed_turn": 11,
+   "order_version": 1,
+   "pos": [
+    10,
+    10
+   ],
+   "received_turn": 12,
+   "recon_role": "line",
+   "recon_skill": 35,
+   "side": "british",
+   "skill": 70,
+   "stance": "move",
+   "standing_profile": "balanced",
+   "standing_version": 0,
+   "status": "ready",
+   "strength": 28,
+   "supply_site": null,
+   "suppression": 0,
+   "tactical_target": null,
+   "target": [
+    9,
+    10
+   ],
+   "tools": 20,
+   "unit_type": "infantry",
+   "weapon_class": "1944 small arms"
+  },
+  {
+   "ammo": 948,
+   "fatigue": 3,
+   "fire_posture": "open_fire",
+   "id": "D25",
+   "initial": 30,
+   "local_action": "continue",
+   "local_reason": "No enemy within effective range; maintain the assigned mission.",
+   "mission_result": {
+    "order_version": 1,
+    "reason": "Instructions received.",
+    "started_turn": 1,
+    "status": "active",
+    "template": "move",
+    "updated_turn": 1
+   },
+   "morale": 73,
+   "name": "25 Platoon \u00b7 Brotheridge",
+   "observed_turn": 11,
+   "order_version": 1,
+   "pos": [
+    9,
+    10
+   ],
+   "received_turn": 12,
+   "recon_role": "line",
+   "recon_skill": 35,
+   "side": "british",
+   "skill": 70,
+   "stance": "move",
+   "standing_profile": "balanced",
+   "standing_version": 0,
+   "status": "ready",
+   "strength": 27,
+   "supply_site": null,
+   "suppression": 0,
+   "tactical_target": null,
+   "target": [
+    8,
+    10
+   ],
+   "tools": 20,
+   "unit_type": "infantry",
+   "weapon_class": "1944 small arms"
+  },
+  {
+   "ammo": 600,
+   "fatigue": 0,
+   "fire_posture": "open_fire",
+   "id": "DHQ",
+   "initial": 15,
+   "local_action": "hold",
+   "local_reason": "No enemy within effective range; maintain the assigned mission.",
+   "morale": 90,
+   "name": "D Company headquarters \u00b7 Howard",
+   "observed_turn": 12,
+   "order_version": 0,
+   "pos": [
+    10,
+    13
+   ],
+   "received_turn": 12,
+   "recon_role": "line",
+   "recon_skill": 35,
+   "side": "british",
+   "skill": 70,
+   "stance": "hold",
+   "standing_profile": "balanced",
+   "standing_version": 0,
+   "status": "ready",
+   "strength": 15,
+   "suppression": 0,
+   "tactical_target": null,
+   "target": null,
+   "tools": 20,
+   "unit_type": "infantry",
+   "weapon_class": "1944 small arms"
+  }
+ ],
+ "voice_profile": "wwii-1944-en-v1",
+ "weather": {
+  "conditions": "night, cloudy (S52 sheet 2); fixed POC condition",
+  "season": "summer"
+ },
+ "winner": null
+}
