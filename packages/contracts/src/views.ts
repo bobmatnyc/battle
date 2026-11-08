@@ -5,6 +5,7 @@ import {
   array, boolean, count, fail, hex, integer, json, jsonObject, literal, nullable, number,
   object, record, refine, string, type Check, type JsonObject, type JsonValue,
 } from "./check.ts";
+import {mapFeatures, type MapFeature} from "./features.ts";
 
 type Hex = [number, number];
 
@@ -191,7 +192,7 @@ const sharedFields = {
   winner: nullable(string), reason: nullable(string), objective: hex,
   max_turns: count, seconds_per_turn: count, side: string, weather: jsonObject, hq: hex,
   command: commandLocation, units: array(unitReport), order_templates: array(orderTemplate),
-  standing_templates: jsonList, map_features: jsonList,
+  standing_templates: jsonList,
   display_locale: literal("en"), voice_profile: string, analysis,
 };
 const sharedOptional = {scenario_brief: scenarioBrief};
@@ -202,13 +203,13 @@ interface SharedView {
   max_turns: number; seconds_per_turn: number; side: string; weather: JsonObject; hq: Hex;
   command: CommandLocation; units: UnitReport[]; order_templates: OrderTemplate[];
   standing_templates: JsonObject[]; recommendations: Recommendation[];
-  map_features: JsonObject[];
   display_locale: "en"; voice_profile: string; analysis: Analysis;
   scenario_brief?: ScenarioBrief;
 }
 
 /** One side's commander view: its own delivered reports only. */
 export interface CommanderView extends SharedView {
+  map_features: MapFeature[];
   contacts: Contact[]; orders: CommanderOrder[]; dispatches: Dispatch[];
   standing_orders: StandingOrder[]; supply_sites: SupplySite[];
   recommendations: (Recommendation & {received_turn: number})[]; formation_ops: FormationOp[];
@@ -217,6 +218,7 @@ export interface CommanderView extends SharedView {
 
 /** The God view: true state of every side, for the local observer only. */
 export interface GodView extends SharedView {
+  map_features: JsonObject[];
   view_mode: "god"; contacts: []; orders: GodOrder[]; dispatches: GodDispatch[];
   standing_orders: StandingOrder[]; supply_sites: GodSupplySite[];
   reports: JsonObject[]; events: JsonObject[]; decisions: JsonObject[];
@@ -247,7 +249,7 @@ function ownBrief(view: SharedView, path: string): void {
  * own broadcasts with no sender condition, reach or receipts.
  * Test: `commander fixtures validate`, `commander view refuses each God-only field`. */
 export const commanderView: Check<CommanderView> = refine(object({
-  ...sharedFields,
+  ...sharedFields, map_features: mapFeatures,
   contacts: array(contact), orders: array(commanderOrder), dispatches: array(commanderDispatch),
   standing_orders: array(commanderStandingOrder), supply_sites: array(commanderSupplySite),
   recommendations: array(commanderRecommendation), formation_ops: array(commanderFormationOp),
@@ -272,7 +274,7 @@ const emptyContacts: Check<[]> = (input, path) => array(json, {max: 0})(input, p
  * no contacts (God sees units), side-tagged dispatches, transports on orders.
  * Test: `god fixtures validate`, `god view requires view_mode god`. */
 export const godView: Check<GodView> = refine(object({
-  ...sharedFields,
+  ...sharedFields, map_features: jsonList,
   view_mode: literal("god"), contacts: emptyContacts,
   orders: array(godOrder), dispatches: array(godDispatch),
   standing_orders: array(godStandingOrder), supply_sites: array(godSupplySite),
