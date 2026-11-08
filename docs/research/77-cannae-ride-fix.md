@@ -159,6 +159,8 @@ Measured, not yet explained.
 
 No engine or policy change was made for this batch; what to change next is an owner decision.
 
+Explained in [79](79-cannae-observations-diagnosis.md).
+
 ## 7. Review notes
 
 **code-critic on `aa8789f`: APPROVE.** No blocking findings. LOW findings, recorded, not scheduled:
