@@ -6,7 +6,7 @@ import {readdirSync, readFileSync} from "node:fs";
 import {test} from "node:test";
 import vm from "node:vm";
 import {readMapFeatures, type MapFeature} from "@battle/contracts";
-import {featureLayer, featureLegend, featureNotes, footprint, type FeatureOptions} from "../src/features.ts";
+import {featureLayer, featureLegend, featureNotes, footprint, placeLabels, type FeatureOptions, type LabelPlace, type LabelSpec, type Rect} from "../src/features.ts";
 import {readStatusTable, statusTableFor} from "../src/feature-sources.ts";
 import {hexCenter} from "../src/geometry.ts";
 import {esc} from "../src/render.ts";
@@ -99,4 +99,61 @@ test("the status table is the POC's file, read through a checked reader; the des
     const body = readFileSync(new URL(name, src), "utf8");
     for (const text of texts) assert.ok(!body.includes(text), `${name} copies "${text}"`);
   }
+});
+
+// bt-T16 (docs/research/80): no feature label meets another label or a counter. The boxes are measured here
+// with a narrower text estimate than the placement rule's (6 px a character, 7.8 for capitals).
+type Box = {x0: number; y0: number; x1: number; y1: number};
+const meet = (a: Box, b: Box): boolean => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+function drawnLabels(layer: string): (Box & {text: string})[] {
+  const out: (Box & {text: string})[] = [];
+  for (const m of layer.matchAll(/<g class="feature-mark[^>]*data-feature="([^"]*)"([^>]*)>(.*?)<\/g>/g)) {
+    const t = /<text x="([-\d.]+)" y="([-\d.]+)"(?: text-anchor="(\w+)")? class="feature-label">([^<]*)<\/text>/.exec(m[3]!);
+    if (!t) continue;
+    const move = /translate\(([-\d.]+),([-\d.]+)\)/.exec(m[2]!);
+    const x = Number(t[1]) + (move ? Number(move[1]) : 0), y = Number(t[2]) + (move ? Number(move[2]) : 0);
+    const text = t[4]!.replaceAll("&#39;", "'").replaceAll("&amp;", "&");
+    const w = [...text].reduce((n, c) => n + (/[A-Z%]/.test(c) ? 7.8 : 6), 0), x0 = t[3] === "middle" ? x - w / 2 : t[3] === "end" ? x - w : x;
+    out.push({text, x0: x0 - 1, y0: y - 10, x1: x0 + w + 1, y1: y + 3});
+  }
+  return out;
+}
+const PLAYABLE = ["little-round-top", "hougoumont-north-gate", "concord-north-bridge", "pegasus-bridge", "hill-223-patrol"];
+
+test("label placement is deterministic, takes the first free place and hides a label with none", () => {
+  const spot = (x: number, y: number): LabelPlace => ({x, y, anchor: "start"});
+  const a: LabelSpec = {key: "a", priority: 1, text: "Alpha", candidates: [spot(10, 20), spot(10, 60)]};
+  const b: LabelSpec = {key: "b", priority: 0, text: "Bravo", candidates: [spot(10, 20), spot(10, 60)]};
+  const entries = (specs: LabelSpec[], obstacles: Rect[] = []): unknown => [...placeLabels(specs, obstacles).entries()];
+  assert.deepEqual(entries([a, b]), [["b", spot(10, 20)], ["a", spot(10, 60)]], "the lower priority number takes the shared first place");
+  assert.deepEqual(entries([b, a]), entries([a, b]), "the input order does not matter");
+  assert.deepEqual(entries([{...b, priority: 1}, a]), [["a", spot(10, 20)], ["b", spot(10, 60)]], "equal priority: the lower key goes first");
+  assert.deepEqual(entries([a], [{x0: 0, y0: 0, x1: 200, y1: 30}]), [["a", spot(10, 60)]], "an obstacle sends the label to its next place");
+  assert.deepEqual(entries([a], [{x0: 0, y0: 0, x1: 200, y1: 30}, {x0: 0, y0: 40, x1: 200, y1: 90}]), [["a", null]], "no free place hides the label");
+  assert.deepEqual(entries([{...a, candidates: [spot(10, 20)]}, {...b, candidates: [spot(10, 20)]}]), [["b", spot(10, 20)], ["a", null]],
+    "of two labels that want one place the higher-numbered priority is hidden");
+});
+
+test("no feature label meets another label or a counter on the five playable scenarios", () => {
+  for (const id of PLAYABLE) {
+    const list = features(id), plain = featureLayer(list, options(id));
+    const labels = drawnLabels(plain);
+    assert.ok(labels.length > 0, id);
+    assert.doesNotMatch(plain, /data-label="hidden"/, `${id}: no label hidden without counters`);
+    // Worst case: a 74 x 34 counter centred on every mark's hex.
+    const counters: Rect[] = list.flatMap((f) => ("pos" in f ? [f.pos] : f.points)).map((p) => hexCenter(p, RADIUS))
+      .map(([x, y]) => ({x0: x - 37, y0: y - 17, x1: x + 37, y1: y + 17}));
+    const crowded = drawnLabels(featureLayer(list, {...options(id), obstacles: counters}));
+    for (const set of [labels, crowded]) for (let i = 0; i < set.length; i++) {
+      for (let j = i + 1; j < set.length; j++) assert.ok(!meet(set[i]!, set[j]!), `${id}: "${set[i]!.text}" meets "${set[j]!.text}"`);
+    }
+    for (const label of crowded) for (const c of counters) assert.ok(!meet(label, c), `${id}: a counter covers "${label.text}"`);
+  }
+});
+
+test("the POC desk and this desk place labels alike with the same counters in the way", () => {
+  const id = "pegasus-bridge", list = features(id);
+  const obstacles: Rect[] = [{x0: 380, y0: 440, x1: 460, y1: 480}, {x0: 880, y0: 400, x1: 960, y1: 440}];
+  assert.equal(featureLayer(list, {...options(id), obstacles}),
+    pocCall("BattleFeatures.render(args[0], center, esc, args[1])", [list, {...pocOptions(id), obstacles}]));
 });

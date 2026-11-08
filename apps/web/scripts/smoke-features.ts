@@ -154,6 +154,33 @@ export async function checkRing(page: Page, pocPort: number): Promise<string> {
     + `pointer-events none, its stroke is not hit`;
 }
 
+// bt-T16: every feature label's drawn box, and every counter's, in screen pixels.
+const LABEL_BOXES = `(() => {
+  const box = (n, kind, name) => { const b = n.getBoundingClientRect(); return {kind, name, x0: b.left, y0: b.top, x1: b.right, y1: b.bottom}; };
+  return {
+    labels: [...document.querySelectorAll("#map .battle-features .feature-label")].map(n => box(n, "label", n.textContent)),
+    counters: [...document.querySelectorAll("#map .counter")].map(n => box(n, "counter", n.dataset.unit ?? n.dataset.contact)),
+    hidden: document.querySelectorAll("#map .battle-features [data-label=hidden]").length,
+  };
+})()`;
+type Box = {kind: string; name: string; x0: number; y0: number; x1: number; y1: number};
+const meets = (a: Box, b: Box): boolean => a.x0 < b.x1 - 0.5 && b.x0 < a.x1 - 0.5 && a.y0 < b.y1 - 0.5 && b.y0 < a.y1 - 0.5;
+
+/** Why: a feature label under another label or a counter cannot be read (docs/research/75 §8, 80).
+ * What: measures the drawn boxes in the page; no feature label meets another, and no counter covers one.
+ * The desk has no zoom: its SVG scales as one, so these boxes at any size meet exactly where they do here.
+ * Returns a one-line summary with the number of labels hidden by the placement rule. */
+export async function checkLabels(page: Page): Promise<string> {
+  const found = await page.evaluate<{labels: Box[]; counters: Box[]; hidden: number}>(LABEL_BOXES);
+  const all = [...found.labels, ...found.counters];
+  for (let i = 0; i < found.labels.length; i++) {
+    for (let j = i + 1; j < all.length; j++) {
+      assert.ok(!meets(found.labels[i]!, all[j]!), `${all[j]!.kind} "${all[j]!.name}" meets label "${found.labels[i]!.name}"`);
+    }
+  }
+  return `${found.labels.length} feature labels, ${found.counters.length} counters, none meet; ${found.hidden} label(s) hidden by the rule`;
+}
+
 const disabled = (page: Page, ids: string[]): Promise<boolean[]> =>
   page.evaluate<boolean[]>(`${JSON.stringify(ids)}.map(id => document.getElementById(id).disabled)`);
 

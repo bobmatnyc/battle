@@ -35,15 +35,15 @@ const UnitIcons = (() => {
           `<span>${name}<b>${value(n)}${n === null ? '' : '%'}</b></span>`).join('') + '</div>';
     }
 
-    function render(entries) {
+    const width = 112, height = 72;
+    // Where each entry's card sits: the first free place round its point, in entry order.
+    function layout(entries) {
       const boxes = [];
-      const width = 112, height = 72;
       const overlaps = box => boxes.some(other =>
         box.x < other.x + width + 7 && box.x + width + 7 > other.x &&
         box.y < other.y + height + 7 && box.y + height + 7 > other.y);
       const anchors = entries.map(entry => entry.point);
-      return entries.map(entry => {
-        const info = describe(entry.unit, entry.contact);
+      for (const entry of entries) {
         const [x, y] = entry.point;
         const candidates = [];
         for (let ring = 0; ring < entries.length + 2; ring++) {
@@ -57,6 +57,20 @@ const UnitIcons = (() => {
           ax > candidate.x - 10 && ax < candidate.x + width + 10 &&
           ay > candidate.y - 10 && ay < candidate.y + height + 10)) || candidates.find(candidate => !overlaps(candidate)) || candidates[0];
         boxes.push(box);
+      }
+      return boxes;
+    }
+    // bt-T16: the boxes a feature label must keep clear of: each card, and each anchor dot.
+    function obstacles(entries) {
+      return [...layout(entries).map(b => ({x0: b.x, y0: b.y, x1: b.x + width, y1: b.y + height})),
+        ...entries.map(({point: [x, y]}) => ({x0: x - 6, y0: y - 6, x1: x + 6, y1: y + 6}))];
+    }
+    function render(entries) {
+      const boxes = layout(entries);
+      return entries.map((entry, index) => {
+        const box = boxes[index];
+        const info = describe(entry.unit, entry.contact);
+        const [x, y] = entry.point;
         const attribute = entry.contact ? 'data-contact' : 'data-unit';
         const description = `${label(info)} · ${entry.report}`;
         const color = entry.enemy ? '#873e30' : '#284d68';
@@ -75,7 +89,7 @@ const UnitIcons = (() => {
           }).join('') + '</g></g>';
       }).join('');
     }
-    return Object.freeze({render, metrics});
+    return Object.freeze({render, metrics, layout, obstacles});
   }
   return Object.freeze({create, describe});
 })();

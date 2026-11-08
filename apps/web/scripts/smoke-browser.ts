@@ -29,7 +29,7 @@ import {join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createDeskServer, type DeskServer} from "../server/desk-server.ts";
 import {findBrowser, launch, Page} from "./cdp.ts";
-import {checkFeatures, checkGridToggle, checkReplay, checkRing} from "./smoke-features.ts";
+import {checkFeatures, checkGridToggle, checkLabels, checkReplay, checkRing} from "./smoke-features.ts";
 import {checkCard, choose, clickOn, header, nextNotice, noticeText, openHex, poc, screenshot, selectUnit, until, type Doc} from "./smoke-page.ts";
 import {removeDir, stop, waitForOutput, withDeadline} from "./smoke-support.ts";
 
@@ -89,6 +89,7 @@ async function littleRoundTop(page: Page, pocPort: number, artifacts: string): P
   await screenshot(page, artifacts, "desk-lrt-features.png");
   // bt-T11: the hold-objective ring, as the POC desk draws it; the clicks below pass through it.
   console.log(`ring: ${await checkRing(page, pocPort)}`);
+  console.log(`labels: ${await checkLabels(page)}`);
   await screenshot(page, artifacts, "desk-lrt-ring.png");
   console.log(`grid: ${await checkGridToggle(page, artifacts, "desk-lrt-grid-off.png")}`);
 
@@ -195,6 +196,7 @@ async function hougoumont(page: Page, pocPort: number, artifacts: string): Promi
   console.log(`grid: ${await checkGridToggle(page, artifacts, "desk-hougoumont-grid-off.png")}`);
   await screenshot(page, artifacts, "desk-hougoumont-features.png");
   console.log(`ring: ${await checkRing(page, pocPort)}`);
+  console.log(`labels: ${await checkLabels(page)}`);
 
   const gateParty = state["units"][0];
   await selectUnit(page, gateParty.id);
@@ -226,6 +228,7 @@ async function concord(page: Page, pocPort: number, artifacts: string): Promise<
   console.log(`features: ${await checkFeatures(page, pocPort)}`);
   await screenshot(page, artifacts, "desk-concord-features.png");
   console.log(`ring: ${await checkRing(page, pocPort)}`);
+  console.log(`labels: ${await checkLabels(page)}`);
 
   // The Acton company, the command's own detachment, gets a move to an open hex 3 to 6 hexes away.
   const acton = state["units"].find((u: Doc) => u.id === "P1");
@@ -295,6 +298,7 @@ async function era(page: Page, pocPort: number, artifacts: string, spec: Era): P
   console.log(`features: ${await checkFeatures(page, pocPort)}`);
   await screenshot(page, artifacts, `desk-${spec.shot}-features.png`);
   console.log(`ring: ${await checkRing(page, pocPort)}`);
+  console.log(`labels: ${await checkLabels(page)}`);
 
   const unit = state["units"].find((u: Doc) => u.id === spec.unit);
   await selectUnit(page, unit.id);
