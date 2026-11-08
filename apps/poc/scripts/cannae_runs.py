@@ -13,7 +13,7 @@ headquarters' delivered reports, the most units and men enclosed at any
 interval and when, the last ``record`` row, the attacker units that reached an
 exit (interval and men), per unit the end strength, status, hex and front,
 the yields, wheels and exploit events, each cavalry unit's first fight and the
-interval it left it, Hasdrubal's ride and charge order turns, delivered orders
+interval it left it, Hasdrubal's pursuit (D34), ride and charge order turns, delivered orders
 and their mean delay per side, losses per side against the sources' order of
 magnitude, routed and lost units and the event count. The engine draws no
 random number.
@@ -75,6 +75,11 @@ def summarise(name, entry, result, final, seconds):
     first_order = lambda uid, dest: min((e["turn"] for e in ev if e["kind"] == "order_sent" and e["unit_id"] == uid
                                          and (dest is None or list(e.get("destination") or ()) == list(dest))),
                                         default=None)
+    ride = {uid: first_order(uid, RIDE[uid]) for uid in HASDRUBAL}
+    rode = min((t for t in ride.values() if t is not None), default=None)
+    # D34: a move off the ride hex before the ride is a pursuit of EQ; from the ride on, the charge.
+    other = {uid: [e["turn"] for e in ev if e["kind"] == "order_sent" and e["unit_id"] == uid
+                   and e.get("destination") and list(e["destination"]) != list(RIDE[uid])] for uid in HASDRUBAL}
     return {
         "run": name, "entry": entry.id, "winner": final["winner"], "turn": final["turn"],
         "time": clock(final["turn"]), "reason": final["reason"], "replay": result["replay"]["status"],
@@ -87,9 +92,9 @@ def summarise(name, entry, result, final, seconds):
         "exploit": [(e["unit_id"], e["kind"], e["turn"], e.get("reason")) for e in ev
                     if e["kind"] in ("exploit_started", "exploit_stopped")],
         "cavalry_fight": {uid: _first_fight(ev, uid) for uid in CAVALRY if any(u["id"] == uid for u in final["units"])},
-        "ride": {uid: first_order(uid, RIDE[uid]) for uid in HASDRUBAL},
-        "charge": {uid: min((e["turn"] for e in ev if e["kind"] == "order_sent" and e["unit_id"] == uid
-                             and e.get("destination") and list(e["destination"]) != list(RIDE[uid])), default=None)
+        "pursue": {uid: [t for t in other[uid] if rode is None or t < rode] for uid in HASDRUBAL},
+        "ride": ride,
+        "charge": {uid: min((t for t in other[uid] if rode is not None and t >= rode), default=None)
                    for uid in HASDRUBAL},
         "orders_delivered": {side: [len(d), round(sum(d) / len(d), 1) if d else None] for side, d in orders.items()},
         "losses": {s: f"{lost[s]}/{initial[s]}" for s in sorted(lost)}, "sources": SOURCES,
