@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>battle · command desk</title>
+<link rel="stylesheet" href="/style.css">
+<script type="module" src="/src/main.ts"></script>
+</head>
+<body>
+<header class="desk-header">
+  <div><span id="campaign"></span><h1 id="title">Command desk</h1></div>
+  <div class="battle-clock" aria-live="polite">
+    <strong id="battle-time">--:--</strong>
+    <span id="battle-date"></span>
+    <span id="battle-location"></span>
+  </div>
+</header>
+<main class="desk">
+  <section class="field">
+    <svg id="map" role="img" aria-label="Hex map of the battlefield"></svg>
+    <p id="notice" class="notice" role="status" data-kind="info">Connecting to the local simulation…</p>
+  </section>
+  <aside class="panel">
+    <section>
+      <h2>Selected</h2>
+      <p id="selection">Select one of your counters on the map.</p>
+      <button id="send-order" disabled>Send move order</button>
+      <button id="clock-toggle" disabled>Start clock</button>
+    </section>
+    <section><h2>Orders</h2><ol id="orders"></ol></section>
+    <section><h2>Enemy sightings</h2><ul id="contacts"></ul></section>
+  </aside>
+</main>
+</body>
+</html>

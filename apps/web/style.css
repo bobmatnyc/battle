@@ -1,0 +1,27 @@
+body { margin: 0; font: 14px/1.4 system-ui, sans-serif; color: #222; background: #f4f1e8; }
+.desk-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: #23445b; color: #fff; }
+.desk-header h1 { margin: 0; font-size: 18px; }
+.battle-clock { display: flex; flex-direction: column; align-items: flex-end; }
+.battle-clock strong { font-size: 22px; }
+.desk { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; padding: 12px; }
+#map { width: 100%; height: auto; background: #efe9d6; border: 1px solid #b7ad8f; }
+.hex { stroke: #a99f80; stroke-width: 0.6; cursor: pointer; }
+.hex.destination { stroke: #23445b; stroke-width: 3; }
+.objective circle { fill: none; stroke: #8f7134; stroke-width: 2; stroke-dasharray: 5 4; }
+.objective text { font-size: 11px; fill: #634e27; }
+.route { stroke: #23445b; stroke-width: 3; stroke-dasharray: 7 5; fill: none; }
+.counter rect { stroke-width: 1.5; }
+.counter text { font-size: 9px; font-family: ui-monospace, monospace; }
+.counter .counter-id { font-weight: bold; }
+.counter.friendly { cursor: pointer; }
+.counter.friendly rect { fill: #dfe9f3; stroke: #244f76; }
+.counter.friendly.selected rect { fill: #fff3c4; stroke: #c48a00; stroke-width: 3; }
+.counter.contact rect { fill: #f6dfdb; stroke: #873e36; stroke-dasharray: 4 3; }
+.panel section { margin-bottom: 14px; }
+.panel h2 { font-size: 14px; margin: 0 0 4px; text-transform: uppercase; letter-spacing: .05em; }
+.panel ol, .panel ul { margin: 0; padding-left: 18px; }
+button { margin: 4px 4px 0 0; padding: 6px 10px; }
+.notice { padding: 6px 10px; border-radius: 3px; background: #e8e3d2; }
+.notice[data-kind="refusal"] { background: #f6d5cf; color: #6b1f15; font-weight: bold; }
+.notice[data-kind="accepted"] { background: #d6ecd2; color: #1f4d17; }
+@media (max-width: 760px) { .desk { grid-template-columns: 1fr; } }

@@ -51,10 +51,10 @@ test("the desk page and its modules are served as JavaScript", async () => {
   assert.equal(page.status, 200);
   assert.match(page.body, /<script type="module" src="\/src\/main.ts">/);
   assert.match(String(page.headers["content-security-policy"]), /connect-src 'self'/);
-  const module = await call("/src/timeline.ts");
+  const module = await call("/src/api.ts");
   assert.equal(module.status, 200);
   assert.match(String(module.headers["content-type"]), /text\/javascript/);
-  assert.doesNotMatch(module.body, /: BattleSetting/);
+  assert.doesNotMatch(module.body, /readonly status: number|: Promise<CommanderState>/, "types are stripped");
   assert.match(module.body, /from "\/contracts\/index.ts"/, "the bare contracts import is rewritten");
   const contract = await call("/contracts/map.ts");
   assert.equal(contract.status, 200);
