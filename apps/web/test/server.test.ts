@@ -165,9 +165,11 @@ test("only the routes the desk uses are relayed; others never reach the POC", as
   seen.length = 0;
   const refused: [string, string, number][] = [
     ["POST", "/api/history", 405], ["POST", "/api/replay", 405], ["POST", "/api/chat", 404],
-    ["POST", "/api/advance", 404], ["POST", "/api/mode", 404], ["POST", "/api/standing-orders", 404],
-    ["POST", "/api/formations", 404], ["POST", "/api/recommendations", 404], ["GET", "/api/unknown", 404],
-    ["GET", "/api/orders", 405], ["POST", "/api/state", 405],
+    ["POST", "/api/advance", 404], ["POST", "/api/mode", 404], ["POST", "/api/recommendations", 404],
+    ["GET", "/api/unknown", 404], ["GET", "/api/orders", 405], ["POST", "/api/state", 405],
+    ["GET", "/api/standing-orders", 405], ["GET", "/api/formations", 405],
+    // docs/research/81 §12: an empty body is not a standing order or formation request.
+    ["POST", "/api/standing-orders", 400], ["POST", "/api/formations", 400],
   ];
   for (const [method, path, status] of refused) {
     const reply = await call(path, {method, headers: {"Content-Type": "application/json"}, body: method === "POST" ? "{}" : undefined});
@@ -264,4 +266,43 @@ test("a module that exists but fails to load or strip is a 500 with the reason, 
     assert.equal(fine.status, 200);
     assert.doesNotMatch(fine.body, /: number/);
   } finally { await local.close(); }
+});
+
+const recorded = (name: string): string =>
+  readFileSync(new URL(`../../../packages/contracts/fixtures/${name}.json`, import.meta.url), "utf8");
+
+// docs/research/81 §12: the two command routes relay a body only once it passes its contract,
+// and the POC receives the checked copy, so nothing outside the contract reaches it.
+test("standing orders and formations are relayed only as contract-valid bodies; a malformed one is a 400 never relayed", async () => {
+  seen.length = 0;
+  const json = {"Content-Type": "application/json"};
+  const bodies: [string, string][] = [
+    ["/api/standing-orders", recorded("standing-request")],
+    ["/api/formations", recorded("formation-request-split")],
+    ["/api/formations", recorded("formation-request-combine")],
+  ];
+  for (const [path, body] of bodies) {
+    const reply = await call(path, {method: "POST", headers: json, body});
+    assert.equal(reply.status, 200, path);
+  }
+  assert.deepEqual(seen.map((s) => `${s.method} ${s.url}`),
+    ["POST /api/standing-orders", "POST /api/formations", "POST /api/formations"]);
+  bodies.forEach(([, body], index) => assert.deepEqual(JSON.parse(seen[index]!.body), JSON.parse(body)));
+  seen.length = 0;
+  const standing = JSON.parse(recorded("standing-request"));
+  const split = JSON.parse(recorded("formation-request-split"));
+  const refused: [string, unknown, RegExp][] = [
+    ["/api/standing-orders", {...standing, instruction: {...standing.instruction, profile_id: ""}}, /\$\.instruction\.profile_id/],
+    ["/api/standing-orders", {...standing, side: "confederate"}, /\$\.side/],
+    ["/api/formations", {...split, instruction: {...split.instruction, kind: "merge"}}, /\$\.instruction\.kind/],
+    ["/api/formations", {...split, instruction: {...split.instruction, partner_id: "U1"}}, /\$\.instruction\.partner_id/],
+    ["/api/formations", "not json", /JSON/],
+  ];
+  for (const [path, body, error] of refused) {
+    const reply = await call(path, {method: "POST", headers: json, body: typeof body === "string" ? body : JSON.stringify(body)});
+    assert.equal(reply.status, 400, `${path} ${JSON.stringify(body)}`);
+    assert.match(JSON.parse(reply.body).error, error);
+    assert.equal(JSON.parse(reply.body).outcome, undefined, "a refused request was never sent, so its outcome is known");
+  }
+  assert.equal(seen.length, 0, "a malformed command never reaches the POC");
 });

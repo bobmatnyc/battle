@@ -1,0 +1,9 @@
+{
+ "game_id": "f1c7f1c7f1c7f1c7",
+ "instruction": {
+  "kind": "combine",
+  "partner_id": "UD1",
+  "unit_id": "U2"
+ },
+ "revision": 5
+}

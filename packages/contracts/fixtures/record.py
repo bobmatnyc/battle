@@ -118,6 +118,42 @@ def record_pegasus_signal(tmp):
     raise SystemExit("The Pegasus run delivered no codeword; replay-commander-pegasus.json not written.")
 
 
+def record_commands(api):
+    """docs/research/81 §12 (bt-T20): the standing-order and formation request bodies the
+    POC accepted, and the commander view after them. A fresh Little Round Top game: U1 is
+    sent Preserve the force; U2 (headquarters) detaches 20 troops to its first free
+    neighbour; after the split is reported the detachment is combined back into U2; then
+    the clock runs until the combine and the standing order are reported."""
+    from battle import grid
+
+    def until(done, limit=12):
+        for _ in range(limit):
+            if done(api.read("/api/state", {})):
+                return
+            api.mutate("/api/advance", cursor(api))
+        raise SystemExit("The command game did not report in time; no command fixture written.")
+
+    state = api.read("/api/state", {})
+    taken = [u["pos"] for u in state["units"]]
+    hq = state["command"]["unit_id"]
+    standing = {"instruction": {"unit_id": "U1", "profile_id": "cautious"}, **cursor(api)}
+    write("standing-request.json", standing)
+    api.mutate("/api/standing-orders", standing)
+    pos = next(u["pos"] for u in state["units"] if u["id"] == hq)
+    destination = next(p for p in grid.neighbors(pos) if p not in taken)
+    split = {"instruction": {"kind": "split", "unit_id": hq, "count": 20, "destination": destination}, **cursor(api)}
+    write("formation-request-split.json", split)
+    api.mutate("/api/formations", split)
+    until(lambda s: s["formation_ops"][0]["status"] == "completed")
+    child = next(u["id"] for u in api.read("/api/state", {})["units"] if u["pos"] == destination)
+    combine = {"instruction": {"kind": "combine", "unit_id": hq, "partner_id": child}, **cursor(api)}
+    write("formation-request-combine.json", combine)
+    api.mutate("/api/formations", combine)
+    until(lambda s: s["formation_ops"][-1]["status"] == "completed"
+          and s["standing_orders"][0]["status"] == "delivered")
+    write("state-commander-commands.json", api.read("/api/state", {}))
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         with mock.patch.object(storage.uuid, "uuid4", return_value=GAME_ID_UUID):
@@ -128,6 +164,13 @@ def main():
         finally:
             app.close()
         record_pegasus_signal(tmp)
+        with mock.patch.object(storage.uuid, "uuid4", return_value=GAME_ID_UUID):
+            app = build_application(Path(tmp) / "commands.sqlite", offline=True,
+                                    settings=Settings(), scenario_id=SCENARIO)
+        try:
+            record_commands(HttpApi(app))
+        finally:
+            app.close()
 
 
 if __name__ == "__main__":

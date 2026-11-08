@@ -81,3 +81,19 @@ test("an order body that breaks the contract is not sent", async () => {
   await assert.rejects(api.orders({...body, orders: []}), ContractError);
   assert.equal(sent.length, 0);
 });
+
+// docs/research/81 §12: the two command routes, each body checked before it is sent.
+test("a standing order and a formation post their checked body; a malformed one is not sent", async () => {
+  const sent: Sent[] = [];
+  const api = createDeskApi(transport(200, raw("state-commander"), sent));
+  const standing = raw("standing-request") as Parameters<typeof api.standingOrder>[0];
+  const split = raw("formation-request-split") as Parameters<typeof api.formation>[0];
+  assert.equal((await api.standingOrder(standing)).side, "union");
+  assert.equal((await api.formation(split)).side, "union");
+  assert.deepEqual(sent.map((s) => [s.url, s.init?.method]), [["/api/standing-orders", "POST"], ["/api/formations", "POST"]]);
+  assert.deepEqual(JSON.parse(String(sent[0]!.init?.body)), standing);
+  assert.deepEqual(JSON.parse(String(sent[1]!.init?.body)), split);
+  await assert.rejects(api.standingOrder({...standing, instruction: {...standing.instruction, profile_id: ""}}), ContractError);
+  await assert.rejects(api.formation({...split, instruction: {kind: "combine", unit_id: "U2", partner_id: "U2"}}), ContractError);
+  assert.equal(sent.length, 2);
+});
