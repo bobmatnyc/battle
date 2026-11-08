@@ -55,6 +55,8 @@ A `validate_order` refusal (400) cannot be reached through ordinary clicks in th
 
 The first round's evidence, against `4acc325`, is in `apps/poc/artifacts/ts-desk-2-4acc325/`. It includes `test-poc.log` (744 tests OK plus the UI scripts) and `headless-poc.log` (replay `identical`); the fix round changed nothing those cover.
 
+**Evidence for main `690808f`** (git-ignored, in the main checkout): `apps/poc/artifacts/ts-desk-2-main-690808f/` holds the gate run on main after `npm ci --offline`: `typecheck.log` (exit 0), `npm-test.log` (web 58/58, contracts 58/58), `test-poc.log` (744 tests OK plus the UI scripts), `headless-poc.log` (replay `identical`), `smoke-web.log` (`SMOKE PASSED`) with `desk-accepted.png` and `desk-hougoumont.png`, and `fault-cleanup.log` with its script `fault-cleanup.sh`: an 8 s deadline on a frozen browser and a POC that never reports ready both exit 1, and the process check after each finds no POC, Chrome or profile left. `MANIFEST.txt` lists each file, its command and exit code. The independent browser check of `1688f81` is in `apps/poc/artifacts/ts-desk-2-1688f81/web-qa/`.
+
 ## How to run
 
 As in [70](70-ts-desk-slice-1.md#how-to-run-it): `make poc-offline`, then `make web` (Node >= 24.2).
