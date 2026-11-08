@@ -63,6 +63,8 @@ As in [70](70-ts-desk-slice-1.md#how-to-run-it): `make poc-offline`, then `make 
 
 ## Deferred
 
+Slice 3 ([73](73-ts-desk-slice-3.md)) adds map features, the grid toggle, commander replay and the query-string test; its deferred list supersedes this one.
+
 - Standing orders, split and combine, recommendations (accept/dismiss), staff chat and the twin.
 - Replay, God Mode, export.
 - Field glass, unit images, roads, buildings and works, elevation shading, MapLibre. Counters on adjacent hexes overlap (visible at Hougoumont); the click still hits the counter on top, and the smoke test checks the hit.
