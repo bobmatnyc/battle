@@ -12,7 +12,9 @@ press and the cavalry's opening moves. The sent orders: both sides' light
 troops fall back at ``LIGHT_TURN``; the Roman heavy infantry is then ordered
 one row forward, which starts its press (exploit trigger ``arrival``), once
 headquarters has the light troops reported behind the block, or
-``ADVANCE_WAIT`` intervals later; Hasdrubal's horse rides behind the Roman
+``ADVANCE_WAIT`` intervals later; while the Roman right cavalry EQ is in
+the Carthaginian view and not routed, Hasdrubal's horse is sent to its
+reported hex (D34, Bob 2026-11-08 14:22Z, docs/research/77); the horse rides behind the Roman
 line once the Roman right cavalry has dropped out of the Carthaginian view
 (routed away or lost) and, once it is reported there, charges the
 rearmost Roman heavy units it knows of. Each trigger reads only the side's
@@ -21,6 +23,7 @@ decision, and each order is sent once.
 Test: `test_every_order_carries_a_source_locator_or_a_label`,
 `test_the_light_troops_fall_back_then_the_heavy_infantry_advances_once`,
 `test_hasdrubal_rides_only_after_the_roman_right_cavalry_leaves_the_view`,
+`test_the_horse_pursues_the_roman_right_cavalry_while_it_is_in_view_and_unrouted`,
 `test_the_charge_follows_a_reported_arrival_and_targets_the_roman_rear`,
 `test_a_cavalry_delay_holds_the_ride_for_its_intervals`.
 """
@@ -82,6 +85,11 @@ CARTHAGINIAN_ORDERS = (
      f"{LIGHT_TURN}", "stance": "retreat", "hex": f"row {BACK_ROW['carthaginian']}, own column",
      "source": "S65 III.115: the light troops skirmish, neither side gaining",
      "provenance": "authored: as the Roman light troops; the interval and row are authored"},
+    {"id": "pursue", "unit": HASDRUBAL, "trigger": "before the ride, while a contact of EQ is in the view and not "
+     "routed; again when its reported hex changes", "stance": "move", "hex": "EQ's reported hex",
+     "source": "S65 III.116: Hasdrubal 'cut up' the Roman horse by the river before he rode on",
+     "provenance": "reconstruction: D34 (Bob 2026-11-08 14:22Z), ride fix option (i) of docs/research/68 §9; policy "
+                   "only, the Dd8 q5 view rule unchanged (docs/research/77)"},
     {"id": "ride", "unit": HASDRUBAL, "trigger": f"after interval {CONTACT_MAX_AGE + 1}, no contact of EQ in the "
      "view (it routed out of sight or was lost); later by 10, 20 or 40 in cavalry-delayed", "stance": "move",
      "hex": RIDE, "source": "S65 III.116: having cut up the Roman horse, Hasdrubal rides to the Numidians",
@@ -176,6 +184,25 @@ def _horse_gone(observation):
     return any(c.get("routed") for c in eq) or (observation["turn"] > CONTACT_MAX_AGE + 1 and not eq)
 
 
+def _quarry(observation):
+    """EQ's reported hex while a contact of it is in the view and not routed, else None (D34)."""
+    eq = [c for c in observation["contacts"] if c["id"] == "EQ"]
+    return None if not eq or any(c.get("routed") for c in eq) else tuple(eq[0]["pos"])
+
+
+def _last_move(sent, uid):
+    """The destination of ``uid``'s latest move order, or None."""
+    moves = [(t, d) for s, d, t in sent.get(uid, ()) if s == "move"]
+    return max(moves)[1] if moves else None
+
+
+def _pursue(observation, sent, quarry):
+    """D34: a move to EQ's reported hex for each able horse unit not already sent there last."""
+    units = _units(observation)
+    return [{"unit_id": uid, "stance": "move", "destination": list(quarry)} for uid in HASDRUBAL
+            if uid in units and _able(units[uid]) and _last_move(sent, uid) != quarry]
+
+
 def _rear(observation, n):
     """The ``n`` rearmost Roman heavy contacts' hexes (highest row, then lowest column)."""
     heavy = sorted((c for c in observation["contacts"] if c["id"] in HEAVY), key=lambda c: (-c["pos"][1], c["pos"][0]))
@@ -188,14 +215,18 @@ def _carthaginian(observation, *, delay=0, deserters=False):
     turn, sent, units, wanted = observation["turn"], _sent(observation), _units(observation), []
     if turn >= LIGHT_TURN:
         wanted += _fall_back(observation, LIGHT_TROOPS, "carthaginian")
-    rode = any(_has(sent, uid, "move", RIDE[uid]) for uid in HASDRUBAL)
-    if not rode and _horse_gone(observation):
+    rode, horse, quarry = any(_has(sent, uid, "move", RIDE[uid]) for uid in HASDRUBAL), [], _quarry(observation)
+    if not rode and quarry:  # D34: the horse pursues EQ while it is in view and unrouted (policy only).
+        horse = _pursue(observation, sent, quarry)
+    elif not rode and _horse_gone(observation):
         marker = [t for s, d, t in sent.get("HC1", ()) if s == "hold"]
         if delay and not marker:
             wanted.append(("HC1", "hold", None))  # The horse halts: the start of the delay.
         elif not delay or turn >= marker[0] + delay:
-            wanted += [(uid, "move", RIDE[uid]) for uid in HASDRUBAL]
-    charged = any(_rear_sent(sent, uid) for uid in HASDRUBAL)
+            # D34: sent outside _once, whose one-move-per-unit check would refuse the ride after a pursuit.
+            horse = [{"unit_id": uid, "stance": "move", "destination": list(RIDE[uid])} for uid in HASDRUBAL
+                     if uid in units and _able(units[uid])]
+    charged = any(_rear_sent(sent, uid, _ride_turn(sent)) for uid in HASDRUBAL)
     arrived = any(uid in units and grid.distance(units[uid]["pos"], RIDE[uid]) <= 1 for uid in HASDRUBAL)
     if rode and arrived and not charged:  # The charge goes alone: it is the one order the horse needs now.
         orders = [{"unit_id": uid, "stance": "move", "destination": list(hex_)}
@@ -210,12 +241,20 @@ def _carthaginian(observation, *, delay=0, deserters=False):
             rear = _rear(observation, 1)
             if rear:
                 wanted.insert(0, ("ND", "move", rear[0]))
-    return [], _once(observation, wanted)
+    return [], (_once(observation, wanted) + horse)[:3]
 
 
-def _rear_sent(sent, uid):
-    """Destinations of ``uid``'s move orders other than its ride hex: its charge."""
-    return [d for s, d, _ in sent.get(uid, ()) if s == "move" and d != tuple(RIDE[uid])]
+def _ride_turn(sent):
+    """The interval the first ride order was sent, or None."""
+    return min((t for uid in HASDRUBAL for s, d, t in sent.get(uid, ()) if s == "move" and d == tuple(RIDE[uid])),
+               default=None)
+
+
+def _rear_sent(sent, uid, ride_turn):
+    """Destinations of ``uid``'s move orders other than its ride hex sent from the ride on: its charge.
+    D34: a pursuit of EQ, sent before the ride, is not a charge."""
+    return [d for s, d, t in sent.get(uid, ()) if s == "move" and d != tuple(RIDE[uid])
+            and ride_turn is not None and t >= ride_turn]
 
 
 def carthaginian_actions(observation):

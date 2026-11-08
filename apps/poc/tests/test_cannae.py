@@ -221,7 +221,8 @@ class CannaePolicyTests(unittest.TestCase):
         units, eq = self._carthaginians(), {"id": "EQ", "pos": [21, 11]}
         falls = [sent(u, "retreat", [0, 3], LIGHT_TURN) for u in ("LT1", "LT2", "LT3")]
         rides = lambda orders: [o for o in orders if o["unit_id"] in HASDRUBAL]
-        self.assertEqual(rides(carthaginian_actions(observation(30, units, [eq], falls))[1]), [])
+        no_ride = lambda orders: [o for o in rides(orders) if o["destination"] == list(RIDE[o["unit_id"]])]
+        self.assertEqual(no_ride(carthaginian_actions(observation(30, units, [eq], falls))[1]), [])  # D34: it pursues.
         self.assertEqual(rides(carthaginian_actions(observation(CONTACT_MAX_AGE + 1, units, [], falls))[1]), [])
         gone = carthaginian_actions(observation(CONTACT_MAX_AGE + 2, units, [], falls))[1]
         routed = carthaginian_actions(observation(3, units, [dict(eq, routed=True)], falls))[1]
@@ -229,6 +230,34 @@ class CannaePolicyTests(unittest.TestCase):
         self.assertEqual((rides(gone), rides(routed)), (want, want))
         ridden = falls + [sent(u, "move", list(RIDE[u]), 20) for u in HASDRUBAL]
         self.assertEqual(rides(carthaginian_actions(observation(21, units, [], ridden))[1]), [])
+
+    def test_the_horse_pursues_the_roman_right_cavalry_while_it_is_in_view_and_unrouted(self):
+        # D34 (Bob 2026-11-08 14:22Z): Cannae ride fix option (i), policy only; the Dd8 q5 view rule is unchanged.
+        units, eq = self._carthaginians(), {"id": "EQ", "pos": [21, 11]}
+        horse = lambda orders: [o for o in orders if o["unit_id"] in HASDRUBAL]
+        pursue = lambda pos: [{"unit_id": u, "stance": "move", "destination": pos} for u in HASDRUBAL]
+        ride = [{"unit_id": u, "stance": "move", "destination": list(RIDE[u])} for u in HASDRUBAL]
+        # In view and unrouted: each horse unit is sent to EQ's reported hex, once per reported hex.
+        self.assertEqual(horse(carthaginian_actions(observation(3, units, [eq]))[1]), pursue([21, 11]))
+        chased = [sent(u, "move", [21, 11], 3) for u in HASDRUBAL]
+        self.assertEqual(horse(carthaginian_actions(observation(4, units, [eq], chased))[1]), [])
+        moved = dict(eq, pos=[21, 13], age=2)
+        self.assertEqual(horse(carthaginian_actions(observation(6, units, [moved], chased))[1]), pursue([21, 13]))
+        # Out of view: no pursuit; before interval 8 nothing, after it the ride, even after a pursuit.
+        self.assertEqual(horse(carthaginian_actions(observation(3, units))[1]), [])
+        self.assertEqual(horse(carthaginian_actions(observation(CONTACT_MAX_AGE + 2, units, [], FALLS + chased))[1]),
+                         ride)
+        # Routed: no pursuit; the ride, even after a pursuit.
+        self.assertEqual(horse(carthaginian_actions(observation(9, units, [dict(eq, routed=True)], FALLS + chased))[1]),
+                         ride)
+        # After a pursuit and the ride, the charge still follows the arrival.
+        ridden = FALLS + chased + [sent(u, "move", list(RIDE[u]), 20) for u in HASDRUBAL]
+        there = [dict(u, pos=list(RIDE["HC1"])) if u["id"] == "HC1" else u for u in units]
+        rear = [{"id": "A3", "pos": [15, 12]}]
+        self.assertEqual(carthaginian_actions(observation(25, there, rear, ridden))[1],
+                         [{"unit_id": "HC1", "stance": "move", "destination": [15, 12]}])
+        # The ride is not interrupted by EQ coming back into view.
+        self.assertEqual(horse(carthaginian_actions(observation(21, units, [eq], ridden))[1]), [])
 
     def test_the_charge_follows_a_reported_arrival_and_targets_the_roman_rear(self):
         units = self._carthaginians()
