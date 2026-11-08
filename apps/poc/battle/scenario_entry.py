@@ -144,7 +144,8 @@ class VictoryEntry:
     alone reads ``recover_units`` (attacker unit ids), ``rally_hex``,
     ``rally_radius`` and one of ``recover_strength`` or ``recover_pct``.
     ``encircle`` (docs/research/68) alone reads ``exits``, ``pocket_units``,
-    ``centre_units``, ``zoc``, ``min_enclosed_pct`` and ``centre_break``."""
+    ``centre_units``, ``zoc``, ``min_enclosed_pct``, ``centre_break`` and
+    ``edition`` (docs/research/82)."""
 
     kind: str
     objective: tuple[int, int]
@@ -172,6 +173,8 @@ class VictoryEntry:
     zoc: int | None = None
     min_enclosed_pct: int | None = None
     centre_break: int | None = None
+    # docs/research/82: the encircle rules edition (``victory_encircle.EDITIONS``); None: as before.
+    edition: str | None = None
 
 
 @dataclass(frozen=True)

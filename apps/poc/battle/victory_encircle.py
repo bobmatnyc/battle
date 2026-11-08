@@ -9,7 +9,9 @@ path leads from its hex to an exit with enemy-held hexes, and hexes within
 ``zoc`` of an enemy, treated as blocked. ``Encircle`` scores it and records,
 every interval, what doc 63 §5 asks to be recorded but not scored. Only an
 entry that names the kind writes its fields, so every other battle scores as
-before.
+before. An entry that names the ``cannae-d38`` edition (``VictoryEntry.edition``,
+docs/research/82) writes it to ``s['victory']['edition']`` and is scored by
+Bob's D38 rules; a snapshot without the key scores as before.
 """
 
 from . import grid, recon
@@ -17,11 +19,14 @@ from .victory import INEFFECTIVE, HoldObjective, _seize_only_problems, _side_wit
 
 KIND = "encircle"
 FIELDS = (("exits", ()), ("pocket_units", ()), ("centre_units", ()), ("zoc", None), ("min_enclosed_pct", None),
-          ("centre_break", None))
+          ("centre_break", None), ("edition", None))
 FLOW_CAP = 24  # Passage width counted up to the grid's width; wider is "open".
 # Dd8 (Bob 2026-11-07): Q2 literal reading. Doc 63 §5's centre break wins "before that":
 # only while enclosed and lost men are below min_enclosed_pct (doc 68 §8 q2). False: at any interval.
 BREAK_ONLY_BELOW_SHARE = True
+# D38 (Bob 2026-11-08 17:41Z): the Cannae rules edition of docs/research/82, opted into per entry.
+D38 = "cannae-d38"
+EDITIONS = (D38,)
 
 
 def encircle_only_problems(entry):
@@ -136,6 +141,12 @@ def _live(u):
     return u["strength"] > 0 and u["status"] not in ("lost", "merged")
 
 
+def _wall(u, d38):
+    """A live defender blocks a path; D38 Q2 (docs/research/82): a routed one does not.
+    Test: `test_q2_a_routed_defender_is_no_longer_a_wall`."""
+    return _live(u) and not (d38 and u["status"] in INEFFECTIVE)
+
+
 class Encircle:
     """Doc 63 §5 ``encircle``. Each interval a unit of ``pocket_units`` (the
     attacker's heavy infantry) is enclosed when ``enclosure`` finds no route
@@ -180,6 +191,8 @@ class Encircle:
             problems.append("encircle zoc must be an integer of 0 to 3")
         if not (type(v.min_enclosed_pct) is int and 1 <= v.min_enclosed_pct <= 100):
             problems.append("encircle min_enclosed_pct must be an integer of 1 to 100")
+        if v.edition is not None and v.edition not in EDITIONS:
+            problems.append(f"encircle edition must be one of {', '.join(EDITIONS)}, or None")
         if not (type(v.centre_break) is int and 1 <= v.centre_break <= max(1, len(v.centre_units))):
             problems.append("encircle centre_break must be an integer of 1 to the number of centre units")
         return problems + _seize_only_problems(entry)
@@ -187,7 +200,8 @@ class Encircle:
     def setup(self, entry):
         v = entry.victory
         force = sum(_starting_strength(entry, uid) for uid in v.pocket_units)
-        return {"kind": self.kind, "objective_name": v.objective_name, "exits": [list(p) for p in v.exits],
+        edition = {} if v.edition is None else {"edition": v.edition}  # docs/research/82: opt-in only.
+        return {**edition, "kind": self.kind, "objective_name": v.objective_name, "exits": [list(p) for p in v.exits],
                 "pocket_units": list(v.pocket_units), "centre_units": list(v.centre_units), "zoc": v.zoc,
                 "force": force, "enclosed_needed": -(-force * v.min_enclosed_pct // 100),
                 "centre_break": v.centre_break, "record": [], "closed_turn": None,
@@ -203,7 +217,8 @@ class Encircle:
             seen = [c for c in s["contacts"][side].values() if fresh(c)]
             if side == attacker:
                 pocket = {u["id"]: u["pos"] for u in own if u["id"] in v["pocket_units"]}
-                enemies = [c["pos"] for c in seen]
+                # D38 Q2 (docs/research/82): a contact reported routed is no wall in the reports either.
+                enemies = [c["pos"] for c in seen if not (v.get("edition") == D38 and c.get("routed"))]
             else:
                 pocket = {c["id"]: c["pos"] for c in seen if c["id"] in v["pocket_units"]}
                 enemies = [u["pos"] for u in own]
@@ -212,12 +227,13 @@ class Encircle:
 
     def score(self, s):
         v = s["victory"]
+        d38 = v.get("edition") == D38
         defender = _side_with_role(s, "defender")
         attacker = _side_with_role(s, "attacker")
         names = {x["id"]: x["name"] for x in s["sides"]}
         units = {u["id"]: u for u in s["units"]}
         pocket = {uid: units[uid]["pos"] for uid in v["pocket_units"] if _live(units[uid])}
-        enemies = [u["pos"] for u in s["units"] if u["side"] == defender and _live(u)]
+        enemies = [u["pos"] for u in s["units"] if u["side"] == defender and _wall(u, d38)]
         enclosed, open_exits, narrowest = enclosure(s["cells"], pocket, enemies, v["exits"], v["zoc"])
         men = sum(units[uid]["strength"] for uid in enclosed)
         lost = sum(units[uid]["initial"] - units[uid]["strength"] for uid in v["pocket_units"])

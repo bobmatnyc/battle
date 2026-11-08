@@ -76,7 +76,7 @@ class CannaeEntryTests(unittest.TestCase):
         self.assertNotIn(ENTRY, PLAYER_SCENARIOS)  # Doc 63 §9 q12: headless only.
         dry_run(validate(ENTRY))
         s = build_state(ENTRY)
-        self.assertEqual((s["rules"], s["scenario"]), ("poc-13", "cannae-envelopment-v1"))
+        self.assertEqual((s["rules"], s["scenario"]), ("poc-13", "cannae-envelopment-v2"))  # docs/research/82: cannae-d38.
         self.assertEqual(s["sides"], [{"id": "roman", "name": "Roman", "role": "attacker"},
                                       {"id": "carthaginian", "name": "Carthaginian", "role": "defender"}])
         self.assertEqual((ENTRY.start_time, ENTRY.player, s["commanders"]["roman"]["unit_id"]),
