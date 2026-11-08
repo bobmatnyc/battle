@@ -96,10 +96,25 @@ All under the git-ignored `apps/poc/artifacts/roads-buildings-1-9a193a2/`, for c
   - `*-legend.png` and `*-hex-tooltips.txt`, the native tooltip text a screenshot cannot show;
   - read-only renders `concord-north-bridge-render.{png,html}`, `pegasus-bridge-render.{png,html}`, `hill-223-patrol-render.{png,html}`;
   - the route/sight SVGs.
-- Fault cleanup (`faults/`): `throw`, `sigint`, `poc-not-ready` (exit 1); `deadline` at 3 s (exit 1); `no-browser` (exit 3, BLOCKED). Every run ends with `cleanup: POC pid … gone; browser group … gone; profile removed; database dir removed`. The first deadline attempt used 8 s; the whole run finished inside it and passed, so it was rerun at 3 s.
+- Fault cleanup (`faults/`; rerun after the review fix, §6.1): `throw`, `sigint`, `poc-not-ready` (exit 1); `deadline` at 3 s (exit 1); `no-browser` (exit 3, BLOCKED). Every run ends with `cleanup: POC pid … gone; browser group … gone; profile removed; database dir removed`. The first deadline attempt used 8 s; the whole run finished inside it and passed, so it was rerun at 3 s.
 - `mutations.log` with `mutate.py`; `digests-base-6be1819.txt`, `digests-head-9a193a2.txt` with `digests.py`.
 
 The harness is `scripts/map_screenshots.mjs <dir>`. It runs offline on a temporary SQLite file and a free port. No provider credentials reach the POC; `--offline` uses the scripted commander. It switches to Hougoumont through the desk's own picker and Reset. The picker still lists only `little-round-top` and `hougoumont-north-gate`, and the harness asserts this. The headless maps are rendered from self-contained pages that inline the shipped `cartography.js`, `feature-sources.js`, `map-features.js` and `style.css`. Exit 3 means no browser ran: BLOCKED, never a pass. It shares the TS smoke's approach (process group, one deadline, profile removal), reimplemented in plain JS so `apps/poc` stays independent of `apps/web`.
+
+### 6.1 Review fix: signals during cleanup (`6f210a6`)
+
+The review found that `process.once` for SIGINT and SIGTERM let a second signal during cleanup kill the harness before the detached browser group stopped. SIGHUP had no handler at all. The harness now listens with `process.on` for SIGINT, SIGTERM and SIGHUP for the whole run. The first signal starts cleanup; later ones are ignored while it runs. Write errors on stdout and stderr are ignored, so a closed terminal cannot end the run before cleanup. The synchronous `python3` child that builds the headless map data has a 60 s `timeout` and fails on `r.error`, because it blocks the deadline and the signal handlers while it runs.
+
+Evidence is under `apps/poc/artifacts/roads-buildings-1-6f210a6/` (`MANIFEST.txt`):
+
+- `make-test-poc.log`: `Ran 744 tests … OK`, all JS checks passed, `EXIT=0`. `harness.log`: passed, `EXIT=0`, with fresh screenshots in `screenshots/`.
+- `faults-{throw,sigint,poc-not-ready,deadline,no-browser}.log`: the same five fault runs as §6; every one reports its processes gone and the profile removed.
+- `signals/`: `signal_driver.mjs` starts the harness, waits for its browser, sends signals, then lists leftover processes and checks the profile.
+  - Against the old code (`de26550`): a second SIGINT 5 ms after the first killed the harness by signal, leaving the POC and the profile (`old-double-sigint.log`). SIGHUP killed it, leaving the POC, the browser and the profile (`old-sighup.log`). The driver then removed what was left.
+  - With the fix: double SIGINT at 5 ms and at 0 ms, and SIGHUP, each exit 1 after `cleanup: … gone; … gone; profile removed; database dir removed`, with no leftover process (`new-*.log`).
+  - At 50 ms the old code's cleanup had already finished, so that gap shows nothing; the 5 ms runs are the ones recorded.
+
+`make headless-poc`, `make smoke-poc`, the npm gates and `make smoke-web` were not rerun: the fix changes only the harness script. Their logs for `9a193a2` stand.
 
 ## 7. Editions, replay digests and fixtures unchanged
 
