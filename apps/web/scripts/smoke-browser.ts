@@ -3,7 +3,8 @@
 // server on another free port, and a headless Chrome/Chromium in a time zone
 // far from the battle's. It checks the map features, their legend status and the
 // grid toggle; with real pointer input it selects a counter and reads its unit
-// card, sends a move and a non-move order, sees refusals carry the server's text,
+// card, sends a move and a non-move order, a standing order and its cancel and a split of headquarters
+// (docs/research/81 §12), sees refusals carry the server's text (at Hougoumont, a split across the wall),
 // runs the clock, replays the battle in the commander view and returns to live,
 // then switches to Hougoumont and checks the header, features (compound and gate),
 // counters, unit card and a Hougoumont-only order, then to Concord (docs/research/74): header,
@@ -30,6 +31,7 @@ import {fileURLToPath} from "node:url";
 import {createDeskServer, type DeskServer} from "../server/desk-server.ts";
 import {findBrowser, launch, Page} from "./cdp.ts";
 import {checkFeatures, checkGridToggle, checkLabels, checkReplay, checkRing} from "./smoke-features.ts";
+import {checkEngineRefusal, checkSplit, checkStanding} from "./smoke-commands.ts";
 import {checkCard, choose, clickOn, header, nextNotice, noticeText, openHex, poc, screenshot, selectUnit, until, type Doc} from "./smoke-page.ts";
 import {removeDir, stop, waitForOutput, withDeadline} from "./smoke-support.ts";
 
@@ -128,6 +130,12 @@ async function littleRoundTop(page: Page, pocPort: number, artifacts: string): P
   await screenshot(page, artifacts, "desk-accepted.png");
   console.log(`accepted: ${unit.id} hold_fire (${held.id}, ${held.status}); notice: ${posture["text"]}`);
 
+  // 3b. docs/research/81 §12: a standing order and its cancel, then a split of headquarters.
+  console.log(`standing: ${await checkStanding(page, pocPort, unit.id, "cautious")}`);
+  console.log(`split: ${await checkSplit(page, pocPort, state["command"].unit_id)}`);
+  await screenshot(page, artifacts, "desk-lrt-commands.png");
+  await selectUnit(page, unit.id);
+
   // 4. Refused with the server's text: the clock was started elsewhere (e.g. the POC desk),
   // so the POC refuses a Rest order the desk sends from its paused view.
   await poc(pocPort, "/api/clock", {command: "start", game_id: state["game_id"]});
@@ -209,6 +217,9 @@ async function hougoumont(page: Page, pocPort: number, artifacts: string): Promi
   assert.ok(after["orders"].some((o: Doc) => o.unit_id === gateParty.id && o.stance === "close_gate"), "the POC holds close_gate");
   await screenshot(page, artifacts, "desk-hougoumont.png");
   console.log(`accepted: ${gateParty.id} close_gate; notice: ${gate["text"]}`);
+  // docs/research/81 §12: the desk draws no wall rule, so the engine refuses a split of A2 (10,9)
+  // west across the compound wall to 9,9, and the desk shows the engine's text.
+  console.log(`refused split: ${await checkEngineRefusal(page, pocPort, "A2", 30, [9, 9])}`);
 }
 
 // docs/research/74: Concord from the picker, offline and scripted, played to its outcome headline.
@@ -378,7 +389,8 @@ async function body(binary: string, artifacts: string, profile: string, held: St
   for (const spec of ERAS) await era(held.page, pocPort, artifacts, spec);
   console.log("SMOKE PASSED: map features with legend status and the grid toggle at Little Round Top and Hougoumont, "
     + "the objective ring exactly where the brief sets it (Little Round Top, Concord), "
-    + "unit card, move and hold-fire orders accepted, refusals shown with the server's text, clock, "
+    + "unit card, move and hold-fire orders accepted, a standing order sent and cancelled, a split of headquarters, "
+    + "refusals shown with the server's text (a split across the Hougoumont wall with the engine's), clock, "
     + "commander replay back to an earlier interval and return to live, a switch to Hougoumont with its header, "
     + "unit card and Close the gate order, and a switch to Concord with its header, water, roads and bridge, "
     + "a move order and the clock run to the outcome headline, then Pegasus Bridge (canal, marsh, both bridges, the charges "
