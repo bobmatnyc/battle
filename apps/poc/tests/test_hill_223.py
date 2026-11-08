@@ -1,8 +1,9 @@
 """Hill 223, 8 October 1918: the catalog entry, its variants, the scripted
 policies and the headless run. Plan: docs/research/56; runs: docs/research/61.
 
-No test asserts a winner: the policies act as the sources describe or doc 56
-infers, and the engine decides the outcome.
+The policies act as the sources describe or doc 56 infers, and the engine
+decides the outcome. One test pins the scripted default's result (bt-T17), so
+a rules change that flips it fails by name.
 """
 
 import hashlib
@@ -249,6 +250,13 @@ class Hill223RunTests(unittest.TestCase):
                              (AMERICAN_POLICY, GERMAN_POLICY))
             self.assertEqual(final["scenario"], "hill-223-patrol-v1")
         self.assertEqual(digest(*one), digest(*two))
+
+    def test_the_scripted_default_ends_in_an_american_win_at_turn_27(self):
+        # bt-T17: the outcome observed at a01a58b.
+        with tempfile.TemporaryDirectory() as tmp:
+            result, final = run(ENTRY, tmp)
+        self.assertEqual((final["status"], final["winner"], final["turn"]), ("complete", "american", 27))
+        self.assertEqual(result["winner"], "american")
 
 
 if __name__ == "__main__":

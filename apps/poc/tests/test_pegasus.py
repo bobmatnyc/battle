@@ -1,8 +1,9 @@
 """Pegasus Bridge, 6 June 1944: the catalog entry, its variants, the scripted
 policies and the headless run. Plan: docs/research/52; runs: docs/research/54.
 
-No test asserts a winner: the policies issue the orders the sources describe
-or doc 52 infers, and the engine decides the outcome.
+The policies issue the orders the sources describe or doc 52 infers, and the
+engine decides the outcome. One test pins the scripted baseline's result
+(bt-T17), so a rules change that flips it fails by name.
 """
 
 import hashlib
@@ -191,6 +192,13 @@ class PegasusRunTests(unittest.TestCase):
         self.assertEqual(result["replay"]["status"], "identical")
         self.assertEqual((result["run"]["player_policy"], result["run"]["opponent"]), (BRITISH_POLICY, GUARD_POLICY))
         self.assertEqual(final["scenario"], "pegasus-bridge-v1")
+
+    def test_the_scripted_baseline_ends_in_a_german_win_at_turn_5(self):
+        # bt-T17: the outcome observed at a01a58b; the digest below also moves, but not by name.
+        with tempfile.TemporaryDirectory() as tmp:
+            result, final = run(ENTRY, tmp)
+        self.assertEqual((final["status"], final["winner"], final["turn"]), ("complete", "german", 5))
+        self.assertEqual(result["winner"], "german")
 
     def test_baseline_run_keeps_its_pinned_digest(self):
         self.assertEqual(run_digest(ENTRY), BASELINE_RUN_SHA256)
