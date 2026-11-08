@@ -40,6 +40,36 @@ test("a browser that gives no DevTools endpoint is killed and launch rejects", {
   assert.equal(alive(pid), false);
 });
 
+function hungBrowser(): {dir: string; binary: string} {
+  const dir = mkdtempSync(join(tmpdir(), "battle-hung-browser."));
+  const binary = join(dir, "browser");
+  writeFileSync(binary, "#!/bin/sh\nsleep 300 &\necho $! >&2\nwait\n");  // a helper, like Chrome's
+  chmodSync(binary, 0o755);
+  return {dir, binary};
+}
+
+test("launch registers the browser before it waits, so cleanup can stop its group mid-launch", {timeout: 10000}, async () => {
+  const {dir, binary} = hungBrowser();
+  let registered: ReturnType<typeof spawn> | undefined;
+  const launching = launch(binary, join(dir, "profile"), process.env, 60000, (child) => { registered = child; return true; });
+  launching.catch(() => {});
+  await new Promise((done) => setTimeout(done, 300));
+  assert.ok(registered?.pid, "the child is known to the caller while launch still waits");
+  await stop(registered, {group: true});
+  await assert.rejects(launching, /exited/);
+  assert.equal(alive(registered.pid), false);
+  assert.equal(alive(-registered.pid!), false, "no process is left in the browser's group");
+});
+
+test("launch refuses to start a browser once cleanup has begun", {timeout: 10000}, async () => {
+  const {dir, binary} = hungBrowser();
+  let pid: number | undefined;
+  await assert.rejects(launch(binary, join(dir, "profile"), process.env, 60000, (child) => { pid = child.pid; return false; }),
+    /cleanup has begun/);
+  assert.ok(pid);
+  assert.equal(alive(-pid!), false, "the refused browser's group is stopped");
+});
+
 class FakeSocket extends EventTarget implements SocketLike {
   sent: string[] = [];
   send(data: string): void { this.sent.push(data); }

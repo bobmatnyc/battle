@@ -32,11 +32,17 @@ export function findBrowser(): string | null {
 
 export interface Browser { process: ChildProcess; endpoint: string }
 
-/** Why: a browser that never opens DevTools must not outlive the smoke run (#2).
- * What: starts a headless browser with its own profile; resolves with its DevTools endpoint,
- * else stops the browser and rejects with ChildFailure (its `pid`).
- * Test: `a browser that gives no DevTools endpoint is killed and launch rejects`. */
-export async function launch(binary: string, profile: string, env: NodeJS.ProcessEnv, timeoutMs = 20000): Promise<Browser> {
+/** Why: a browser that never opens DevTools, or a run interrupted while it starts, must not
+ * leave the browser running (slice 1 #2; bt-T07 fix round #3).
+ * What: starts a headless browser with its own profile in its own process group and hands it to
+ * `register` before waiting, so the caller's cleanup can stop it at any time. When `register`
+ * returns false (cleanup has begun), the group is stopped and launch rejects. Resolves with the
+ * DevTools endpoint, else stops the group and rejects with ChildFailure (its `pid`).
+ * Test: `a browser that gives no DevTools endpoint is killed and launch rejects`,
+ * `launch registers the browser before it waits, so cleanup can stop its group mid-launch`,
+ * `launch refuses to start a browser once cleanup has begun`. */
+export async function launch(binary: string, profile: string, env: NodeJS.ProcessEnv, timeoutMs = 20000,
+  register: (child: ChildProcess) => boolean = () => true): Promise<Browser> {
   const child = spawn(binary, [
     "--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`,
     "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-sync",
@@ -44,6 +50,10 @@ export async function launch(binary: string, profile: string, env: NodeJS.Proces
     "--window-size=1400,1000", "about:blank",
     // Its own process group, so `stop(child, {group: true})` also ends its helper processes.
   ], {env, stdio: ["ignore", "ignore", "pipe"], detached: true});
+  if (!register(child)) {
+    await stop(child, {group: true});
+    throw new ChildFailure("browser launch refused: cleanup has begun", child.pid);
+  }
   try {
     const found = await waitForOutput(child, /DevTools listening on (ws:\/\/\S+)/, timeoutMs, "browser");
     return {process: child, endpoint: found[1]!};

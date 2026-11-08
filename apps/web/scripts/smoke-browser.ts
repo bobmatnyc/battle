@@ -270,26 +270,42 @@ async function hougoumont(page: Page, pocPort: number, artifacts: string): Promi
   console.log(`accepted: ${gateParty.id} close_gate; notice: ${gate["text"]}`);
 }
 
-interface Started { poc?: ChildProcess; desk?: DeskServer; browser?: ChildProcess; page?: Page }
+// `closing` is set when cleanup begins; nothing is started after that, and every child is
+// recorded here before the run waits on it, so cleanup can stop it on every exit path.
+interface Started { closing: boolean; poc?: ChildProcess; desk?: DeskServer; browser?: ChildProcess; page?: Page }
+
+function halt(held: Started): void {
+  if (held.closing) throw new Error("the smoke run is stopping; nothing more is started");
+}
 
 async function body(binary: string, artifacts: string, profile: string, held: Started): Promise<number> {
   const [pocPort, deskPort] = [await freePort(), await freePort()];
+  halt(held);
   // Slice 1 review #1: assigned before the wait, so cleanup stops it on every path.
   held.poc = spawnPoc(pocPort, join(artifacts, "battle.sqlite"));
   await waitForOutput(held.poc, POC_READY, READY_MS, "POC");
-  held.desk = await createDeskServer({pocUrl: `http://127.0.0.1:${pocPort}`, port: deskPort});
+  halt(held);
+  const desk = await createDeskServer({pocUrl: `http://127.0.0.1:${pocPort}`, port: deskPort});
+  if (held.closing) await desk.close();
+  halt(held);
+  held.desk = desk;
+  console.log("launching browser");
   let started;
   try {
-    started = await launch(binary, profile, cleanEnv({TZ: BROWSER_ZONE}), Number(process.env["SMOKE_BROWSER_MS"] ?? 20000));
+    // Fix round #3: the browser is registered before launch waits for DevTools, so an interrupt or
+    // the deadline during launch stops its group; once cleanup has begun, launch refuses.
+    started = await launch(binary, profile, cleanEnv({TZ: BROWSER_ZONE}), Number(process.env["SMOKE_BROWSER_MS"] ?? 20000),
+      (child) => { held.browser = child; return !held.closing; });
   } catch (error) {
+    halt(held);
     console.error(`SMOKE BLOCKED: the browser did not start (${(error as Error).message}). This is not a pass.`);
     return BLOCKED;
   }
-  held.browser = started.process;
+  halt(held);
   held.page = await Page.open(started.endpoint);
   if (FREEZE) {
     console.log("SMOKE_FREEZE_BROWSER: stopping the browser group; its DevTools socket stays open");
-    process.kill(-held.browser.pid!, "SIGSTOP");
+    process.kill(-started.process.pid!, "SIGSTOP");
   }
   await held.page.send("Page.navigate", {url: held.desk.url});
   await until("the desk to load", () => held.page!.evaluate<boolean>("document.documentElement.dataset.deskReady === 'true'"));
@@ -310,9 +326,10 @@ async function main(): Promise<number> {
   // Review #3: the profile lives outside the artifacts and is removed on every exit path.
   const profile = mkdtempSync(join(tmpdir(), "battle-desk-profile."));
   console.log(`artifacts: ${artifacts}\nbrowser: ${binary}\ndeadline: ${DEADLINE_MS} ms`);
-  const held: Started = {};
+  const held: Started = {closing: false};
   let cleaned: Promise<void> | undefined;
   const cleanup = (): Promise<void> => cleaned ??= (async () => {
+    held.closing = true;
     held.page?.close();
     if (held.browser) await stop(held.browser, {group: true});
     await held.desk?.close();
