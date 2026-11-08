@@ -4,10 +4,12 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {test} from "node:test";
-import {formationSubmission, parse, readCommanderState, type CommanderState, type UnitReport} from "@battle/contracts";
 import {
-  combineBody, combinePartners, combineRefusal, defaultSplit, formationOutcome, MAX_STRENGTH, MIN_STRENGTH,
-  operationsMarkup, PROFILE, REFUSALS, splitBody, splitRefusal,
+  formationSubmission, parse, readCommanderState, type CommanderState, type FormationInstruction, type UnitReport,
+} from "@battle/contracts";
+import {
+  combineBody, combinePartners, combineRefusal, defaultSplit, formationHelp, formationOutcome, MAX_STRENGTH, MIN_STRENGTH,
+  operationsMarkup, partnerOptions, PROFILE, REFUSALS, splitBody, splitRefusal,
 } from "../src/formations.ts";
 import {hexDistance} from "../src/geometry.ts";
 import {commander, raw} from "./fixtures.ts";
@@ -22,7 +24,7 @@ const matched = (): CommanderState => edit(commander(), "U3", {recon_role: "line
 
 test("hex distance is the POC's odd-row offset distance", () => {
   assert.equal(hexDistance([11, 14], [10, 13]), 1);
-  assert.equal(hexDistance([11, 14], [13, 15]), 2);
+  assert.equal(hexDistance([11, 14], [13, 15]), 3);  // grid.distance gives 3
   assert.equal(hexDistance([13, 15], [14, 16]), 1);
   assert.equal(hexDistance([13, 15], [12, 16]), 2);
   assert.equal(hexDistance([4, 4], [4, 4]), 0);
@@ -33,7 +35,7 @@ test("combine partners are the adjacent own formations the engine would accept",
   assert.deepEqual(combinePartners(view, unit(view, "U1")).map((u) => u.id), ["U3"]);
   assert.deepEqual(combinePartners(commander(), unit(commander(), "U1")), [], "a scout and a line company do not combine");
   assert.equal(combineRefusal(commander(), unit(commander(), "U1"), "U3"), REFUSALS.mismatch);
-  assert.equal(combineRefusal(view, unit(view, "U1"), "U2"), REFUSALS.apart, "U2 is two hexes away");
+  assert.equal(combineRefusal(view, unit(view, "U1"), "U2"), REFUSALS.apart, "U2 is three hexes away");
   assert.equal(combineRefusal(view, unit(view, "U1"), "U1"), REFUSALS.same);
   assert.equal(combineRefusal(edit(view, "U3", {strength: 47}), unit(view, "U1"), "U3"), REFUSALS.tooStrong);
   assert.equal(combineRefusal(edit(view, "U3", {strength: 46}), unit(view, "U1"), "U3"), null, "34 + 46 is exactly 80");
@@ -104,7 +106,17 @@ test("the operations list shows each split or combine with its units, status and
 test("after an unknown outcome the re-read decides what the player is told about a split or combine", () => {
   const before = commander();
   const after = readCommanderState(raw("state-commander-commands"));
-  const split = {kind: "split", unit_id: "U2", count: 20, destination: [14, 15]} as const;
+  const split: FormationInstruction = {kind: "split", unit_id: "U2", count: 20, destination: [14, 15]};
   assert.match(formationOutcome(before, after, split).text, /did take the split: F1, U2, completed/);
   assert.match(formationOutcome(before, before, split).text, /no new split for U2/);
+});
+
+test("the formation help says what a split and a combine need, in the engine's words", () => {
+  const view = matched();
+  const u1 = unit(view, "U1");
+  assert.match(formationHelp(view, u1, 17, null), /^Split: click an adjacent hex for the detached troops\. Combine: the partner joins U1, which survives\./);
+  assert.match(formationHelp(view, u1, 11, null), new RegExp(`^Split: ${REFUSALS.count}`));
+  assert.match(formationHelp(view, u1, 17, [12, 14]), /^Split: 17 troops to hex 12,14\./);
+  assert.match(formationHelp(commander(), unit(commander(), "U1"), 17, null), /Combine: no adjacent formation can join this one/);
+  assert.equal(partnerOptions(combinePartners(view, u1), "U3"), "<option value=\"U3\" selected>U3 · 40 troops</option>");
 });

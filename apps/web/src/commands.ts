@@ -2,9 +2,11 @@
 // (docs/research/71). A command the relay could not confirm (`outcome: "unknown"`) is
 // followed by a re-read; its notice stays "unknown" whatever the re-read finds or fails to do,
 // so the player is never told a possibly committed command simply failed.
-import type {CommanderState, MapDocument, OrderSubmission} from "@battle/contracts";
+import type {CommanderState, FormationSubmission, MapDocument, OrderSubmission, StandingOrderSubmission} from "@battle/contracts";
 import {DeskRefusal, type DeskApi} from "./api.ts";
+import {formationAccepted, formationOutcome} from "./formations.ts";
 import {orderOutcome, templateFor} from "./orders.ts";
+import {standingAccepted, standingOutcome} from "./standing.ts";
 import type {Notice} from "./selection.ts";
 import {battleClock} from "./timeline.ts";
 
@@ -53,6 +55,49 @@ export async function sendOrder(api: DeskApi, loaded: Loaded, body: OrderSubmiss
   const where = order.destination ? ` → hex ${order.destination.join(",")}` : "";
   return {loaded: {...loaded, view},
     notice: {kind: "accepted", text: `Order accepted: ${order.unit_id} ${label}${where}. Start the clock to carry it out.`}};
+}
+
+// docs/research/81 §12: a standing order or formation goes the way of an order. `send` posts it;
+// on an unknown outcome the re-read decides the notice (`outcome`), or says the re-read failed too.
+async function sendCommand(api: DeskApi, loaded: Loaded, send: () => Promise<CommanderState>, what: string,
+  outcome: (after: CommanderState) => Notice, accepted: (after: CommanderState) => Notice): Promise<Step> {
+  let view: CommanderState;
+  try {
+    view = await send();
+  } catch (error) {
+    if (!unknownOutcome(error)) throw error;
+    try {
+      const next = await reread(api, loaded);
+      return {loaded: next, notice: outcome(next.view)};
+    } catch (failure) {
+      return {loaded, notice: {kind: "unknown", text: `${SLOW}, so the outcome of ${what} is unknown, `
+        + `and re-reading the battle failed (${message(failure)}). Check the battle before sending it again.`}};
+    }
+  }
+  return {loaded: {...loaded, view}, notice: accepted(view)};
+}
+
+/** Why: a standing order the POC may have committed must not read as a failure.
+ * What: posts `body`; on an unknown outcome re-reads and reports what the battle now holds, or that
+ * the outcome is unknown when the re-read fails. Any other refusal (the engine's text) is rethrown.
+ * Test: `an accepted standing order, split or combine names what the POC now holds`,
+ * `a standing order or formation whose outcome is unknown is re-read, and the re-read decides the notice`,
+ * `a plain refusal of a standing order or formation keeps the engine's text and is not re-read`. */
+export function sendStanding(api: DeskApi, loaded: Loaded, body: StandingOrderSubmission): Promise<Step> {
+  const {unit_id: unit, profile_id: profile} = body.instruction;
+  return sendCommand(api, loaded, () => api.standingOrder(body), `the ${unit} standing order`,
+    (after) => standingOutcome(loaded.view, after, unit, profile), (after) => standingAccepted(loaded.view, after, unit, profile));
+}
+
+/** Why: a split or combine the POC may have committed must not read as a failure.
+ * What: as `sendStanding`, for POST /api/formations.
+ * Test: `an accepted standing order, split or combine names what the POC now holds`,
+ * `a standing order or formation whose outcome is unknown is re-read, and the re-read decides the notice`,
+ * `a plain refusal of a standing order or formation keeps the engine's text and is not re-read`. */
+export function sendFormation(api: DeskApi, loaded: Loaded, body: FormationSubmission): Promise<Step> {
+  const instruction = body.instruction;
+  return sendCommand(api, loaded, () => api.formation(body), `the ${instruction.unit_id} ${instruction.kind}`,
+    (after) => formationOutcome(loaded.view, after, instruction), (after) => formationAccepted(loaded.view, after, instruction));
 }
 
 /** Why: after a 504 the POC may still start the new battle, so "no new battle" cannot be claimed.

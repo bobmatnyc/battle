@@ -1,10 +1,16 @@
 // The order catalog as the desk uses it (docs/research/71). Pure: no DOM, no network.
 // The catalog is the view's `order_templates` (apps/poc orders.catalog), so the desk
 // offers exactly the kinds the POC takes for this battle; Python still checks every rule.
-import {orderSubmission, parse, type CommanderView, type OrderSubmission, type OrderTemplate} from "@battle/contracts";
+import {
+  orderSubmission, parse, type CommanderView, type OrderSubmission, type OrderTemplate, type UnitReport,
+} from "@battle/contracts";
 import {ownUnit, type Notice, type Selection} from "./selection.ts";
 
 const UNORDERABLE = new Set(["routed", "lost", "merged"]);
+
+/** True when headquarters' report bars orders to `unit` (engine.report_refusal: routed, lost,
+ * merged or leaderless); standing orders and formations use it (docs/research/81 §12). */
+export const reportedUnable = (unit: UnitReport): boolean => UNORDERABLE.has(unit.status) || unit["leaderless"] === true;
 
 /** The view's template `id`, or undefined when this battle does not offer it. */
 export function templateFor(view: CommanderView, id: string): OrderTemplate | undefined {

@@ -57,6 +57,27 @@
       <button id="send-order" disabled>Send order</button>
       <button id="clock-toggle" disabled>Start clock</button>
     </section>
+    <section id="standing-panel">
+      <h2>Standing orders</h2>
+      <p id="standing-current" class="standing-current"></p>
+      <label for="standing-profile">Instruction</label>
+      <select id="standing-profile" disabled></select>
+      <p id="standing-help" class="order-help"></p>
+      <button id="send-standing" disabled>Send standing order</button>
+      <button id="cancel-standing" disabled>Cancel standing order</button>
+      <ol id="standing-orders" class="standing-orders"></ol>
+    </section>
+    <section id="formation-panel">
+      <h2>Split or combine</h2>
+      <label for="split-count">Troops to detach</label>
+      <input id="split-count" type="number" min="12" step="1" value="12" disabled>
+      <button id="send-split" disabled>Send split</button>
+      <label for="combine-partner">Combine with</label>
+      <select id="combine-partner" disabled></select>
+      <button id="send-combine" disabled>Send combine</button>
+      <p id="formation-help" class="order-help"></p>
+      <ol id="formation-ops" class="formation-ops"></ol>
+    </section>
     <section><h2>Orders</h2><ol id="orders"></ol></section>
     <section id="signals-panel" hidden><h2>Signals</h2><ol id="signals" class="signals"></ol></section>
     <section><h2>Dispatches</h2><ol id="dispatches" class="dispatches"></ol></section>
