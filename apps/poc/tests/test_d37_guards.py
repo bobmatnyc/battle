@@ -1,0 +1,403 @@
+"""D37 guards on the paid model batch (docs/research/78): the exact cap, the
+key-limit check, the key from the environment only, the pinned model and the
+provider-limit stop. Fake openers and fake providers only: no network, no
+credential, no spend."""
+
+import importlib.util
+import io
+import json
+import os
+import subprocess
+import tempfile
+import unittest
+import urllib.error
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+from unittest import mock
+
+from battle.adapters.openrouter import KEY_INFO_URL, KeyInfoError, fetch_key_info
+from battle.adapters.rules import ScenarioRegistry
+from battle.bootstrap import build_replay
+from battle.command_policy import scripted_actions, scripted_policy
+from battle.config import Settings
+from battle.paid_batch import D37_OPTION_A, check_key, fake_key_opener, key_limit_check
+from battle.scenario import LITTLE_ROUND_TOP
+from battle.spend import BudgetExhausted, Price, SpendGuard
+
+POC = Path(__file__).resolve().parent.parent
+_spec = importlib.util.spec_from_file_location("model_runs", POC / "scripts" / "model_runs.py")
+model_runs = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(model_runs)
+
+SOURCE = {"commit": "0" * 40, "clean": True}
+DUMMY_KEY = "dummy-not-a-key"  # A placeholder; no opener here reaches a network.
+SONNET = "anthropic/claude-sonnet-5.5"
+
+
+class Reply:
+    """A urllib response stand-in."""
+
+    def __init__(self, body):
+        self.body = json.dumps(body).encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self, limit=-1):
+        return self.body
+
+
+def http_error(code, body=None):
+    raw = json.dumps(body).encode() if body is not None else b"not json"
+    return urllib.error.HTTPError("https://openrouter.ai/x", code, "refused", {}, io.BytesIO(raw))
+
+
+class ChatOpener:
+    """Answers chat-completions requests with the entry's scripted orders and
+    a cost, until call ``refuse_at``, which gets ``refusal`` (an exception to
+    raise or a body to return). Every request body is kept."""
+
+    def __init__(self, entry, refuse_at=None, refusal=None, cost=0.01):
+        self.entry, self.refuse_at, self.refusal, self.cost = entry, refuse_at, refusal, cost
+        self.bodies = []
+
+    def __call__(self, request, timeout):
+        body = json.loads(request.data)
+        self.bodies.append(body)
+        if len(self.bodies) == self.refuse_at:
+            if isinstance(self.refusal, BaseException):
+                raise self.refusal
+            return Reply(self.refusal)
+        observation = json.loads(body["messages"][1]["content"])["observation"]
+        side = observation["side"]
+        _, orders = scripted_actions(scripted_policy(self.entry, side), observation, self.entry.sides[side].role)
+        return Reply({"id": f"gen-{len(self.bodies)}", "model": body["model"],
+                      "choices": [{"finish_reason": "stop",
+                                   "message": {"content": json.dumps({"text": "Orders.", "orders": orders})}}],
+                      "usage": {"prompt_tokens": 100, "completion_tokens": 20, "cost": self.cost}})
+
+
+class CostFake:
+    """A provider fake whose n-th call costs ``costs[n-1]``."""
+
+    available, model, effort = True, "fake/d37", "high"
+
+    def __init__(self, entry, costs):
+        self.entry, self.costs, self.calls = entry, costs, 0
+
+    def request(self, instruction, payload):
+        self.calls += 1
+        side = payload["observation"]["side"]
+        _, orders = scripted_actions(scripted_policy(self.entry, side), payload["observation"],
+                                     self.entry.sides[side].role)
+        return {"text": "Orders.", "orders": orders}, {"model": self.model, "response_id": f"gen-{self.calls}",
+                                                       "usage": {"cost": self.costs[self.calls - 1]}}
+
+
+def git_repo(path):
+    for args in (("init", "-q"), ("commit", "-q", "--allow-empty", "-m", "base")):
+        subprocess.run(["git", "-C", str(path), "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args],
+                       check=True, capture_output=True)
+
+
+def never(*args, **kwargs):
+    raise AssertionError("this opener or provider must not be called")
+
+
+def key_reply(**data):
+    base = {"limit": 14.0, "limit_remaining": 14.0, "limit_reset": None, "is_free_tier": False, "usage": 0,
+            "label": "masked-key-label-placeholder"}  # OpenRouter's label can show part of the key.
+    return lambda request, timeout: Reply({"data": {**base, **data}})
+
+
+def batch_files(directory):
+    return "".join(p.read_text() for p in Path(directory).iterdir() if p.suffix in (".json", ".jsonl"))
+
+
+class ExactCapTest(unittest.TestCase):
+    """Item 1: spend so far + the call's reserve may equal the cap, never pass it."""
+
+    def test_a_call_landing_exactly_on_the_cap_is_allowed_and_one_cent_over_is_refused(self):
+        size = lambda instruction, payload: 0  # noqa: E731 - no input tokens priced.
+        cent = Price(0.0, 10.0, 1000)  # 1,000 output tokens at $10 per million: $0.01.
+        exact = SpendGuard(14.0, cent, size)
+        exact.charge(13.99)
+        exact.check("i", {})  # 13.99 + 0.01 == 14.00: allowed.
+        over = SpendGuard(14.0, Price(0.0, 10.0, 2000), size)
+        over.charge(13.99)
+        with self.assertRaises(BudgetExhausted):
+            over.check("i", {})  # 13.99 + 0.02 == 14.01: refused.
+        full = SpendGuard(14.0, cent, size, spent_usd=14.0)
+        with self.assertRaises(BudgetExhausted):
+            full.check("i", {})
+        self.assertTrue(full.at_cap())
+
+    def test_the_exact_cap_call_is_sent_and_the_cent_over_call_is_never_sent(self):
+        # Pegasus default makes 2 player calls: the first costs $13.99, the second's reserve is
+        # $0.01 (exactly the cap) or $0.02 (a cent over).
+        for tokens, calls, status in ((1000, 2, "model_game"), (2000, 1, "stopped")):
+            fakes = []
+            with self.subTest(tokens=tokens), tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
+                code, summary = model_runs.run_batch(
+                    ["pegasus-bridge"], 1, 14.0, Path(tmp) / "b", price=Price(0.0, 10.0, tokens), source=SOURCE,
+                    provider_for=lambda e: fakes.append(CostFake(e, [13.99, 0.01])) or fakes[-1])
+                self.assertEqual(fakes[0].calls, calls)
+                self.assertEqual(code, model_runs.EXIT_CAP)
+                self.assertEqual(summary["model_games"] + len(summary["stopped_or_failed"]), 1)
+                if status == "stopped":
+                    self.assertEqual(summary["stopped_or_failed"][0]["status"], "stopped")
+                self.assertLessEqual(summary["spent_usd"], 14.0)
+
+
+class KeyLimitTest(unittest.TestCase):
+    """Item 2: the key's own limit, checked before any spend, fail closed."""
+
+    def test_key_limit_check_accepts_only_a_key_limited_to_the_cap(self):
+        good = {"limit": 14.0, "limit_remaining": 14.0, "limit_reset": None, "is_free_tier": False, "usage": 0}
+        record = key_limit_check(good, 14.0)
+        self.assertTrue(record["ok"], record)
+        self.assertNotIn("label", record)
+        self.assertTrue(key_limit_check({**good, "limit": 10, "limit_remaining": 14}, 14.0)["ok"])
+        bad = {
+            "unlimited": {"limit": None, "limit_remaining": None},
+            "limit above the cap": {"limit": 14.01},
+            "remaining below the cap": {"limit_remaining": 13.99},
+            "free tier": {"is_free_tier": True},
+            "free tier not a boolean": {"is_free_tier": "no"},
+            "limit not a number": {"limit": "14"},
+            "limit a boolean": {"limit": True},
+            "remaining missing": {"limit_remaining": float("nan")},
+        }
+        for name, change in bad.items():
+            with self.subTest(name):
+                self.assertFalse(key_limit_check({**good, **change}, 14.0)["ok"])
+        self.assertFalse(key_limit_check({}, 14.0)["ok"])
+        self.assertFalse(key_limit_check("junk", 14.0)["ok"])
+
+    def test_key_info_call_is_a_get_with_the_key_and_fails_closed(self):
+        seen = []
+
+        def opener(request, timeout):
+            seen.append((request.full_url, request.get_method(), request.get_header("Authorization")))
+            return Reply({"data": {"limit": 14.0}})
+
+        self.assertEqual(fetch_key_info(DUMMY_KEY, opener=opener), {"limit": 14.0})
+        self.assertEqual(seen, [(KEY_INFO_URL, "GET", "Bearer " + DUMMY_KEY)])
+        self.assertEqual(KEY_INFO_URL, "https://openrouter.ai/api/v1/key")
+        failures = {
+            "HTTP 500": (http_error(500), False), "HTTP 401": (http_error(401), True),
+            "HTTP 403": (http_error(403), True), "URLError": (urllib.error.URLError("down"), False),
+            "TimeoutError": (TimeoutError(), False),
+        }
+        for reason, (exc, rejected) in failures.items():
+            def raising(request, timeout, exc=exc):
+                raise exc
+            with self.subTest(reason), self.assertRaises(KeyInfoError) as caught:
+                fetch_key_info(DUMMY_KEY, opener=raising)
+            self.assertEqual((str(caught.exception), caught.exception.rejected), (reason, rejected))
+        for junk in (b"not json", b"[]", b'{"data": null}', b'{"error": {"code": 401}}'):
+            reply = Reply(None)
+            reply.body = junk
+            with self.subTest(junk), self.assertRaises(KeyInfoError):
+                fetch_key_info(DUMMY_KEY, opener=lambda request, timeout, r=reply: r)
+
+    def test_main_refuses_to_start_when_the_key_check_fails_and_records_a_passing_check_without_the_key(self):
+        argv = ["--plan", "pegasus-bridge", "--model", SONNET, "--games", "1", "--cap-usd", "14"]
+        env = {"OPENROUTER_API_KEY": DUMMY_KEY}
+        for opener in (key_reply(limit=None), key_reply(limit=20.0), key_reply(limit_remaining=1.0),
+                       key_reply(is_free_tier=True), lambda request, timeout: (_ for _ in ()).throw(OSError())):
+            with tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err, \
+                    self.assertRaises(SystemExit) as refused:
+                git_repo(tmp)
+                model_runs.main([*argv, "--dir", str(Path(tmp) / "b")], provider_for=never, repo=tmp,
+                                environ=env, key_opener=opener)
+            self.assertEqual(refused.exception.code, 2)
+            self.assertNotIn(DUMMY_KEY, err.getvalue())
+            self.assertFalse((Path(tmp) / "b").exists())
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
+            git_repo(tmp)
+            model_runs.main([*argv, "--dir", str(Path(tmp) / "b")], repo=tmp, environ=env,
+                            key_opener=key_reply(), provider_for=lambda e: CostFake(e, [0.01] * 10))
+            manifest = json.loads((Path(tmp) / "b" / "manifest.json").read_text())
+            written = batch_files(Path(tmp) / "b")
+        check = manifest["key_check"]
+        self.assertEqual((check["ok"], check["limit"], check["limit_remaining"], check["is_free_tier"]),
+                         (True, 14.0, 14.0, False))
+        self.assertEqual(check["endpoint"], KEY_INFO_URL)
+        self.assertNotIn(DUMMY_KEY, written)
+        self.assertNotIn("masked-key-label", written)  # The key's label is not recorded.
+
+
+class KeyFromEnvironmentTest(unittest.TestCase):
+    """Item 3: the paid path takes the key from the injected environment only."""
+
+    def test_a_key_only_in_env_local_is_refused(self):
+        argv = ["--plan", "pegasus-bridge", "--model", SONNET, "--games", "1", "--cap-usd", "14"]
+        with tempfile.TemporaryDirectory() as root:
+            dotenv = Path(root) / ".env.local"  # Outside the repo, so the tree stays clean.
+            dotenv.write_text(f"OPENROUTER_API_KEY={DUMMY_KEY}\n")
+            tmp = Path(root) / "repo"
+            tmp.mkdir()
+            git_repo(tmp)
+            defaults = (dotenv, None)  # Settings.load() would read this file by default.
+            with mock.patch.object(Settings.load.__func__, "__defaults__", defaults), \
+                    mock.patch.dict(os.environ, {"PATH": os.environ.get("PATH", "")}, clear=True):
+                self.assertEqual(Settings.load().api_key, DUMMY_KEY)  # The trap is armed.
+                for args in (argv, ["--paid-plan", D37_OPTION_A.name]):
+                    with self.subTest(args[0]), redirect_stderr(io.StringIO()) as err, \
+                            redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as refused:
+                        model_runs.main([*args, "--dir", str(Path(tmp) / "b")], repo=tmp,
+                                        provider_for=lambda e: CostFake(e, [0.0] * 10))
+                    self.assertEqual(refused.exception.code, 2)
+                    self.assertIn("OPENROUTER_API_KEY is missing", err.getvalue())
+                    self.assertFalse((Path(tmp) / "b").exists())
+
+    def test_missing_empty_or_rejected_key_refuses_to_start(self):
+        cases = {"missing": ({}, never), "empty": ({"OPENROUTER_API_KEY": "  "}, never),
+                 "rejected 401": ({"OPENROUTER_API_KEY": DUMMY_KEY},
+                                  lambda request, timeout: (_ for _ in ()).throw(http_error(401))),
+                 "rejected 403": ({"OPENROUTER_API_KEY": DUMMY_KEY},
+                                  lambda request, timeout: (_ for _ in ()).throw(http_error(403)))}
+        for name, (env, opener) in cases.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp, \
+                    redirect_stderr(io.StringIO()) as err, self.assertRaises(SystemExit) as refused:
+                git_repo(tmp)
+                model_runs.main(["--paid-plan", D37_OPTION_A.name, "--dir", str(Path(tmp) / "b")], repo=tmp,
+                                environ=env, key_opener=opener, chat_opener=never)
+            self.assertEqual(refused.exception.code, 2)
+            self.assertIn("rejected" if name.startswith("rejected") else "missing or empty", err.getvalue())
+            self.assertFalse((Path(tmp) / "b").exists())
+        with self.assertRaisesRegex(ValueError, "OPENROUTER_API_KEY"):
+            model_runs.run_batch(["pegasus-bridge"], 1, 14.0, "unused", price=Price(2.0, 10.0, 4000), source=SOURCE,
+                                 settings=Settings(model=SONNET, effort="high", max_tokens=4000),
+                                 key_check={"ok": True}, opener=never)
+        with self.assertRaisesRegex(ValueError, "key-limit check"):
+            model_runs.run_batch(["pegasus-bridge"], 1, 14.0, "unused", price=Price(2.0, 10.0, 4000), source=SOURCE,
+                                 settings=Settings(api_key=DUMMY_KEY, model=SONNET, effort="high", max_tokens=4000),
+                                 key_check=None, opener=never)
+
+
+def paid_run(tmp, chat):
+    """Runs ``--paid-plan d37-option-a`` with fake key and chat openers."""
+    git_repo(tmp)
+    with redirect_stdout(io.StringIO()):
+        code = model_runs.main(["--paid-plan", D37_OPTION_A.name, "--dir", str(Path(tmp) / "b")], repo=tmp,
+                               environ={"OPENROUTER_API_KEY": DUMMY_KEY}, key_opener=fake_key_opener(14.0),
+                               chat_opener=chat)
+    out = Path(tmp) / "b"
+    return (code, json.loads((out / "manifest.json").read_text()),
+            [json.loads(line) for line in (out / "runs.jsonl").read_text().splitlines()],
+            json.loads((out / "batch-summary.json").read_text()), out)
+
+
+class PinnedModelTest(unittest.TestCase):
+    """Item 4: the paid plan fixes Sonnet 5.5 in the body, the price and the manifest."""
+
+    def test_paid_plan_pins_sonnet_in_body_price_and_manifest_and_refuses_overrides(self):
+        for extra in (["--model", "openai/gpt-4.1-mini"], ["--model", SONNET], ["--cap-usd", "20"],
+                      ["--games", "2"], ["--plan", "pegasus-bridge"], ["--effort", "low"],
+                      ["--input-price", "0", "--output-price", "0"]):
+            with self.subTest(extra), tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err, \
+                    redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as refused:
+                git_repo(tmp)
+                model_runs.main(["--paid-plan", D37_OPTION_A.name, *extra, "--dir", str(Path(tmp) / "b")], repo=tmp,
+                                environ={"OPENROUTER_API_KEY": DUMMY_KEY}, key_opener=fake_key_opener(14.0),
+                                chat_opener=never)
+            self.assertEqual(refused.exception.code, 2)
+            self.assertIn("--paid-plan d37-option-a fixes", err.getvalue())
+            self.assertFalse((Path(tmp) / "b").exists())
+        # Little Round Top is first; three calls are answered, the fourth is refused for credit.
+        chat = ChatOpener(LITTLE_ROUND_TOP, refuse_at=4, refusal=http_error(402, {"error": {"code": 402}}))
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {"OPENROUTER_MODEL": "x/y"}):
+            code, manifest, games, summary, _ = paid_run(tmp, chat)
+        self.assertEqual({b["model"] for b in chat.bodies}, {SONNET})
+        self.assertEqual({(b["max_tokens"], b["reasoning"]["effort"]) for b in chat.bodies}, {(4000, "high")})
+        self.assertEqual((manifest["model"], manifest["cap_usd"], manifest["paid_plan"]),
+                         (SONNET, 14.0, "d37-option-a"))
+        self.assertEqual((manifest["prices"]["input_per_mtok"], manifest["prices"]["output_per_mtok"]), (2.0, 10.0))
+        self.assertEqual(manifest["games_per_item"], dict(D37_OPTION_A.items))
+        self.assertEqual(sum(manifest["games_per_item"].values()), 12)
+        self.assertEqual(games[0]["pins"]["model"], SONNET)
+        self.assertEqual((code, summary["planned"]), (model_runs.EXIT_PROVIDER_LIMIT, 12))
+
+    def test_dry_run_prints_the_plan_and_a_fake_key_check_with_no_key_or_network(self):
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()) as out:
+            git_repo(tmp)
+            code = model_runs.main(["--paid-plan", D37_OPTION_A.name, "--dry-run"], repo=tmp, environ={},
+                                   key_opener=never, chat_opener=never)
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), [".git"])
+        shown = json.loads(out.getvalue())
+        self.assertEqual(code, 0)
+        self.assertEqual((shown["model"], shown["cap_usd"], shown["games"]), (SONNET, 14.0, 12))
+        self.assertEqual(shown["plan"], dict(D37_OPTION_A.items))
+        self.assertEqual(shown["play_order"], [f"{item} x{n}" for item, n in D37_OPTION_A.items])
+        self.assertTrue(shown["key_check"]["ok"])
+        self.assertIn("fake", shown["key_check"]["opener"])
+
+
+class ProviderLimitTest(unittest.TestCase):
+    """Item 5: a credit or budget refusal stops the batch and keeps the partial game."""
+
+    def run_refused(self, refusal, refuse_at=3):
+        chat = ChatOpener(LITTLE_ROUND_TOP, refuse_at=refuse_at, refusal=refusal)
+        settings = Settings(api_key=DUMMY_KEY, model=SONNET, effort="high", max_tokens=4000, timeout=90.0)
+        check = check_key(DUMMY_KEY, 14.0, opener=fake_key_opener(14.0))
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        out = Path(tmp.name) / "b"
+        with redirect_stdout(io.StringIO()):
+            code, summary = model_runs.run_batch(["little-round-top"], 2, 14.0, out, price=Price(2.0, 10.0, 4000),
+                                                 source=SOURCE, settings=settings, key_check=check, opener=chat)
+        games = [json.loads(line) for line in (out / "runs.jsonl").read_text().splitlines()]
+        manifest = json.loads((out / "manifest.json").read_text())
+        return code, summary, games, manifest, chat, out
+
+    def test_a_provider_credit_refusal_stops_the_batch_and_keeps_the_partial_game(self):
+        refusals = {
+            "HTTP 402 openrouter_key_limit": http_error(402, {"error": {"code": 402, "message": "m", "metadata": {
+                "limit_source": "openrouter_key_limit"}}}),
+            "HTTP 402 unnamed": http_error(402),
+            "HTTP 403 openrouter_guardrail_budget": http_error(403, {"error": {"code": 403, "metadata": {
+                "limit_source": "openrouter_guardrail_budget"}}}),
+            "HTTP 402 openrouter_credits": {"id": "gen-x", "error": {"code": 402, "metadata": {
+                "limit_source": "openrouter_credits"}}},  # An in-body refusal with HTTP 200.
+        }
+        for reason, refusal in refusals.items():
+            with self.subTest(reason):
+                code, summary, games, manifest, chat, out = self.run_refused(refusal)
+                self.assertEqual(code, model_runs.EXIT_PROVIDER_LIMIT)
+                self.assertEqual(len(chat.bodies), 3)  # Nothing is sent after the refusal.
+                stopped = games[0]
+                self.assertEqual((stopped["status"], stopped["reason"]), ("stopped", f"provider_limit: {reason}"))
+                self.assertTrue(stopped["db"].endswith(".stopped.sqlite"))
+                self.assertTrue(Path(stopped["db"]).exists())
+                self.assertAlmostEqual(stopped["cost_usd"], 0.02)
+                self.assertEqual((summary["status"], summary["reason"], summary["not_started"]),
+                                 ("provider_limit", stopped["reason"], 1))
+                self.assertAlmostEqual(summary["spent_usd"], 0.02)
+                self.assertEqual((manifest["closed"]["status"], manifest["closed"]["reason"]),
+                                 ("provider_limit", stopped["reason"]))
+                self.assertAlmostEqual(manifest["closed"]["spent_usd"], 0.02)
+                replay = build_replay(Path(stopped["db"]))
+                state = replay.repository.load(replay.repository.latest())
+                mine = [d for d in state["decisions"] if d.get("side") == LITTLE_ROUND_TOP.player]
+                self.assertEqual([d["fallback"] for d in mine], [False, False])  # No scripted fallback kept.
+                self.assertEqual(sorted(p.name for p in out.iterdir() if p.suffix == ".sqlite"),
+                                 ["little-round-top-1.stopped.sqlite"])
+
+    def test_other_refusals_fail_the_game_as_before(self):
+        for refusal in (http_error(403, {"error": {"code": 403, "message": "flagged"}}),
+                        http_error(429, {"error": {"code": 429, "metadata": {"error_type": "rate_limit_exceeded"}}})):
+            with self.subTest(refusal.code):
+                code, summary, games, _, chat, _ = self.run_refused(refusal)
+                self.assertEqual((code, summary["status"]), (model_runs.EXIT_FAILED, "failed"))
+                self.assertEqual(games[0]["reason"], f"fallback: provider_error HTTP {refusal.code}")
+                self.assertNotIn("provider_limit", games[0])
+                self.assertEqual(len(chat.bodies), 3)
+
+
+if __name__ == "__main__":
+    unittest.main()

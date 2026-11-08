@@ -80,6 +80,9 @@ def record_response(telemetry, metadata):
     # Only an in-body provider error adds this key, so other records keep their shape.
     if "error_code" in metadata:
         telemetry["provider_error_code"] = metadata["error_code"]
+    # D37: a credit or budget refusal ({"status", "limit_source"}) stops a paid batch.
+    if "provider_limit" in metadata:
+        telemetry["provider_limit"] = metadata["provider_limit"]
 
 
 class CommanderService:

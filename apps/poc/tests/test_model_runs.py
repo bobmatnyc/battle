@@ -21,6 +21,7 @@ from battle.adapters.openrouter import RESPONSE_FORMAT, OpenRouterProvider
 from battle.command_policy import system_prompt
 from battle.config import Settings
 from battle.contracts import ProviderFailure
+from battle.paid_batch import fake_key_opener
 from battle.scenario_concord import CONCORD_NORTH_BRIDGE
 from battle.scenario_hougoumont import HOUGOUMONT_NORTH_GATE
 from battle.scenario_pegasus import PEGASUS_BRIDGE
@@ -35,6 +36,8 @@ _spec.loader.exec_module(model_runs)
 # A zero reserve: only the spend already made counts against the cap.
 FREE = Price(0.0, 0.0, 1)
 SOURCE = {"commit": "0" * 40, "clean": True}
+# D37: main() needs a key in its environment; this placeholder is never sent anywhere real.
+DUMMY_KEY = "dummy-not-a-key"
 
 
 class ScriptedFake:
@@ -172,7 +175,7 @@ class ModelRunsTest(unittest.TestCase):
     def test_reserve_and_pins_use_the_environment_settings(self):
         # Sonnet at 16,000 output tokens reserves over $0.16 for the first call, so a $0.15
         # cap refuses it; at 650 tokens (Settings without the environment) it would play.
-        with dummy_env(OPENROUTER_EFFORT="high", OPENROUTER_MAX_TOKENS="16000"), \
+        with dummy_env(OPENROUTER_EFFORT="high", OPENROUTER_MAX_TOKENS="16000", OPENROUTER_API_KEY=DUMMY_KEY), \
                 tempfile.TemporaryDirectory() as tmp:
             git(tmp, "init", "-q")
             git(tmp, "commit", "-q", "--allow-empty", "-m", "base")
@@ -181,7 +184,8 @@ class ModelRunsTest(unittest.TestCase):
                 code = model_runs.main(
                     ["--plan", "pegasus-bridge", "--model", "anthropic/claude-sonnet-5.5", "--games", "1",
                      "--cap-usd", "0.15", "--dir", str(Path(tmp) / "b")],
-                    provider_for=lambda entry: fakes.append(ScriptedFake(entry)) or fakes[-1], repo=tmp)
+                    provider_for=lambda entry: fakes.append(ScriptedFake(entry)) or fakes[-1], repo=tmp,
+                    key_opener=fake_key_opener(0.15))
             manifest = json.loads((Path(tmp) / "b" / "manifest.json").read_text())
             game = json.loads((Path(tmp) / "b" / "runs.jsonl").read_text().splitlines()[0])
         self.assertEqual(manifest["prices"]["max_output_tokens"], 16000)
@@ -209,7 +213,7 @@ class ModelRunsTest(unittest.TestCase):
         self.assertIs(summary["spend_complete"], False)
 
     def test_cli_exits_non_zero_at_the_cap(self):
-        with dummy_env(), tempfile.TemporaryDirectory() as tmp:
+        with dummy_env(OPENROUTER_API_KEY=DUMMY_KEY), tempfile.TemporaryDirectory() as tmp:
             git(tmp, "init", "-q")
             git(tmp, "commit", "-q", "--allow-empty", "-m", "base")
             with redirect_stdout(io.StringIO()):
@@ -217,7 +221,8 @@ class ModelRunsTest(unittest.TestCase):
                     ["--plan", "pegasus-bridge", "--model", "fake/model-runs", "--games", "3",
                      "--cap-usd", "0.05", "--input-price", "0", "--output-price", "0",
                      "--dir", str(Path(tmp) / "b")],
-                    provider_for=lambda entry: ScriptedFake(entry, cost=0.03), repo=tmp)
+                    provider_for=lambda entry: ScriptedFake(entry, cost=0.03), repo=tmp,
+                    key_opener=fake_key_opener(0.05))
         self.assertEqual(code, model_runs.EXIT_CAP)
 
     def test_dirty_tree_is_refused_and_pins_appear(self):

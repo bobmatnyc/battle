@@ -55,11 +55,15 @@ class Settings:
 
     @classmethod
     def load(
-        cls, path: Path = ROOT / ".env.local", environ: Mapping[str, str] | None = None
+        cls, path: Path | None = ROOT / ".env.local", environ: Mapping[str, str] | None = None
     ):
+        """Settings from ``environ`` (default ``os.environ``), then the dotenv
+        file at ``path``. ``path`` None reads no file: the paid batch takes its
+        key from the injected environment only (D37, docs/research/78).
+        Test: `test_a_key_only_in_env_local_is_refused`."""
         environment = os.environ if environ is None else environ
         values = {}
-        if path.exists():
+        if path is not None and path.exists():  # D37: None reads no .env.local.
             for line in path.read_text().splitlines():
                 if "=" in line and not line.lstrip().startswith("#"):
                     key, value = line.split("=", 1)
