@@ -13,6 +13,8 @@ export {esc};
 // Water and marsh as the POC desk fills them (docs/research/72 §1).
 const TERRAIN_FILL: Record<string, string> = {open: "#e7e0c4", woods: "#b9c99a", rocky: "#c9c1b0", water: "#b9d3e3", marsh: "#d7e3cf"};
 const SYMBOLS: Record<string, string> = {infantry: "INF", cavalry: "CAV", artillery: "ART"};
+// bt-T11: the POC desk's ring is r=53 on its 25.5 hex radius (apps/poc/static/app.js renderMap).
+const RING_PER_RADIUS = 53 / 25.5;
 
 const percent = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : null;
@@ -51,10 +53,12 @@ export const featureOptions = (map: MapDocument, sources: StatusTable): FeatureO
 
 /** Why: the map is the player's main view and must show only what the commander view holds.
  * What: SVG markup: one hex per map cell (its tooltip names each feature mark on it, with
- * status), the objective, the view's map features, a dashed line to the chosen destination,
+ * status), the objective (with a dashed ring round it and its neighbours when the brief's
+ * `objective.ring` is set), the view's map features, a dashed line to the chosen destination,
  * a counter per own unit (`data-unit`) and per contact (`data-contact`).
  * Test: `the map draws every cell and the player's own counters`,
  * `enemy counters come from contacts and carry no exact values`, `text from the server is escaped`,
+ * `a hold-objective brief rings the objective`, `no ring without the brief's ring flag or without a brief`,
  * `the map draws the commander view's features above the hexes and below the counters, with status in each hex tooltip`. */
 export function mapMarkup(view: CommanderView, map: MapDocument, selection: Selection, sources: StatusTable = {}): string {
   const r = map.radius;
@@ -68,7 +72,11 @@ export function mapMarkup(view: CommanderView, map: MapDocument, selection: Sele
   }).join("");
   const [ox, oy] = hexCenter(view.objective, r);
   const label = view.scenario_brief?.objective.label ?? "Objective";
-  const objective = `<g class="objective" pointer-events="none"><circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="${(r * 0.6).toFixed(1)}"/>`
+  // bt-T11: the brief sets `ring` for a hold-objective victory; no brief, no ring.
+  const ring = view.scenario_brief?.objective.ring === true
+    ? `<circle class="objective-ring" pointer-events="none" cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="${(r * RING_PER_RADIUS).toFixed(1)}"/>`
+    : "";
+  const objective = `<g class="objective" pointer-events="none">${ring}<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="${(r * 0.6).toFixed(1)}"/>`
     + `<text x="${ox.toFixed(1)}" y="${(oy + r * 0.6 + 12).toFixed(1)}" text-anchor="middle">${esc(label)}</text></g>`;
   const unit = view.units.find((u) => u.id === selection.unitId);
   let route = "";

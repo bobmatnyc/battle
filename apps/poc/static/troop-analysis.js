@@ -81,7 +81,7 @@ const TroopAnalysis = {
       const disabled = busy || replay || godMode || !['poc-8', 'poc-9', 'poc-10', 'poc-11', 'poc-12', 'poc-13'].includes(state.rules) || state.status !== 'active' ||
         !assessment.command_operational || ['routed', 'lost'].includes(unit.status);
       for (const id of ['standing-send', 'standing-recommend', 'standing-profile']) $(id).disabled = disabled;
-      let status = 'Changing a selection is a draft. Dispatch sends it by voice or runner.';
+      let status = BattleOrderWording.standing(state.command?.profile);  // bt-T11: the side's own means
       if (!['poc-8', 'poc-9', 'poc-10', 'poc-11', 'poc-12', 'poc-13'].includes(state.rules)) status = 'Use Reset to start a battle with configurable standing orders.';
       else if (godMode) status = 'Observer view: switch off God Mode to send instructions.';
       else if (replay) status = 'Recorded assessment; return to live to send instructions.';

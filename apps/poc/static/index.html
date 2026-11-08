@@ -16,7 +16,7 @@
 <section id="enemy-intelligence" class="contact-intelligence" aria-label="Enemy intelligence"><div class="intelligence-heading"><h3>Enemy intelligence</h3><span>ESTIMATES AT LAST SIGHTING</span></div><div id="contact-list" class="contact-list"></div></section>
 <section id="god-inspector" class="god-inspector hidden"><div class="intelligence-heading"><h3>Battle interactions</h3><span id="god-count"></span></div><label>Inspect <select id="god-filter"><option value="all">All events</option><option value="combat">Combat &amp; movement</option><option value="communications">Orders &amp; communications</option><option value="decisions">Commander decisions</option></select></label><div id="god-events" class="god-events"></div><button id="god-older">Show older events</button><details><summary>Orders &amp; reports in transit</summary><pre id="god-traffic"></pre></details><details><summary>Recorded strategic decisions</summary><pre id="god-decisions"></pre></details><details><summary>Exact unit state</summary><pre id="god-units"></pre></details></section>
 <div id="outcome" class="outcome hidden"></div>
-<div class="orders-bar"><div id="order-summary"><span class="eyebrow">MOVEMENT ORDERS</span><strong>Select a detachment to begin.</strong></div><div class="order-buttons"><button id="hold-order" disabled>Hold position</button><button id="send-order" disabled>Dispatch runner ↗</button></div></div>
+<div class="orders-bar"><div id="order-summary"><span class="eyebrow">MOVEMENT ORDERS</span><strong>Select a detachment to begin.</strong></div><div class="order-buttons"><button id="hold-order" disabled>Hold position</button><button id="send-order" disabled>Dispatch order ↗</button></div></div>
 <div id="unit-list" class="unit-list"></div>
 <details class="product-intent" id="product-intent">
 <summary>Command language &amp; multiplayer design <span>PRODUCT INTENT</span></summary>
@@ -30,7 +30,7 @@
 </section>
 <aside class="command-panel">
 <section id="unit-detail" class="unit-detail hidden" aria-label="Selected unit"><div class="detail-heading"><p class="eyebrow">SELECTED FORMATION</p><button id="unit-close" aria-label="Close unit details">×</button></div><h2 id="unit-title"></h2><p id="unit-report-age"></p><div id="unit-recommendations" aria-label="Commander recommendations"></div><div id="unit-stats"></div><p id="unit-mission"></p><p id="unit-judgment"></p><div class="unit-actions"><button id="unit-move">Move</button><button id="unit-order">Give an order</button><button id="unit-hold">Hold</button><button id="unit-split">Split</button><button id="unit-combine">Combine</button><button id="unit-analysis">Standing orders &amp; analysis</button></div><p id="unit-action-note"></p><form id="unit-action-form" class="hidden"><label id="unit-order-field">Order<select id="unit-order-kind"><option value="hold">Hold position and defend</option><option value="move">Move to selected hex</option></select></label><div id="unit-order-description" class="hidden"></div><label id="unit-split-field" class="hidden">Troops to detach<input id="unit-split-count" type="number" min="12" step="1" value="20"></label><label id="unit-combine-field" class="hidden">Join into this formation<select id="unit-combine-target"></select></label><p id="unit-action-target"></p><div class="unit-form-buttons"><button id="unit-action-cancel" type="button">Cancel</button><button id="unit-action-submit" type="submit">Send instructions</button></div></form><div id="unit-operations"></div></section>
-<div id="mission-objective" class="objective"><p class="eyebrow">YOUR MISSION <span>01</span></p><h2 id="mission-title"></h2><p id="mission-text"></p><div class="objective-rule"></div><p class="small">Movement orders travel by runner. Units engage on their own. Your map shows the last delivered reports.</p></div>
+<div id="mission-objective" class="objective"><p class="eyebrow">YOUR MISSION <span>01</span></p><h2 id="mission-title"></h2><p id="mission-text"></p><div class="objective-rule"></div><p class="small"><span id="order-means">Movement orders travel by your command's own means.</span> Units engage on their own. Your map shows the last delivered reports.</p></div>
 <div class="tabs" role="tablist"><button id="dispatch-tab" role="tab" aria-selected="true" class="active">Dispatches <span id="dispatch-count">0</span></button><button id="chat-tab" role="tab" aria-selected="false">Staff chat <span>✧</span></button></div>
 <div id="dispatch-panel" class="dispatch-panel"><div id="dispatches"></div></div>
 <div id="chat-panel" class="chat-panel hidden"><div class="staff-intro"><span class="staff-icon">✧</span><div><strong>Your staff adviser</strong><p>Ask for an assessment or proposed orders. You decide what gets sent.</p></div></div><div id="messages" class="messages"></div><form id="chat-form"><label class="sr-only" for="chat-input">Message your staff adviser</label><textarea id="chat-input" placeholder="How should we hold this position?" rows="2" maxlength="2000"></textarea><button type="submit" id="chat-send" aria-label="Send staff message">↑</button></form></div>
@@ -53,11 +53,12 @@
 <script src="/cartography.js?v=19" defer></script>
 <script src="/map-view.js?v=19" defer></script>
 <script src="/api-client.js?v=18" defer></script>
-<script src="/troop-analysis.js?v=18" defer></script>
+<script src="/order-wording.js?v=20" defer></script>
+<script src="/troop-analysis.js?v=20" defer></script>
 <script src="/scenario-picker.js?v=18" defer></script>
 <script src="/timeline.js?v=18" defer></script>
 <script src="/unit-icons.js?v=18" defer></script>
 <script src="/feature-sources.js?v=19" defer></script>
 <script src="/map-features.js?v=19" defer></script>
-<script src="/app.js?v=19" defer></script>
+<script src="/app.js?v=20" defer></script>
 </body></html>

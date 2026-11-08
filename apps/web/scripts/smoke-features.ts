@@ -124,6 +124,36 @@ export async function checkGridToggle(page: Page, artifacts: string, shot: strin
   return `grid off: hex stroke-opacity 0, ${after["marks"].length} marks kept; grid on again`;
 }
 
+// bt-T11: the ring's style, size, and what a click on its stroke hits.
+const RING = `(() => {
+  const rings = [...document.querySelectorAll("#map .objective-ring")];
+  const ring = rings[0];
+  if (!ring) return {count: 0};
+  const b = ring.getBoundingClientRect(), s = getComputedStyle(ring);
+  const hit = document.elementFromPoint(b.right - 1, b.top + b.height / 2);
+  return {count: rings.length, width: b.width, dash: s.strokeDasharray, fill: s.fill, events: s.pointerEvents,
+    hitRing: hit === ring, radius: Number(ring.getAttribute("r"))};
+})()`;
+
+/** Why: a hold-objective battle shows the ground to hold as the POC desk does.
+ * What: the dashed, unfilled ring is drawn exactly when the POC's brief sets `objective.ring`,
+ * spans about twice the hex radius, and takes no clicks. Returns a one-line summary. */
+export async function checkRing(page: Page, pocPort: number): Promise<string> {
+  const state = await poc(pocPort, "/api/state");
+  const map = await poc(pocPort, "/api/map");
+  const expected = state["scenario_brief"].objective.ring === true;
+  const ring = await page.evaluate<Doc>(RING);
+  assert.equal(ring["count"], expected ? 1 : 0, `objective ring drawn ${ring["count"]}, brief ring ${expected}`);
+  if (!expected) return `${state["scenario_brief"].id}: brief ring false, no ring drawn`;
+  assert.equal(ring["dash"], "5px, 5px");
+  assert.equal(ring["fill"], "none");
+  assert.equal(ring["events"], "none");
+  assert.equal(ring["hitRing"], false, "a click on the ring's stroke passes through it");
+  assert.ok(ring["radius"] > Math.sqrt(3) * map["radius"], `ring r=${ring["radius"]} encloses the neighbouring hexes`);
+  return `${state["scenario_brief"].id}: dashed unfilled ring r=${ring["radius"]} (hex radius ${map["radius"]}), `
+    + `pointer-events none, its stroke is not hit`;
+}
+
 const disabled = (page: Page, ids: string[]): Promise<boolean[]> =>
   page.evaluate<boolean[]>(`${JSON.stringify(ids)}.map(id => document.getElementById(id).disabled)`);
 

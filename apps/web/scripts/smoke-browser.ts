@@ -8,7 +8,8 @@
 // then switches to Hougoumont and checks the header, features (compound and gate),
 // counters, unit card and a Hougoumont-only order, then to Concord (docs/research/74): header,
 // water, roads and bridge, an order, and the clock run to the outcome headline, then to Pegasus
-// Bridge and Hill 223 (docs/research/75) the same way.
+// Bridge and Hill 223 (docs/research/75) the same way. On every scenario it checks the objective
+// ring is drawn exactly when the brief sets it, takes no clicks, and spans the neighbours (bt-T11).
 //
 // Exit 0: passed. Exit 1: failed (also when the overall deadline passes). Exit 3:
 // BLOCKED, no runnable browser (never a pass).
@@ -28,7 +29,7 @@ import {join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createDeskServer, type DeskServer} from "../server/desk-server.ts";
 import {findBrowser, launch, Page} from "./cdp.ts";
-import {checkFeatures, checkGridToggle, checkReplay} from "./smoke-features.ts";
+import {checkFeatures, checkGridToggle, checkReplay, checkRing} from "./smoke-features.ts";
 import {checkCard, choose, clickOn, header, nextNotice, noticeText, openHex, poc, screenshot, selectUnit, until, type Doc} from "./smoke-page.ts";
 import {removeDir, stop, waitForOutput, withDeadline} from "./smoke-support.ts";
 
@@ -86,6 +87,9 @@ async function littleRoundTop(page: Page, pocPort: number, artifacts: string): P
   // Slice 3: roads, footprints and the legend with each mark's status; the grid toggle keeps them.
   console.log(`features: ${await checkFeatures(page, pocPort)}`);
   await screenshot(page, artifacts, "desk-lrt-features.png");
+  // bt-T11: the hold-objective ring, as the POC desk draws it; the clicks below pass through it.
+  console.log(`ring: ${await checkRing(page, pocPort)}`);
+  await screenshot(page, artifacts, "desk-lrt-ring.png");
   console.log(`grid: ${await checkGridToggle(page, artifacts, "desk-lrt-grid-off.png")}`);
 
   // 1. A real click on the friendly counter selects it and shows its unit card.
@@ -190,6 +194,7 @@ async function hougoumont(page: Page, pocPort: number, artifacts: string): Promi
   console.log(`features: ${await checkFeatures(page, pocPort)}`);
   console.log(`grid: ${await checkGridToggle(page, artifacts, "desk-hougoumont-grid-off.png")}`);
   await screenshot(page, artifacts, "desk-hougoumont-features.png");
+  console.log(`ring: ${await checkRing(page, pocPort)}`);
 
   const gateParty = state["units"][0];
   await selectUnit(page, gateParty.id);
@@ -220,6 +225,7 @@ async function concord(page: Page, pocPort: number, artifacts: string): Promise<
   console.log(`scenario: ${started["text"]}`);
   console.log(`features: ${await checkFeatures(page, pocPort)}`);
   await screenshot(page, artifacts, "desk-concord-features.png");
+  console.log(`ring: ${await checkRing(page, pocPort)}`);
 
   // The Acton company, the command's own detachment, gets a move to an open hex 3 to 6 hexes away.
   const acton = state["units"].find((u: Doc) => u.id === "P1");
@@ -288,6 +294,7 @@ async function era(page: Page, pocPort: number, artifacts: string, spec: Era): P
   console.log(`scenario: ${started["text"]}`);
   console.log(`features: ${await checkFeatures(page, pocPort)}`);
   await screenshot(page, artifacts, `desk-${spec.shot}-features.png`);
+  console.log(`ring: ${await checkRing(page, pocPort)}`);
 
   const unit = state["units"].find((u: Doc) => u.id === spec.unit);
   await selectUnit(page, unit.id);
@@ -366,6 +373,7 @@ async function body(binary: string, artifacts: string, profile: string, held: St
   await concord(held.page, pocPort, artifacts);
   for (const spec of ERAS) await era(held.page, pocPort, artifacts, spec);
   console.log("SMOKE PASSED: map features with legend status and the grid toggle at Little Round Top and Hougoumont, "
+    + "the objective ring exactly where the brief sets it (Little Round Top, Concord), "
     + "unit card, move and hold-fire orders accepted, refusals shown with the server's text, clock, "
     + "commander replay back to an earlier interval and return to live, a switch to Hougoumont with its header, "
     + "unit card and Close the gate order, and a switch to Concord with its header, water, roads and bridge, "
