@@ -1,6 +1,6 @@
 # 68 — Cannae: the scenario entry, its defaults and deviations
 
-**Date:** 2026-11-07. **Requirement:** the army-scale Cannae planned in [63](63-cannae-scenario-plan.md), with every default of 63 §8 and the named variants of 63 §8 that the engine can build. **Ruling:** D86 (Bob 2026-11-07 13:10Z), "Accept doc 63 defaults (A, designed yield, scripted orders, sources in parallel)": scale option A (63 §9 q1), the designed yield C1 as the default and no design C2 as a variant (q5), scripted controls issuing each sector's orders before sector commanders exist (q10), and the source pull in parallel with the runs, not before them (q11). Every other 63 §9 question takes 63's proposal. **Results are pending the EVO runs.** Nothing below is a model result.
+**Date:** 2026-11-07. **Requirement:** the army-scale Cannae planned in [63](63-cannae-scenario-plan.md), with every default of 63 §8 except row 17 and the named variants of 63 §8 that the engine can build. **Ruling:** D86 (Bob 2026-11-07 13:10Z), "Accept doc 63 defaults (A, designed yield, scripted orders, sources in parallel)": scale option A (63 §9 q1), the designed yield C1 as the default and no design C2 as a variant (q5), scripted controls issuing each sector's orders before sector commanders exist (q10), and the source pull in parallel with the runs, not before them (q11). Every other 63 §9 question takes 63's proposal. **Results** are in §6 and §6.1, from the EVO runs `bt05r-d829763` at `d829763`.
 
 Labels follow 63: **sourced** (S65 to S70, [09](09-sources.md#cannae-source-pass--2026-11-07)), **inferred**, **reconstruction**, **authored**. A value 63 leaves open is an authored default; its change site carries `# D86 (Bob 2026-11-07 13:10Z): doc 63 defaults` or a provenance field that names D86.
 
@@ -35,7 +35,7 @@ Every rule below is read only when the snapshot carries `army_rules` (written by
 
 One change beyond 63's list: under army rules a contact of a routed enemy carries `routed: true` (`recon.scan`), so that Hasdrubal's trigger, "the Roman right cavalry routed or lost" (63 §8 row 20), can be read from the Carthaginian side's delivered view.
 
-**Opt-in proof.** `test_every_saved_poc13_entry_plays_as_recorded` plays each of the seven earlier poc-13 headless entries for 40 engine intervals and compares the SHA-256 of the snapshot with the value recorded at `5704c40`, before any change. All seven are equal. Against the pre-change `engine.py` and `recon.py`, 9 of the 25 tests in `test_army.py` fail (the behaviours above); against the pre-change `scenario_entry.py` the module cannot load (no `communications` side field).
+**Opt-in proof.** `test_every_saved_poc13_entry_plays_as_recorded` plays each of the seven earlier poc-13 headless entries for 40 engine intervals and compares the SHA-256 of the snapshot with the value recorded at `5704c40`, before any change. All seven are equal. Against the pre-change `engine.py` and `recon.py`, 9 of the 25 tests then present in `test_army.py` fail (the behaviours above); against the pre-change `scenario_entry.py` the module cannot load (no `communications` side field).
 
 ## 3. The entry and its defaults
 
@@ -126,15 +126,57 @@ Each interval `enclosure` blocks every hex held by a live Carthaginian unit and 
 
 ## 6. Runs and run time
 
-`python3 scripts/cannae_runs.py` runs the default and the 13 variants, 14 runs, each with its closing replay check. **Pending the EVO runs.** On this Mac a 160-interval default with the scripted controls, engine only (no storage, no replay), took 42.6 s; a 12-interval run through the runs script's own path (BatchStore and replay check) replays `identical` (`test_a_short_headless_run_replays_identically_and_summarises`). For EVO, 66's 41-unit figure is the planning estimate: about 1.28 s an interval, 205 s a run and 161 s for its replay check, so about 6 minutes a run and about 85 minutes for the 14 (an upper estimate; 66 ran on a shared host). Cavalry at 3 hexes an interval and the enclosure measure add path work that 66 did not measure.
+`python3 scripts/cannae_runs.py` runs the default and the 13 variants, 14 runs, each with its closing replay check. A 12-interval run through the runs script's own path (BatchStore and replay check) replays `identical` (`test_a_short_headless_run_replays_identically_and_summarises`).
+
+### 6.1 Results: EVO run `bt05r-d829763` at `d829763`
+
+EVO run dir `bt05r-d829763`, from `git archive d829763` (sha256 `dbf45dffe4b32c70f491ceba5d9e0008851abc65eb7b38c383a28c77f198b457`), serial, under `nohup`. Reproduce from `apps/poc`:
+
+```
+python3 scripts/cannae_runs.py --dir <run dir>/runs
+python3 scripts/cannae_runs.py --only <entry> --dir <run dir>/runs
+```
+
+All 14 runs exit 0 and replay `identical`. Every run is a Roman win at turn 160 (16:00:00), the deadline. The table is built from each run's result JSON (`run.log` for the default, `run-<entry>.log` for the rest). "Enclosed / lost" are the two counts in the reason, "The Roman army was not enclosed by the deadline: E men enclosed and L lost, short of the 28400 required."
+
+| Entry | Winner, end | Enclosed / lost (reason) | Peak enclosed (men, turn, units) | Closed turn | Known closed (Carth. / Roman) | Exited (unit, turn, men) | Losses (Carth.; Roman) | Events |
+|---|---|---|---|---|---|---|---|---|
+| `default` | Roman, 160 (16:00:00) | 0 / 5700 | 26465, 56, 8 | 36 | 25 / 33 | L1 62 2634 | 21699/50020; 6525/77200 | 69079 |
+| `no-design` | Roman, 160 (16:00:00) | 0 / 4303 | 12984, 47, 4 | 26 | 25 / 28 | A1 73 2849 | 16137/50020; 5128/77200 | 69879 |
+| `cavalry-delayed-10` | Roman, 160 (16:00:00) | 0 / 5700 | 26465, 56, 8 | 36 | 25 / 33 | L1 62 2634 | 21699/50020; 6525/77200 | 69079 |
+| `cavalry-delayed-20` | Roman, 160 (16:00:00) | 0 / 5700 | 26465, 56, 8 | 36 | 25 / 33 | L1 62 2634 | 21699/50020; 6525/77200 | 69079 |
+| `cavalry-delayed-40` | Roman, 160 (16:00:00) | 0 / 5700 | 26465, 56, 8 | 36 | 25 / 33 | L1 62 2634 | 21699/50020; 6525/77200 | 69079 |
+| `one-wing-fixed-af1` | Roman, 160 (16:00:00) | 0 / 4601 | 23627, 56, 7 | 36 | 25 / 33 | L1 62 2634 | 17543/50020; 5426/77200 | 67226 |
+| `one-wing-fixed-af2` | Roman, 160 (16:00:00) | 0 / 3665 | 22895, 48, 7 | 31 | 25 / 36 | A6 71 2628 | 12165/50020; 4490/77200 | 69115 |
+| `roman-reserve` | Roman, 160 (16:00:00) | 0 / 5137 | 26907, 66, 8 | 26 | 25 / 26 | A6 62 2506 | 19277/50020; 5954/77200 | 59918 |
+| `aemilius-commands` | Roman, 160 (16:00:00) | 0 / 6618 | 23585, 42, 7 | 29 | 29 / 35 | L3 61 2717 | 23075/50020; 7439/77200 | 65912 |
+| `roman-horse-holds` | Roman, 160 (16:00:00) | 0 / 5714 | 16383, 43, 5 | 24 | 24 / 25 | L4 55 2564 | 15899/50020; 6371/83600 | 68229 |
+| `dust` | Roman, 160 (16:00:00) | 0 / 5030 | 29677, 52, 9 | 36 | 25 / 28 | L1 71 2750 | 16722/50020; 5855/77200 | 60823 |
+| `deserters` | Roman, 160 (16:00:00) | 0 / 5155 | 36553, 51, 11 | 36 | 25 / 33 | L1 62 2702 | 19331/50520; 5980/77200 | 73109 |
+| `wide-front` | Roman, 160 (16:00:00) | 16845 / 3387 | 20002, 51, 6 | 38 | 40 / none | L6 64 2640 | 8814/50020; 3777/77200 | 56481 |
+| `zoc-0` | Roman, 160 (16:00:00) | 0 / 5700 | 0, 1, 0 | none | none / none | L1 62 2634 | 21699/50020; 6525/77200 | 69079 |
+
+Cost: the default took 5:46 wall (345.9 s as the script reports it) and 437,172 kB peak RSS. The 13 others took 4:28 (`wide-front`) to 8:12 (`no-design`) each and 361 to 464 MB, 71 min 40 s in all (04:30:21 to 05:42:01 UTC, 2026-11-08), one at a time with a load guard that never had to wait. The 14 runs took about 77 min, against the planning estimate of about 85 min. The artifacts (logs, per-run `time -v`, manifests, `SHA256SUMS-all`) are in `apps/poc/artifacts/cannae-d86-d829763/`, with `evo-gates-d829763-MANIFEST.txt` beside it.
+
+### 6.2 Readings
+
+a. No entry reaches the 28,400 share. The largest enclosed-plus-lost count at the deadline is 20,232 (`wide-front`: 16,845 enclosed, 3,387 lost); every other entry has 0 enclosed and 3,665 to 6,618 lost. The Romans win all 14 at the deadline.
+
+b. In the default the pocket closes at interval 36 on the ground (interval 25 in the Carthaginian headquarters' reports, 33 in the Roman). Enclosure peaks at 26,465 men in 8 units at interval 56, short of 28,400 at its best, and is 0 at interval 160 (last record `[160, 0, 0, 5700, 3, 3, 0]`). L1 leaves by an exit at interval 62 with 2,634 men.
+
+c. Negative baseline: the ride never fired. In all 14 runs the `ride` and `charge` fields are `null` for HC1, HC2 and HC3, so no order was sent to a Hasdrubal horse unit, with the ride hexes or any other destination. The three `cavalry-delayed` entries match the default in every game field (winner, reason, enclosure peak, closed turns, exit, losses, 69,079 events). The cavalry record varies only by entry: HC3 fights at intervals 5 to 6 in `roman-horse-holds` and 7 to 9 in `roman-reserve`, against 7 to 8 in the default, which has HC1 at 1 to 2. The delay variants and `roman-horse-holds` therefore do not test the ride: the controls never exercise it, and these runs show nothing about sensitivity or insensitivity to the delay. The three units end at (21,16), (20,15) and (21,15), `ready`, with HC1 in a fight from interval 1 to 2 and HC3 from interval 7 to 8 in the default (`cavalry_fight`).
+
+   Cause, from a read-only diagnosis at `dcfc0d2` (60 intervals of default and `zoc-0` headless, replay identical and matching the EVO run). The ride never fires under the Dd8 q5 reading. The trigger (`cannae_policy.py:173-176`, gated at `:192`) needs the Roman right cavalry EQ to be seen routed, or to be out of the Carthaginian view. Neither happens. At interval 60 EQ is on its start hex (21,11) with 1,470 of 1,600 men, status ready; the Carthaginian contact of EQ is fresh (age 0) and not routed, and EQ was seen on 60 of 60 intervals. The cause is the authored opening order of Hasdrubal's horse: a charge down the lane to (21,16) with `press_assault` (`scenario_cannae.py:45`, `:182`). The 2-hex lane leaves a free column beside EQ, so the horse rides past it after a few volleys (EQ is under fire only on intervals 1, 3, 4 and 7). While engaged, one horse unit costs EQ about 22 men and 2.7 morale a volley, so a rout would need about 20 intervals of contact. Ruled out: the trigger not being evaluated, a wrong unit id or view key, and a ride order built but dropped. No ride order is ever built. The fix changes outcomes; see §9.
+
+d. Closed: `zoc-0` behaves as defined. It plays the same battle as the default (same events, losses, exit and reason counts) and reads 0 enclosed. Under `zoc` 0, `_blocked` (`victory_encircle.py:35-38`) blocks only occupied hexes, so one-unit-per-hex lines leave gaps and every Roman unit has an open path to an exit (`:125`). The records match the default except in the enclosure columns: at interval 36 the default has 2 units and 6,537 men enclosed, `zoc-0` has 0; at interval 56 the default has 8 units and 26,465, `zoc-0` has 0. This is the doc 63 §8 definition of the measure. The result follows from the zoc 0 definition. It does not test the S67 claim. 63 §8 states the variant's purpose as testing S67 p. 25's claim that the cavalry could not seal the rear.
 
 ## 7. Tests
 
-`tests/test_army.py` (27 tests) covers the declared scale, the army data and unit-key checks, the side profiles, the delivery estimate, the engaged-share volley, the rear multiplier, morale by share and its carried remainder, the front, the cavalry's three steps, the routed contact, the yield and its limit, the wheel and its trigger, the enclosure measure with `zoc` 1 and 0, the three `encircle` outcomes, the centre break only below the share (Dd8 q2), headquarters knowledge, the field refusal by other kinds, and the opt-in digests. `tests/test_cannae.py` (13 tests) covers the registration, every 63 §8 default, the D86 labels, the designed yield against `no-design`, each variant's difference, the policy registration, each scripted order's locator or label, the light-troops and advance sequence, Hasdrubal's trigger, the charge, the cavalry delay, the deserters, and a 12-interval headless run with its replay check.
+`tests/test_army.py` (27 tests) covers the declared scale, the army data and unit-key checks, the side profiles, the delivery estimate, the engaged-share volley, the rear multiplier, morale by share and its carried remainder, the front, the cavalry's three steps, the routed contact, the yield and its limit, the wheel and its trigger, the enclosure measure with `zoc` 1 and 0, the three `encircle` outcomes, the centre break only below the share (Dd8 q2), headquarters knowledge, the field refusal by other kinds, and the opt-in digests. `tests/test_cannae.py` (13 tests) covers the registration, every default of 63 §8 except row 17, the D86 labels, the designed yield against `no-design`, each variant's difference, the policy registration, each scripted order's locator or label, the light-troops and advance sequence, Hasdrubal's trigger, the charge, the cavalry delay, the deserters, and a 12-interval headless run with its replay check.
 
 ## 8. Readings ruled by the owner (Dd8)
 
-Six readings of 63 change outcomes. Bob ruled on all six in Dd8 (2026-11-07, relayed 23:47Z), accepting the PM's recommendation on each: keep the built reading for questions 1 and 3 to 6, take the option for question 2. None is open. Each is one constant. Results are still pending the EVO runs.
+Six readings of 63 change outcomes. Bob ruled on all six in Dd8 (2026-11-07, relayed 23:47Z), accepting the PM's recommendation on each: keep the built reading for questions 1 and 3 to 6, take the option for question 2. None is open. Each is one constant.
 
 | # | Question | Dd8 ruling | Rejected reading |
 |---|---|---|---|
@@ -144,3 +186,13 @@ Six readings of 63 change outcomes. Bob ruled on all six in Dd8 (2026-11-07, rel
 | 4 | The battle signal (row 17) | **Built:** before the start, not sounded (§3.2 item 1) | A new signal kind sounded at the start that begins the press of the units in reach (6 hexes from Varro, so the two right-hand columns would not hear it) |
 | 5 | Hasdrubal's trigger (row 20) | **Built:** read from the Carthaginian view (a routed contact, or no contact after interval 7) | Read from the truth, or a local doctrine on the horse |
 | 6 | Line spacing (row 10) | **Built:** 3 hexes from the Roman front row to the crescent, so the two light lines start adjacent | From the Roman front to the Carthaginian base row, which puts both light lines in one row |
+
+## 9. Open owner question: the Cannae ride
+
+The default is left as built until the owner rules. The ride never fires (§6.2 c) because EQ is neither routed nor out of view. Three fixes, each of which changes outcomes:
+
+| Option | Change |
+|---|---|
+| (i) | The horse pursues EQ's reported hex while EQ is in view and not routed, so the opening charge no longer rides past it |
+| (ii) | The trigger fires after N intervals with no Carthaginian unit adjacent to EQ, a different reading of 63 §8 row 20 (which would revise Dd8 q5) |
+| (iii) | Raise the cavalry's combat effect, so one horse unit routs EQ in fewer than about 20 intervals of contact |
