@@ -46,8 +46,12 @@ def digest(state):
 class ConcordEntryTests(unittest.TestCase):
     def test_entry_registers_in_the_headless_catalog_after_a_dry_run(self):
         self.assertEqual(build_headless_scenarios().resolve("concord-north-bridge"), ENTRY)
-        # The command desk cannot draw water yet (doc 43, row 8): not a player scenario.
-        self.assertNotIn(ENTRY, PLAYER_SCENARIOS)
+        # docs/research/74: both desks draw water, the bridge and roads, so Concord is a
+        # player scenario, after Little Round Top (the default) and Hougoumont.
+        self.assertEqual([e.id for e in PLAYER_SCENARIOS],
+                         ["little-round-top", "hougoumont-north-gate", "concord-north-bridge"])
+        ids = build_headless_scenarios().ids()
+        self.assertEqual(len(ids), len(set(ids)), "no entry is listed twice in the headless catalog")
         dry_run(validate(ENTRY))
         s = build_state(ENTRY)
         # docs/research/50: v2 has the command fire release; v1 stays buildable as ``before``.
