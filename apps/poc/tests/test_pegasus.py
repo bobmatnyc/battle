@@ -50,7 +50,10 @@ def run_digest(entry):
 class PegasusEntryTests(unittest.TestCase):
     def test_entry_registers_in_the_headless_catalog_after_a_dry_run(self):
         self.assertEqual(build_headless_scenarios().resolve("pegasus-bridge"), ENTRY)
-        self.assertNotIn(ENTRY, PLAYER_SCENARIOS)  # The desk cannot draw water yet.
+        # docs/research/75: both desks draw the canal, the bridges and the charges, so Pegasus is
+        # a player scenario, after Concord, and its German side plays its scripted control there.
+        self.assertIn(ENTRY, PLAYER_SCENARIOS)
+        self.assertTrue(ENTRY.desk_scripted_opponent)
         dry_run(validate(ENTRY))
         s = build_state(ENTRY)
         self.assertEqual((s["rules"], s["scenario"]), ("poc-13", "pegasus-bridge-v1"))

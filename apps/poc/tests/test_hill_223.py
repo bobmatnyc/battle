@@ -75,7 +75,10 @@ def digest(result, final):
 class Hill223EntryTests(unittest.TestCase):
     def test_entry_registers_in_the_headless_catalog_after_a_dry_run(self):
         self.assertEqual(build_headless_scenarios().resolve("hill-223-patrol"), ENTRY)
-        self.assertNotIn(ENTRY, PLAYER_SCENARIOS)  # Doc 56 §9 q6: headless only.
+        # docs/research/75: doc 56 §9 q6 kept it headless at first; it is now a player scenario,
+        # after Pegasus, and its German side plays its scripted control on the desk.
+        self.assertIn(ENTRY, PLAYER_SCENARIOS)
+        self.assertTrue(ENTRY.desk_scripted_opponent)
         dry_run(validate(ENTRY))
         s = build_state(ENTRY)
         self.assertEqual((s["rules"], s["scenario"]), ("poc-13", "hill-223-patrol-v1"))

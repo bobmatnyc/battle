@@ -6,6 +6,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from battle import engine, grid, scenario
+from battle.bootstrap import PLAYER_SCENARIOS
 from battle.presentation import present_view, scenario_brief
 from battle.scenario import LITTLE_ROUND_TOP
 from battle.server import Application
@@ -82,8 +83,8 @@ class ScenarioBriefTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             listing = Application(Path(directory) / 'battle.sqlite', offline=True).read('/api/scenarios', {})
         self.assertEqual(listing['default'], 'little-round-top')
-        self.assertEqual([s['id'] for s in listing['scenarios']],
-                         ['little-round-top', 'hougoumont-north-gate', 'concord-north-bridge'])  # docs/research/74
+        # docs/research/75: the list is the player catalog, in order; test_playable_eras_2 pins its ids.
+        self.assertEqual([s['id'] for s in listing['scenarios']], [e.id for e in PLAYER_SCENARIOS])
         self.assertEqual(listing['scenarios'][1]['title'], 'Hougoumont: the north gate')
 
 

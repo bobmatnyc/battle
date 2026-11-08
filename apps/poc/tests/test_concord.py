@@ -48,7 +48,7 @@ class ConcordEntryTests(unittest.TestCase):
         self.assertEqual(build_headless_scenarios().resolve("concord-north-bridge"), ENTRY)
         # docs/research/74: both desks draw water, the bridge and roads, so Concord is a
         # player scenario, after Little Round Top (the default) and Hougoumont.
-        self.assertEqual([e.id for e in PLAYER_SCENARIOS],
+        self.assertEqual([e.id for e in PLAYER_SCENARIOS][:3],
                          ["little-round-top", "hougoumont-north-gate", "concord-north-bridge"])
         ids = build_headless_scenarios().ids()
         self.assertEqual(len(ids), len(set(ids)), "no entry is listed twice in the headless catalog")

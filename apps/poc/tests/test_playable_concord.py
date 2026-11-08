@@ -87,8 +87,10 @@ class DeskOpponentTests(unittest.TestCase):
                 self.assertEqual(decision["orders"], fallback_orders(observation, engine.role(before, side)))
                 app.close()
 
-    def test_only_concord_opts_in(self):
-        self.assertEqual([e.id for e in PLAYER_SCENARIOS if e.desk_scripted_opponent], [CONCORD])
+    def test_only_the_newly_playable_entries_opt_in(self):
+        # docs/research/75: Pegasus Bridge and Hill 223 opt in too; test_playable_eras_2 checks every entry.
+        self.assertEqual([e.id for e in PLAYER_SCENARIOS if e.desk_scripted_opponent],
+                         [CONCORD, "pegasus-bridge", "hill-223-patrol"])
 
 
 class ConcordDeskTests(unittest.TestCase):

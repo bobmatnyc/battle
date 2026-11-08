@@ -22,6 +22,12 @@ LIVE_ONLY = ("clock", "game_id", "mode", "model", "inference_available", "messag
 # God-view fields no commander view may carry (engine.god_view).
 GOD_ONLY = ("view_mode", "reports", "events", "decisions", "headquarters", "commands",
             "retired_units", "captives")
+# docs/research/74, 75 (slice 1 review: by id, not by attribute): scenarios whose no-leak
+# case has no dug works to hide, with the reason. Concord's companies carry no tools.
+NO_DUG_WORKS = {"concord-north-bridge": "tools_per_unit 0: no company can dig in"}
+# docs/research/75: intervals of the active-battle case; Pegasus's default demolition ends
+# the battle at the fifth (docs/research/54 §5), so it stops one interval before.
+ACTIVE_INTERVALS = {"pegasus-bridge": 4}
 
 
 def digest(document):
@@ -57,7 +63,7 @@ def replay(api, revision, *, side=None, god=False, game_id=None):
 
 def played(tmp, scenario_id, intervals=80):
     """A live offline game: one player order, then clock intervals until the
-    battle ends (both player scenarios end before 80). Returns the app, the
+    battle ends (every player scenario ends before 80). Returns the app, the
     API and, per revision, what each side and God saw live at that revision."""
     app = build_application(Path(tmp) / "battle.sqlite", offline=True,
                             settings=Settings(), scenario_id=scenario_id)
@@ -165,9 +171,10 @@ class ReplayViewTests(unittest.TestCase):
                         unseen_works += side == viewer
                         self.assertNotIn(f["id"], text)
                         self.assertIn(f["id"], [x["id"] for x in god["map_features"]])
-        # The checks above ran against something to hide. docs/research/74: Concord's
-        # companies carry no entrenching tools (tools_per_unit 0), so only units hide there.
-        if entry.tools_per_unit:
+        # The checks above ran against something to hide; only units hide in NO_DUG_WORKS.
+        if entry.id in NO_DUG_WORKS:
+            self.assertEqual(unseen_works, 0, NO_DUG_WORKS[entry.id])
+        else:
             self.assertGreater(unseen_works, 0)
         self.assertGreater(unseen_units, 0)
         app.close()
@@ -237,7 +244,7 @@ class ReplayViewTests(unittest.TestCase):
                 player = engine.player_side(state)
                 opponent = next(x for x in engine.sides(state) if x != player)
                 mission = brief_mission(catalog.resolve(entry.id), opponent)
-                for _ in range(6):
+                for _ in range(ACTIVE_INTERVALS.get(entry.id, 6)):
                     app.execute("advance", {}, game_id=gid, revision=state["revision"])
                     state = app.repository.load(gid)
                 self.assertEqual(state["status"], "active")
