@@ -4,6 +4,7 @@ import {spawn, type ChildProcess} from "node:child_process";
 import {existsSync, readdirSync} from "node:fs";
 import {homedir} from "node:os";
 import {join} from "node:path";
+import {ChildFailure, waitForOutput} from "./smoke-support.ts";
 
 type Params = Record<string, unknown>;
 interface Reply { id?: number; result?: Params; error?: {message: string}; method?: string; sessionId?: string }
@@ -31,42 +32,68 @@ export function findBrowser(): string | null {
 
 export interface Browser { process: ChildProcess; endpoint: string }
 
-/** Starts a headless browser with its own profile; resolves with its DevTools endpoint. */
-export function launch(binary: string, profile: string, env: NodeJS.ProcessEnv, timeoutMs = 20000): Promise<Browser> {
+/** Why: a browser that never opens DevTools must not outlive the smoke run (#2).
+ * What: starts a headless browser with its own profile; resolves with its DevTools endpoint,
+ * else stops the browser and rejects with ChildFailure (its `pid`).
+ * Test: `a browser that gives no DevTools endpoint is killed and launch rejects`. */
+export async function launch(binary: string, profile: string, env: NodeJS.ProcessEnv, timeoutMs = 20000): Promise<Browser> {
   const child = spawn(binary, [
     "--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`,
     "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-sync",
     "--disable-background-networking", "--disable-component-update", "--disable-default-apps",
     "--window-size=1400,1000", "about:blank",
   ], {env, stdio: ["ignore", "ignore", "pipe"]});
-  return new Promise((done, failed) => {
-    let log = "";
-    const timer = setTimeout(() => failed(new Error(`browser gave no DevTools endpoint in ${timeoutMs} ms`)), timeoutMs);
-    child.stderr!.on("data", (chunk: Buffer) => {
-      log += chunk.toString();
-      const found = /DevTools listening on (ws:\/\/\S+)/.exec(log);
-      if (found) { clearTimeout(timer); done({process: child, endpoint: found[1]!}); }
-    });
-    child.on("exit", (code) => { clearTimeout(timer); failed(new Error(`browser exited (${code}) before DevTools started`)); });
-  });
+  try {
+    const found = await waitForOutput(child, /DevTools listening on (ws:\/\/\S+)/, timeoutMs, "browser");
+    return {process: child, endpoint: found[1]!};
+  } catch (error) {
+    if (error instanceof ChildFailure && /not ready/.test(error.message)) {
+      throw new ChildFailure(`browser gave no DevTools endpoint in ${timeoutMs} ms`, error.pid);
+    }
+    throw error;
+  }
+}
+
+/** The part of a WebSocket the page client uses; a test passes a fake. */
+export interface SocketLike {
+  addEventListener(type: string, listener: (event: Event) => void): void;
+  send(data: string): void;
+  close(): void;
 }
 
 /** One attached page: `send` a CDP method in the page session. */
 export class Page {
   private next = 1;
   private readonly waiting = new Map<number, {done: (r: Params) => void; failed: (e: Error) => void}>();
-  private readonly socket: WebSocket;
+  private readonly socket: SocketLike;
   private sessionId: string | undefined;
+  private closed = false;
   // No parameter properties: Node's type stripping cannot erase them.
-  private constructor(socket: WebSocket) {
+  private constructor(socket: SocketLike) {
     this.socket = socket;
     socket.addEventListener("message", (event) => {
-      const reply = JSON.parse(String(event.data)) as Reply;
+      const reply = JSON.parse(String((event as MessageEvent).data)) as Reply;
       const entry = reply.id === undefined ? undefined : this.waiting.get(reply.id);
       if (!entry || reply.id === undefined) return;
       this.waiting.delete(reply.id);
       if (reply.error) entry.failed(new Error(reply.error.message)); else entry.done(reply.result ?? {});
     });
+    // #3: a browser that dies mid-run closes the socket; every pending call fails instead of waiting for ever.
+    const lost = (): void => {
+      this.closed = true;
+      for (const entry of this.waiting.values()) entry.failed(new Error("DevTools connection closed"));
+      this.waiting.clear();
+    };
+    socket.addEventListener("close", lost);
+    socket.addEventListener("error", lost);
+  }
+
+  /** A page client on an open socket and session; `open` uses it, and so do tests with a fake socket.
+   * Test: `pending DevTools calls reject when the socket closes, and later calls reject at once`. */
+  static attach(socket: SocketLike, sessionId?: string): Page {
+    const page = new Page(socket);
+    page.sessionId = sessionId;
+    return page;
   }
 
   static async open(endpoint: string): Promise<Page> {
@@ -75,7 +102,7 @@ export class Page {
       socket.addEventListener("open", () => done(), {once: true});
       socket.addEventListener("error", () => failed(new Error("could not open the DevTools socket")), {once: true});
     });
-    const page = new Page(socket);
+    const page = Page.attach(socket);
     const {targetId} = await page.send("Target.createTarget", {url: "about:blank"});
     const {sessionId} = await page.send("Target.attachToTarget", {targetId, flatten: true});
     page.sessionId = String(sessionId);
@@ -84,6 +111,7 @@ export class Page {
 
   send(method: string, params: Params = {}): Promise<Params> {
     const id = this.next++;
+    if (this.closed) return Promise.reject(new Error("DevTools connection closed"));
     return new Promise((done, failed) => {
       this.waiting.set(id, {done, failed});
       this.socket.send(JSON.stringify({id, method, params, ...(this.sessionId ? {sessionId: this.sessionId} : {})}));

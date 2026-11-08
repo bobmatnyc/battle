@@ -7,16 +7,19 @@
 //
 // Exit 0: passed. Exit 1: failed. Exit 3: BLOCKED, no runnable browser (never a pass).
 // Usage: node scripts/smoke-browser.ts   (BATTLE_BROWSER=/path/to/chrome to choose one)
+// Forcing a failure: SMOKE_POC_READY=<text the POC never prints>, SMOKE_READY_MS, SMOKE_BROWSER_MS.
+// Every failure path stops the POC and the browser it started before exiting.
 import assert from "node:assert/strict";
 import {spawn, type ChildProcess} from "node:child_process";
 import {mkdtempSync, writeFileSync} from "node:fs";
-import {createServer, request} from "node:http";
+import {createServer} from "node:http";
 import type {AddressInfo} from "node:net";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createDeskServer, type DeskServer} from "../server/desk-server.ts";
 import {findBrowser, launch, Page} from "./cdp.ts";
+import {pocRequest, stop, waitForOutput} from "./smoke-support.ts";
 
 const POC_DIR = fileURLToPath(new URL("../../poc/", import.meta.url));
 const BROWSER_ZONE = "Pacific/Kiritimati";  // UTC+14: a browser-zone shift would move 16:30 to another day
@@ -40,36 +43,18 @@ function cleanEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
   return {...env, ...extra};
 }
 
-function startPoc(port: number, db: string): Promise<ChildProcess> {
-  const child = spawn("python3", ["-m", "battle", "--offline", "--port", String(port), "--db", db],
+// Overrides exist to force the failure paths (docs/research/70): a ready text the POC never prints,
+// shorter readiness timeouts.
+const POC_READY = new RegExp(process.env["SMOKE_POC_READY"] ?? "Battle ready");
+const READY_MS = Number(process.env["SMOKE_READY_MS"] ?? 20000);
+
+function spawnPoc(port: number, db: string): ChildProcess {
+  return spawn("python3", ["-m", "battle", "--offline", "--port", String(port), "--db", db],
     {cwd: POC_DIR, env: cleanEnv(), stdio: ["ignore", "pipe", "pipe"]});
-  return new Promise((done, failed) => {
-    let log = "";
-    const timer = setTimeout(() => failed(new Error(`POC not ready in 20 s:\n${log}`)), 20000);
-    const read = (chunk: Buffer): void => {
-      log += chunk.toString();
-      if (log.includes("Battle ready")) { clearTimeout(timer); done(child); }
-    };
-    child.stdout!.on("data", read);
-    child.stderr!.on("data", read);
-    child.on("exit", (code) => { clearTimeout(timer); failed(new Error(`POC exited (${code}):\n${log}`)); });
-  });
 }
 
 // Direct POC calls, as the POC's own host; used only to check and to stale the cursor.
-function poc(port: number, path: string, body?: unknown): Promise<Doc> {
-  return new Promise((done, failed) => {
-    const data = body === undefined ? undefined : JSON.stringify(body);
-    const req = request({host: "127.0.0.1", port, path, method: data ? "POST" : "GET",
-      headers: {Host: `127.0.0.1:${port}`, ...(data ? {"Content-Type": "application/json"} : {})}}, (res) => {
-      let text = "";
-      res.on("data", (chunk) => { text += chunk; });
-      res.on("end", () => (res.statusCode === 200 ? done(JSON.parse(text)) : failed(new Error(`${path}: ${res.statusCode} ${text}`))));
-    });
-    req.on("error", failed);
-    req.end(data);
-  });
-}
+const poc = (port: number, path: string, body?: unknown): Promise<Doc> => pocRequest(port, path, body);
 
 async function until<T>(what: string, probe: () => Promise<T | null | false>, ms = 15000): Promise<T> {
   const end = Date.now() + ms;
@@ -190,11 +175,15 @@ async function main(): Promise<number> {
   let browser: ChildProcess | undefined;
   let page: Page | undefined;
   try {
-    pocProcess = await startPoc(pocPort, join(artifacts, "battle.sqlite"));
+    // #1: assigned before the wait, so `finally` stops it on every path.
+    pocProcess = spawnPoc(pocPort, join(artifacts, "battle.sqlite"));
+    await waitForOutput(pocProcess, POC_READY, READY_MS, "POC");
     desk = await createDeskServer({pocUrl: `http://127.0.0.1:${pocPort}`, port: deskPort});
     let started;
     try {
-      started = await launch(binary, join(artifacts, "profile"), cleanEnv({TZ: BROWSER_ZONE}));
+      // #2: launch stops a browser that never opens DevTools before it rejects.
+      started = await launch(binary, join(artifacts, "profile"), cleanEnv({TZ: BROWSER_ZONE}),
+        Number(process.env["SMOKE_BROWSER_MS"] ?? 20000));
     } catch (error) {
       console.error(`SMOKE BLOCKED: the browser did not start (${(error as Error).message}). This is not a pass.`);
       return BLOCKED;
@@ -209,9 +198,9 @@ async function main(): Promise<number> {
     return 1;
   } finally {
     page?.close();
-    browser?.kill();
+    if (browser) await stop(browser);
     await desk?.close();
-    pocProcess?.kill();
+    if (pocProcess) await stop(pocProcess);
   }
 }
 
