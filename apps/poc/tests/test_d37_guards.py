@@ -201,7 +201,7 @@ class KeyLimitTest(unittest.TestCase):
             with self.subTest(name):
                 refused = key_limit_check({**good, **change}, 14.0)
                 self.assertFalse(refused["ok"])
-                self.assertFalse(refused["unlimited"])
+                self.assertEqual(refused["unlimited"], name.startswith("unlimited"))  # As read, not the verdict.
         # A missing field is not a null one: absent limit fields, or no data, fail closed.
         for info in (absent, {**absent, "limit": None}, {}, "junk"):
             with self.subTest(info=info):
