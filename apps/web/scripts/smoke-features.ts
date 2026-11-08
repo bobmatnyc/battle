@@ -223,7 +223,7 @@ export async function checkReplay(page: Page, pocPort: number, artifacts: string
   const earlier = await time();
   await choose(page, "replay-slider", "0", ["input", "change"]);
   await until("the scrub to the start", async () => (await index()) === 0 && (await time()) === at(history[0]!["turn"]));
-  const played = await checkPlayback(page, live, history.length, at);
+  const played = await checkPlayback(page, live, history, at);
   await clickOn(page, "#replay-forward");
   await until("a step forward", async () => (await index()) === 1);
   await clickOn(page, "#replay-live");
@@ -240,7 +240,8 @@ export async function checkReplay(page: Page, pocPort: number, artifacts: string
 /** Slice 4a (docs/research/81 §2): from the first record, Play at the fastest offered speed runs to the
  * latest record and stops there; Play again starts over, and a step stops it where it stands. The bar's
  * help and the order help say that orders are closed. Leaves the replay at the first record. */
-async function checkPlayback(page: Page, live: Doc, records: number, at: (turn: number) => string): Promise<string> {
+async function checkPlayback(page: Page, live: Doc, history: Doc[], at: (turn: number) => string): Promise<string> {
+  const records = history.length;
   const text = (id: string): Promise<string> => page.evaluate<string>(`document.getElementById(${JSON.stringify(id)}).textContent`);
   const index = async (): Promise<number> => Number(await page.evaluate<string>(`document.getElementById("replay-slider").value`));
   assert.match(await text("replay-help"), /Play runs the record forward/);
@@ -253,14 +254,22 @@ async function checkPlayback(page: Page, live: Doc, records: number, at: (turn: 
   await until("Pause while playing", async () => (await text("replay-play")) === "Pause");
   await until("playback to the latest record", async () => (await index()) === records - 1 && (await text("replay-play")) === "Play", 60000);
   assert.equal((await header(page))["time"], at(live["turn"]), "the header follows playback");
-  await clickOn(page, "#replay-play");  // at the end: starts over from the first record
-  await until("playback past the first record", async () => (await index()) >= 1);
+  // A step stops playback: from the last record a full interval before the next, at a speed whose
+  // wait is about a second, step back at once; two seconds later no later record has been shown.
+  let from = records - 2;
+  while (from > 0 && !(history[from + 1]!["turn"] > history[from]!["turn"])) from -= 1;
+  assert.ok(from > 0, "the record has a full interval between two records");
+  const speed = speeds.map(Number).find((s) => (history[from + 1]!["turn"] - history[from]!["turn"]) * live["seconds_per_turn"] / s <= 1.5)!;
+  await choose(page, "replay-speed", String(speed));
+  await choose(page, "replay-slider", String(from), ["input", "change"]);
+  await until("the scrub to the interval", async () => (await index()) === from);
+  await clickOn(page, "#replay-play");
+  await until("Pause again", async () => (await text("replay-play")) === "Pause");
   await clickOn(page, "#replay-back");
-  await until("the step to stop playback", async () => (await text("replay-play")) === "Play");
-  const stopped = await index();
-  await new Promise((done) => setTimeout(done, 1500));
-  assert.equal(await index(), stopped, "no record is shown after the stop");
+  await until("the step to stop playback", async () => (await text("replay-play")) === "Play" && (await index()) === from - 1);
+  await new Promise((done) => setTimeout(done, 2500));
+  assert.equal(await index(), from - 1, "no record is shown after the stop");
   await choose(page, "replay-slider", "0", ["input", "change"]);
   await until("the scrub back to the start", async () => (await index()) === 0);
-  return `played ${records} records at ${fastest}× to the latest and stopped; a step stopped a second play at record ${stopped}`;
+  return `played ${records} records at ${fastest}× to the latest and stopped; at ${speed}× a step back from record ${from} stopped playback for 2.5 s`;
 }
