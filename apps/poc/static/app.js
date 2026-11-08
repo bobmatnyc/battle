@@ -69,10 +69,21 @@ function polygons(options){return mapData.cells.map(c=>{const[x,y]=center(c.pos)
 // bt-T18 (docs/research/81 §3): what a zoom-in keeps in frame (BattleMapView.focusCentre), in scene
 // pixels: `core`, the objective hex with its place label (21 px text, about 11 px a character, drawn
 // 118 px above); `all`, that and every mark with a hex.
-function mapFocus(obj,ox,oy){
-  const r=25.5,half=Math.max(r,obj.place.length*5.5),core=[ox-half,oy-135,ox+half,oy+r],all=[...core];
+// bt-T23: a title moved off centre (objectiveTitle) is kept in frame where it is drawn.
+function mapFocus(obj,ox,oy,title={anchor:'middle'}){
+  const r=25.5,half=Math.max(r,obj.place.length*5.5),wide=obj.place.length*11;
+  const [x0,x1]=title.anchor==='start'?[title.x,Math.max(ox+r,title.x+wide)]:title.anchor==='end'?[Math.min(ox-r,title.x-wide),title.x]:[ox-half,ox+half];
+  const core=[x0,oy-135,x1,oy+r],all=[...core];
   for(const f of state.map_features||[])if(Array.isArray(f.pos)){const[x,y]=center(f.pos);all[0]=Math.min(all[0],x-r);all[1]=Math.min(all[1],y-r);all[2]=Math.max(all[2],x+r);all[3]=Math.max(all[3],y+r);}
   return {core,all};
+}
+// bt-T23 (docs/research/80 §7): the objective's title (21 px) and subtitle (10 px, 1.4 px spacing) share one
+// place inside the 1080 x 840 scene: centred, else starting or ending a hex's half-width off centre
+// (BattleFeatures.titlePlace). `style` overrides the CSS text-anchor when the title is not centred.
+const SCENE={x0:0,y0:0,x1:1080,y1:840};
+function objectiveTitle(obj,ox,oy){
+  const t=BattleFeatures.titlePlace([{text:obj.place,y:oy-118,size:21},{text:obj.label,y:oy-97,size:10,spacing:1.4}],ox,25.5,SCENE);
+  return {...t,style:t.anchor==='middle'?'':` style="text-anchor:${t.anchor}"`};
 }
 function featureOptions(){return {metresPerHex:mapData.metres_per_hex,cells:mapData.cells,sources:BattleFeatureSources.forScenario(state.scenario_brief?.id)};}
 // bt-T16 (docs/research/80): the counters, laid out first, so a feature label keeps clear of their cards.
@@ -82,9 +93,10 @@ function counterEntries(){return [
   ...state.units.map(u=>({unit:u,contact:false,enemy:u.side!==state.side,selected:selected===u.id,
     point:center(u.pos),report:godMode?'Exact observer state':`Reported ${clock(u.observed_turn)}`})),
 ];}
-function renderFeatures(options=featureOptions()){return BattleFeatures.render(state.map_features,center,esc,{...options,obstacles:unitIcons.obstacles(counterEntries())});}
+// bt-T23: no feature label crosses the part of the scene the map frame shows (BattleMapView.frame).
+function renderFeatures(options=featureOptions()){return BattleFeatures.render(state.map_features,center,esc,{...options,obstacles:unitIcons.obstacles(counterEntries()),frame:BattleMapView.frame()});}
 function renderFeatureLegend(options){$('feature-legend').innerHTML=BattleFeatures.legend(state.map_features,esc,options);}
-function renderMap(){const[ox,oy]=center(state.objective);const obj=state.scenario_brief?.objective||{place:'',label:'OBJECTIVE',ring:false};const features=featureOptions();let shapes=BattleMap.render(mapData.cells,terrain,BattleMapView.active())+`<g>${polygons(features)}</g><g pointer-events="none" class="summit">${obj.ring?`<circle cx="${ox}" cy="${oy}" r="53" fill="#fff" fill-opacity=".25" stroke="#b19752" stroke-width="2" stroke-dasharray="5 5"/>`:''}<circle cx="${ox}" cy="${oy}" r="15" fill="#fff" stroke="#b19752" stroke-width="2"/><path d="M${ox-4},${oy+8}v-17l11,4 -11,4" fill="none" stroke="#94772e" stroke-width="2"/><text x="${ox}" y="${oy-118}" class="place-label">${esc(obj.place)}</text><text x="${ox}" y="${oy-97}" class="place-subtitle">${esc(obj.label)}</text></g>`;
+function renderMap(){const[ox,oy]=center(state.objective);const obj=state.scenario_brief?.objective||{place:'',label:'OBJECTIVE',ring:false};const features=featureOptions();const title=objectiveTitle(obj,ox,oy);let shapes=BattleMap.render(mapData.cells,terrain,BattleMapView.active())+`<g>${polygons(features)}</g><g pointer-events="none" class="summit">${obj.ring?`<circle cx="${ox}" cy="${oy}" r="53" fill="#fff" fill-opacity=".25" stroke="#b19752" stroke-width="2" stroke-dasharray="5 5"/>`:''}<circle cx="${ox}" cy="${oy}" r="15" fill="#fff" stroke="#b19752" stroke-width="2"/><path d="M${ox-4},${oy+8}v-17l11,4 -11,4" fill="none" stroke="#94772e" stroke-width="2"/><text x="${title.x}" y="${oy-118}"${title.style} class="place-label">${esc(obj.place)}</text><text x="${title.x}" y="${oy-97}"${title.style} class="place-subtitle">${esc(obj.label)}</text></g>`;
 const counters=counterEntries();
 shapes+=renderFeatures(features);renderFeatureLegend(features);
 for(const depot of state.supply_sites||[]){const[x,y]=center(depot.pos);shapes+=`<g pointer-events="none"><rect x="${x-12}" y="${y-12}" width="24" height="24" rx="3" fill="#fff5d5" stroke="#8f7134" stroke-width="2"/><path d="M${x-7},${y-7}l14,14m0,-14l-14,14" stroke="#8f7134"/><text x="${x}" y="${y+29}" text-anchor="middle" font-size="11" fill="#634e27">${godMode?esc(depot.side)+' · ':''}AMMUNITION</text></g>`;}
@@ -99,7 +111,7 @@ for(const r of state.recommendations||[]){
 const hqs=godMode?Object.entries(state.headquarters||{}):[[state.side,state.hq]];
 for(const[side,pos] of hqs){const[hx,hy]=center(pos);const offset=state.command||state.commands?.[side]?-31:0;shapes+=`<g pointer-events="none"><rect x="${hx-18}" y="${hy-12+offset}" width="36" height="22" rx="3" fill="${side===state.side?'#244f76':'#873e36'}" stroke="#f0e2b7"/><text x="${hx}" y="${hy+3+offset}" text-anchor="middle" font-size="10" fill="#fff">${side===state.side?'YOU':'HQ'}</text></g>`;}
 if(godMode){for(const packet of [...[...state.orders,...(state.standing_orders||[])].filter(o=>o.status==='en_route').map(o=>o.transport),...(state.reports||[]).map(r=>r.transport)].filter(Boolean)){const[x,y]=center(packet.pos),[a,b]=center(packet.address);shapes+=`<g pointer-events="none"><path d="M${x},${y}L${a},${b}" stroke="#856830" stroke-width="1.5" stroke-dasharray="3 5" opacity=".6"/><rect x="${x-4}" y="${y-3}" width="8" height="6" fill="#fff4cb" stroke="#856830"/></g>`;}}
-$('map').innerHTML=shapes;$('map').classList.toggle('no-grid',!hexes);BattleMapView.update(terrain,mapFocus(obj,ox,oy));
+$('map').innerHTML=shapes;$('map').classList.toggle('no-grid',!hexes);BattleMapView.update(terrain,mapFocus(obj,ox,oy,title));
 }
 function renderUnits(){$('unit-list').innerHTML=state.units.map(u=>`<button class="unit-card ${u.side!==state.side?'enemy-card':''} ${u.id===selected?'selected':''}" data-unit="${u.id}" aria-pressed="${u.id===selected}"><div class="unit-top"><b>${u.id} · ${esc(u.status.toUpperCase())}${(state.recommendations||[]).some(r=>r.unit_id===u.id&&r.status==='delivered')?' · ⚑ ADVICE':''}</b><span>${godMode?"EXACT · "+u.side.toUpperCase():(state.turn-u.observed_turn)*state.seconds_per_turn+"s AGO"}</span></div><span class="unit-strength">${u.strength}<small> / ${u.initial}</small></span><span class="unit-name">${esc(u.name)}${u.recon_role==="scout"?" · SCOUT":""}${u.id===state.command?.unit_id?" · YOUR HQ":godMode&&Object.values(state.commands||{}).some(c=>c.unit_id===u.id)?" · HQ":""}</span><div class="unit-action" title="${esc(u.local_reason||"Standing orders")}">${esc((u.stance==='dig_in'&&['hold','observe'].includes(u.local_action)?'digging in':u.local_action||'standing orders').replaceAll('_',' '))}${u.tactical_target?" → "+u.tactical_target.join(","):""}</div>${unitIcons.metrics(u)}<div class="unit-bottom"><span>${u.ammo} rounds</span></div></button>`).join('');}
 function renderContacts(){

@@ -19,6 +19,7 @@ const catalog: Record<string, Doc> = JSON.parse(readFileSync(
 const RADIUS = 25.5;  // every catalog map's radius (map.json); the POC renderer's R
 // bt-T23 (docs/research/80 §7): every catalog map's width and height (map.json); the POC's 1080 x 840 scene.
 const FRAME: Rect = {x0: 0, y0: 0, x1: 1080, y1: 840};
+const within = (b: Rect, f: Rect): boolean => b.x0 >= f.x0 && b.y0 >= f.y0 && b.x1 <= f.x1 && b.y1 <= f.y1;
 
 // The POC's own renderer and table, loaded as the POC desk loads them (classic scripts).
 const poc = vm.createContext({});
@@ -160,22 +161,22 @@ test("the POC desk and this desk place labels alike with the same counters in th
   const obstacles: Rect[] = [{x0: 380, y0: 440, x1: 460, y1: 480}, {x0: 880, y0: 400, x1: 960, y1: 440}];
   assert.equal(featureLayer(list, {...options(id), obstacles}),
     pocCall("BattleFeatures.render(args[0], center, esc, args[1])", [list, {...pocOptions(id), obstacles}]));
-  // bt-T23: the Ranville road runs to the east edge; its old first place there was cut by the frame. Both desks
-  // move it the same way, with and without the counters in the way.
-  for (const extra of [{}, {obstacles}]) {
+  // bt-T23: the Ranville road runs to the east edge, where its old first place was cut by the frame. Both desks
+  // move it alike: onto the line with nothing in the way, and with a counter on the line to a flipped place,
+  // ending left of a spot.
+  const onLine: Rect[] = [{x0: 900, y0: 400, x1: 1080, y1: 417}];
+  for (const [extra, anchor] of [[{}, "middle"], [{obstacles: onLine}, "end"]] as const) {
     const layer = featureLayer(list, {...options(id), ...extra});
     assert.equal(layer, pocCall("BattleFeatures.render(args[0], center, esc, args[1])", [list, {...pocOptions(id), ...extra}]));
     const ranville = drawnLabels(layer).find((l) => l.text === "Road from the Orne bridge to Ranville");
-    assert.ok(ranville && ranville.x1 <= FRAME.x1, `the Ranville road label is drawn inside the frame: ${JSON.stringify(ranville)}`);
+    assert.ok(ranville && within(ranville, FRAME), `the Ranville road label is drawn inside the frame: ${JSON.stringify(ranville)}`);
+    assert.match(layer, new RegExp(`text-anchor="${anchor}" class="feature-label">Road from the Orne bridge to Ranville<`));
   }
   // The objective's title (Hill 223's shack is in column 0): both desks choose the same place.
   const [x, y] = hexCenter([0, 11], RADIUS);
   const lines: TitleLine[] = [{text: "Command post at the shack", y: y - 118, size: 21}, {text: "PATROL OBJECTIVE", y: y - 97, size: 10, spacing: 1.4}];
   assert.equal(JSON.stringify(titlePlace(lines, x, RADIUS, FRAME)), pocCall("JSON.stringify(BattleFeatures.titlePlace(args[0], args[1], args[2], args[3]))", [lines, x, RADIUS, FRAME]));
 });
-
-// bt-T23 (docs/research/80 §7): no label is cut by the edge of the map.
-const within = (b: Box, f: Rect): boolean => b.x0 >= f.x0 && b.y0 >= f.y0 && b.x1 <= f.x1 && b.y1 <= f.y1;
 
 test("a place outside the map frame is not taken, and a label with no place inside it is hidden", () => {
   const spot = (x: number, y: number, anchor: LabelPlace["anchor"] = "start"): LabelPlace => ({x, y, anchor});

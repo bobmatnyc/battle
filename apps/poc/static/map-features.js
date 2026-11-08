@@ -29,13 +29,17 @@ const BattleFeatures = (() => {
   const GLYPH = 6.4, CAPITAL = 8.2, PAD = 2;  // px a character at 11 px, deliberately wide; padding for the 3 px halo
   const PRIORITY = {bridge: 0, gate: 1, building: 2, works: 3, road: 4, wall: 5};
 
-  /** The box a label's text occupies at `place`, with a safety margin. */
-  function labelBox(text, place) {
-    const width = [...text].reduce((n, ch) => n + ((ch >= 'A' && ch <= 'Z') || ch === '%' ? CAPITAL : GLYPH), 0);
+  /** The box a label's text occupies at `place`, with a safety margin; `size` is the font size in px and
+   * `spacing` the letter spacing (bt-T23: the objective's title is larger than a feature label). */
+  function labelBox(text, place, size = 11, spacing = 0) {
+    const k = size / 11;
+    const width = [...text].reduce((n, ch) => n + ((ch >= 'A' && ch <= 'Z') || ch === '%' ? CAPITAL : GLYPH) * k + spacing, 0);
     const x0 = place.anchor === 'middle' ? place.x - width / 2 : place.anchor === 'end' ? place.x - width : place.x;
-    return {x0: x0 - PAD, y0: place.y - 12, x1: x0 + width + PAD, y1: place.y + 4};
+    return {x0: x0 - PAD, y0: place.y - 12 * k, x1: x0 + width + PAD, y1: place.y + 4 * k};
   }
   const meets = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  // bt-T23 (docs/research/80 §7): a label box wholly inside the map frame, so no edge cuts it.
+  const inside = (box, frame) => box.x0 >= frame.x0 && box.y0 >= frame.y0 && box.x1 <= frame.x1 && box.y1 <= frame.y1;
 
   /** Places around a symbol of half-extents (`hw`, `hh`) at (`cx`, `cy`): below, above, right, left,
    * then the same shifted up and down in 14 px steps. */
@@ -54,18 +58,32 @@ const BattleFeatures = (() => {
   /** Why: labels sat wherever each mark's drawing put them, so they overlapped each other and the counters
    * (docs/research/75 §8). What: a Map from label key to its place, or null where none fits. `specs` are
    * {key, priority, text, candidates}; they go in order of priority (lower first), then key; each takes its
-   * first candidate whose box meets no obstacle and no label placed before it. A label with no such candidate
-   * is hidden; its mark keeps its tooltip and legend line.
+   * first candidate whose box meets no obstacle and no label placed before it and, given a `frame`
+   * {x0, y0, x1, y1}, lies inside it (bt-T23). A label with no such candidate is hidden; its mark keeps its
+   * tooltip and legend line.
    * Test: scripts/check_map_features.mjs (label placement). */
-  function placeLabels(specs, obstacles = []) {
+  function placeLabels(specs, obstacles = [], frame = null) {
     const taken = [...obstacles], out = new Map();
     const order = [...specs].sort((a, b) => a.priority - b.priority || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
     for (const spec of order) {
-      const place = spec.candidates.find(c => { const box = labelBox(spec.text, c); return !taken.some(t => meets(t, box)); });
+      const place = spec.candidates.find(c => {
+        const box = labelBox(spec.text, c);
+        return (!frame || inside(box, frame)) && !taken.some(t => meets(t, box));
+      });
       if (place) taken.push(labelBox(spec.text, place));
       out.set(spec.key, place || null);
     }
     return out;
+  }
+
+  /** Why: the objective's title is centred over its mark, so an objective at the map's edge had its title cut
+   * (docs/research/81 §11: Hill 223's shack is in column 0). What: {x, anchor} shared by the title's `lines`
+   * ({text, y, size, spacing}): centred on `x` (where it has always sat), else starting at `x - hw`, else
+   * ending at `x + hw`; the first place where every line's box lies inside `frame`. Centred when none does:
+   * the title is never hidden. Test: scripts/check_map_features.mjs (the objective's title). */
+  function titlePlace(lines, x, hw, frame) {
+    const places = [{x, anchor: 'middle'}, {x: x - hw, anchor: 'start'}, {x: x + hw, anchor: 'end'}];
+    return places.find(p => lines.every(l => inside(labelBox(l.text, {...p, y: l.y}, l.size, l.spacing), frame))) || places[0];
   }
   const tidy = v => Math.round(v * 100) / 100;
   // The label's <text>; dx, dy shift absolute coordinates into a translated group. Nothing when hidden.
@@ -108,8 +126,11 @@ const BattleFeatures = (() => {
     const below = ([x, y]) => ({x: x + 12, y: y + 22, anchor: 'start'});
     const on = ([x, y]) => ({x, y: y + 4, anchor: 'middle'});
     const more = along([.1, .15, .2, .3, .4, .45, .55, .6, .7, .8, .85, .9]);
+    // bt-T23: last, the text ending left of each spot, above then below, for a road that runs to the right edge.
+    const aboveLeft = ([x, y]) => ({x: x - 12, y: y - 14, anchor: 'end'});
+    const belowLeft = ([x, y]) => ({x: x - 12, y: y + 22, anchor: 'end'});
     return [...spots.filter(clear).map(above), ...spots.filter(s => !clear(s)).map(above), ...spots.map(below), ...spots.map(on),
-      ...more.flatMap(s => [above(s), below(s), on(s)])];
+      ...more.flatMap(s => [above(s), below(s), on(s)]), ...[...spots, ...more].flatMap(s => [aboveLeft(s), belowLeft(s)])];
   }
   function road(f, info, center, esc, place) {
     const d = f.points.map((p, i) => (i ? 'L' : 'M') + pt(center(p))).join(' ');
@@ -300,11 +321,12 @@ const BattleFeatures = (() => {
 
   /** Why: the command map must show the features the engine moves and sees by.
    * What: one SVG group of every mark, each with a status tooltip. Options: `metresPerHex`
-   * (footprint scale), `cells` (briefing cells: bridge crossings), `sources` (status table).
+   * (footprint scale), `cells` (briefing cells: bridge crossings), `sources` (status table), `obstacles`
+   * (counter boxes no label may sit under), `frame` (the map frame no label may cross, bt-T23).
    * Independent of the hex-grid toggle. Test: scripts/check_map_features.mjs. */
   function render(features, center, esc, options = {}) {
     const list = marks(features, options);
-    const placed = placeLabels(list.flatMap(m => m.label ? [m.label(center)] : []), options.obstacles);
+    const placed = placeLabels(list.flatMap(m => m.label ? [m.label(center)] : []), options.obstacles, options.frame);
     return '<g class="battle-features" pointer-events="none">' + list.map(m => m.draw(center, esc, placed.get(m.key) || null)).join('') + '</g>';
   }
 
@@ -328,5 +350,5 @@ const BattleFeatures = (() => {
         + ` <span class="legend-status legend-status-${esc(m.info.status)}">${LABELS[m.info.status] || esc(m.info.status)}</span> ${esc(m.info.source)}</li>`).join('')}</ul>`;
   }
 
-  return {render, legend, notes, marks, footprint, perimeter, placeLabels, labelBox, around, SPACING};
+  return {render, legend, notes, marks, footprint, perimeter, placeLabels, titlePlace, labelBox, around, SPACING};
 })();

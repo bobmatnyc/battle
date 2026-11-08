@@ -27,6 +27,15 @@ const BattleMapView = (() => {
     const centre=focusCentre([(w/2-a.x)*sx,(h/2-a.y)*sy],[w/2*sx/k,h/2*sy/k],focus);
     map.easeTo({zoom,center:coordinate(centre),duration:180});
   }
+  // bt-T23 (docs/research/80 §7): the part of the 1080 x 840 scene the map frame shows, in scene pixels
+  // {x0,y0,x1,y1}, which no feature label may cross. The whole scene at the fit view and in the SVG fallback.
+  function frame(){
+    const scene={x0:0,y0:0,x1:1080,y1:840};
+    if(!ready)return scene;
+    const a=map.project(coordinate([0,0])),b=map.project(coordinate([1080,840])),{clientWidth:w,clientHeight:h}=map.getContainer();
+    const sx=1080/(b.x-a.x),sy=840/(b.y-a.y);
+    return {x0:Math.max(0,-a.x*sx),y0:Math.max(0,-a.y*sy),x1:Math.min(1080,(w-a.x)*sx),y1:Math.min(840,(h-a.y)*sy)};
+  }
   const coordinate=([x,y])=>{
     const east=(x-540)*metresPerPixel,north=(420-y)*metresPerPixel;
     return [east/radius*180/Math.PI,(2*Math.atan(Math.exp(north/radius))-Math.PI/2)*180/Math.PI];
@@ -98,6 +107,7 @@ const BattleMapView = (() => {
         document.getElementById('map-out').onclick=()=>map.zoomOut({duration:180});
         document.getElementById('map-fit').onclick=fit;
         map.on('move',syncOverlay);
+        map.on('moveend',onChange);  // bt-T23: labels are placed again inside the new frame.
         map.on('resize',syncOverlay);
         resizeObserver=new ResizeObserver(()=>map.resize());resizeObserver.observe(host);
         applyStyle();onChange();syncOverlay();
@@ -106,5 +116,5 @@ const BattleMapView = (() => {
     }catch{fallback();}
   }
   function update(elevation,box=null){focus=box;if(detail!==elevation){detail=elevation;applyStyle();}syncOverlay();}
-  return {init,setCells,update,coordinate,focusCentre,active:()=>ready};
+  return {init,setCells,update,coordinate,focusCentre,frame,active:()=>ready};
 })();

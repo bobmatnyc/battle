@@ -13,8 +13,11 @@ type Hex = readonly [number, number];
 type Center = (pos: Hex) => Point;
 
 /** `radius` is the map document's; `cells` are its briefing cells (bridge crossings); `sources` the status table;
- * `obstacles` (optional) the boxes the counters cover, which no label may sit under (docs/research/80). */
-export interface FeatureOptions { metresPerHex: number; cells: readonly MapCell[]; sources: StatusTable; radius: number; obstacles?: readonly Rect[] }
+ * `obstacles` (optional) the boxes the counters cover, which no label may sit under (docs/research/80);
+ * `frame` (optional) the map frame no label may cross (bt-T23, docs/research/80 §7). */
+export interface FeatureOptions {
+  metresPerHex: number; cells: readonly MapCell[]; sources: StatusTable; radius: number; obstacles?: readonly Rect[]; frame?: Rect;
+}
 /** A status as drawn: the table's, or "reported" / "unlisted" when the table has none. */
 interface Info { status: string; source: string; name?: string; footprint_m?: [number, number] }
 export type MarkKind = "road" | "bridge" | "wall" | "gate" | "building" | "works";
@@ -67,13 +70,17 @@ export interface LabelSpec { key: string; priority: number; text: string; candid
 const GLYPH = 6.4, CAPITAL = 8.2, PAD = 2;  // px a character at 11 px, deliberately wide; padding for the 3 px halo
 const PRIORITY: Record<MarkKind, number> = {bridge: 0, gate: 1, building: 2, works: 3, road: 4, wall: 5};
 
-/** The box a label's text occupies at `place`, with a safety margin. */
-export function labelBox(text: string, place: LabelPlace): Rect {
-  const width = [...text].reduce((n, ch) => n + ((ch >= "A" && ch <= "Z") || ch === "%" ? CAPITAL : GLYPH), 0);
+/** The box a label's text occupies at `place`, with a safety margin; `size` is the font size in px and
+ * `spacing` the letter spacing (bt-T23: the objective's title is larger than a feature label). */
+export function labelBox(text: string, place: LabelPlace, size = 11, spacing = 0): Rect {
+  const k = size / 11;
+  const width = [...text].reduce((n, ch) => n + ((ch >= "A" && ch <= "Z") || ch === "%" ? CAPITAL : GLYPH) * k + spacing, 0);
   const x0 = place.anchor === "middle" ? place.x - width / 2 : place.anchor === "end" ? place.x - width : place.x;
-  return {x0: x0 - PAD, y0: place.y - 12, x1: x0 + width + PAD, y1: place.y + 4};
+  return {x0: x0 - PAD, y0: place.y - 12 * k, x1: x0 + width + PAD, y1: place.y + 4 * k};
 }
 const meets = (a: Rect, b: Rect): boolean => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+// bt-T23 (docs/research/80 §7): a label box wholly inside the map frame, so no edge cuts it.
+const inside = (box: Rect, frame: Rect): boolean => box.x0 >= frame.x0 && box.y0 >= frame.y0 && box.x1 <= frame.x1 && box.y1 <= frame.y1;
 
 /** Places around a symbol of half-extents (`hw`, `hh`) at (`cx`, `cy`): below, above, right, left,
  * then the same shifted up and down in 14 px steps. */
@@ -92,17 +99,34 @@ export function around(cx: number, cy: number, hw: number, hh: number): LabelPla
 /** Why: labels sat wherever each mark's drawing put them, so they overlapped each other and the counters
  * (docs/research/75 §8). What: the place of each label, or null where none fits. Labels go in order of
  * `priority` (lower first), then `key`; each takes its first candidate whose box meets no obstacle and no
- * label placed before it. A label with no such candidate is hidden; its mark keeps its tooltip and legend line.
- * Test: `label placement is deterministic, takes the first free place and hides a label with none`. */
-export function placeLabels(specs: readonly LabelSpec[], obstacles: readonly Rect[] = []): Map<string, LabelPlace | null> {
+ * label placed before it and, given a `frame`, lies inside it (bt-T23). A label with no such candidate is
+ * hidden; its mark keeps its tooltip and legend line.
+ * Test: `label placement is deterministic, takes the first free place and hides a label with none`,
+ * `a place outside the map frame is not taken, and a label with no place inside it is hidden`. */
+export function placeLabels(specs: readonly LabelSpec[], obstacles: readonly Rect[] = [], frame?: Rect | null): Map<string, LabelPlace | null> {
   const taken: Rect[] = [...obstacles], out = new Map<string, LabelPlace | null>();
   const order = [...specs].sort((a, b) => a.priority - b.priority || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
   for (const spec of order) {
-    const place = spec.candidates.find((c) => { const box = labelBox(spec.text, c); return !taken.some((t) => meets(t, box)); });
+    const place = spec.candidates.find((c) => {
+      const box = labelBox(spec.text, c);
+      return (!frame || inside(box, frame)) && !taken.some((t) => meets(t, box));
+    });
     if (place) taken.push(labelBox(spec.text, place));
     out.set(spec.key, place ?? null);
   }
   return out;
+}
+
+/** One line of the objective's title: its text, baseline `y`, font `size` and letter `spacing` in px. */
+export interface TitleLine { text: string; y: number; size: number; spacing?: number }
+/** Why: the objective's title is centred over its mark, so an objective at the map's edge had its title cut
+ * (docs/research/81 §11: Hill 223's shack is in column 0). What: the x and anchor shared by the title's
+ * lines: centred on `x` (where it has always sat), else starting at `x - hw`, else ending at `x + hw`; the
+ * first place where every line's box lies inside `frame`. Centred when none does: the title is never hidden.
+ * Test: `the objective's title stays centred where it fits and moves inside the frame at an edge`. */
+export function titlePlace(lines: readonly TitleLine[], x: number, hw: number, frame: Rect): {x: number; anchor: LabelPlace["anchor"]} {
+  const places: {x: number; anchor: LabelPlace["anchor"]}[] = [{x, anchor: "middle"}, {x: x - hw, anchor: "start"}, {x: x + hw, anchor: "end"}];
+  return places.find((p) => lines.every((l) => inside(labelBox(l.text, {...p, y: l.y}, l.size, l.spacing), frame))) ?? places[0]!;
 }
 const tidy = (v: number): number => Math.round(v * 100) / 100;
 // The label's <text>; `dx`, `dy` shift absolute coordinates into a translated group. Nothing when hidden.
@@ -137,8 +161,11 @@ function roadPlaces(f: RoadFeature, g: Grid, avoid: Point[]): LabelPlace[] {
   const below = ([x, y]: Point): LabelPlace => ({x: x + 12, y: y + 22, anchor: "start"});
   const on = ([x, y]: Point): LabelPlace => ({x, y: y + 4, anchor: "middle"});
   const more = along([.1, .15, .2, .3, .4, .45, .55, .6, .7, .8, .85, .9]);
+  // bt-T23: last, the text ending left of each spot, above then below, for a road that runs to the right edge.
+  const aboveLeft = ([x, y]: Point): LabelPlace => ({x: x - 12, y: y - 14, anchor: "end"});
+  const belowLeft = ([x, y]: Point): LabelPlace => ({x: x - 12, y: y + 22, anchor: "end"});
   return [...spots.filter(clear).map(above), ...spots.filter((s) => !clear(s)).map(above), ...spots.map(below), ...spots.map(on),
-    ...more.flatMap((s) => [above(s), below(s), on(s)])];
+    ...more.flatMap((s) => [above(s), below(s), on(s)]), ...[...spots, ...more].flatMap((s) => [aboveLeft(s), belowLeft(s)])];
 }
 
 // One continuous cased line through the authored points, its label at `place`.
@@ -336,7 +363,7 @@ export function featureMarks(features: readonly MapFeature[], options: FeatureOp
  * Test: `every catalog entry's feature layer, legend and hex notes match the POC desk's`. */
 export function featureLayer(features: readonly MapFeature[], options: FeatureOptions): string {
   const marks = featureMarks(features, options);
-  const placed = placeLabels(marks.flatMap((m) => (m.label ? [m.label] : [])), options.obstacles);
+  const placed = placeLabels(marks.flatMap((m) => (m.label ? [m.label] : [])), options.obstacles, options.frame);
   return "<g class=\"battle-features\" pointer-events=\"none\">" + marks.map((m) => m.draw(placed.get(m.key) ?? null)).join("") + "</g>";
 }
 

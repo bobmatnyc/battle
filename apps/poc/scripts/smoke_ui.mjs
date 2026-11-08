@@ -55,7 +55,7 @@ let served='little-round-top';  // Which scenario the mock server is playing.
 let completed=false;  // docs/research/65: the opponent's replay unlocks only after the battle.
 const liveInitial=()=>completed?{...initial,status:'complete',winner:'union',reason:'The Union held out until the scenario deadline.'}:initial;
 const setCells=[];
-const context=vm.createContext({document:{getElementById:element},window:{matchMedia:()=>({matches:false})},console,BattleMapView:{active:()=>false,update(){},init(){},setCells(cells){setCells.push(cells);}},setTimeout:()=>0,clearTimeout(){},
+const context=vm.createContext({document:{getElementById:element},window:{matchMedia:()=>({matches:false})},console,BattleMapView:{active:()=>false,update(){},init(){},frame:()=>({x0:0,y0:0,x1:1080,y1:840}),setCells(cells){setCells.push(cells);}},setTimeout:()=>0,clearTimeout(){},
   confirm(){throw Error('Native dialogs must not be used');},
   fetch:async(path,options)=>{
     requests.push({path,options});
