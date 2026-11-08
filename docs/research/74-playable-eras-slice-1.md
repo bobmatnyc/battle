@@ -95,7 +95,7 @@ Both browser runs exit 3 (BLOCKED, never a pass) when no browser runs, and stop 
 
 ## 7. Deferred and next slices
 
-- **Next playable entries:** Pegasus Bridge ([52](52-pegasus-bridge-scenario-plan.md) to [54](54-pegasus-scenario-runs.md)) and Hill 223 ([56](56-hill-223-scenario-plan.md), [61](61-hill-223-scenario-runs.md)). Each needs a brief with sources, the `desk_scripted_opponent` decision and its own smoke steps.
+- **Next playable entries:** Pegasus Bridge ([52](52-pegasus-bridge-scenario-plan.md) to [54](54-pegasus-scenario-runs.md)) and Hill 223 ([56](56-hill-223-scenario-plan.md), [61](61-hill-223-scenario-runs.md)). Done in slice 2, [75](75-playable-eras-slice-2.md), with this slice's review fixes.
 - **Gergovia and Cannae** wait on the BCE date ruling bt-D07 (how the desks show a 52 BCE or 216 BCE date). Cannae's outcome also waits on D34.
 - **Hougoumont's desk opponent** (gate controls on the desk) is an owner question (§2), not part of this slice.
 - **Concord's variants and v1 entry** stay headless. A variant on the desk would need its own policy check: the scripted policies are written for the catalog geometry (doc 48).
