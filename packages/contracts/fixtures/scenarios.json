@@ -1,0 +1,17 @@
+{
+ "default": "little-round-top",
+ "scenarios": [
+  {
+   "date": "1863-07-02",
+   "id": "little-round-top",
+   "location": "Little Round Top \u00b7 Gettysburg, Pennsylvania",
+   "title": "Little Round Top"
+  },
+  {
+   "date": "1815-06-18",
+   "id": "hougoumont-north-gate",
+   "location": "Hougoumont \u00b7 Waterloo, Belgium",
+   "title": "Hougoumont: the north gate"
+  }
+ ]
+}
