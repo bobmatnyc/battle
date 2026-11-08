@@ -20,3 +20,4 @@ export function readBattleCursor(input: unknown): BattleCursor {
 export * from "./check.ts";
 export * from "./views.ts";
 export * from "./api.ts";
+export * from "./map.ts";

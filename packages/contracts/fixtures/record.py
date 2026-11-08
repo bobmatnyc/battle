@@ -55,6 +55,7 @@ def record(api):
     write("replay-commander.json", api.read("/api/replay", {"revision": revision}))
     write("replay-side.json", api.read("/api/replay", {"revision": revision, "side": [state["side"]]}))
     write("replay-god.json", api.read("/api/replay", {"revision": revision, "view": ["god"]}))
+    write("map.json", api.read("/api/map", {}))
 
 
 def main():

@@ -1,0 +1,5057 @@
+{
+ "cells": [
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    5,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    6,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    7,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    8,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    9,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    10,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    11,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    12,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    13,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    14,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    15,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    16,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    17,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    18,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    0
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    5,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    6,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    7,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    8,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    9,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    10,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    11,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    12,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    13,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    14,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    15,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    16,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    17,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    18,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    1
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    5,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    6,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    7,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    8,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    9,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    10,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    11,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    12,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    13,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    14,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    15,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    16,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    17,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    18,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    2
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    5,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    6,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    7,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    8,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    9,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    10,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    11,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    12,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    13,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    14,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    15,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    16,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    17,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    18,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    3
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    5,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    6,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    7,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    8,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    9,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    10,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    11,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    12,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    13,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    14,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    15,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    16,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    17,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    18,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    4
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    5,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    6,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    7,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    8,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 149,
+   "move_cost": 100,
+   "pos": [
+    9,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 150,
+   "move_cost": 100,
+   "pos": [
+    10,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 151,
+   "move_cost": 100,
+   "pos": [
+    11,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 150,
+   "move_cost": 100,
+   "pos": [
+    12,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 149,
+   "move_cost": 100,
+   "pos": [
+    13,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    14,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    15,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    16,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    17,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    18,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    5
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    5,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    6,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    7,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    8,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 150,
+   "move_cost": 100,
+   "pos": [
+    9,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 153,
+   "move_cost": 100,
+   "pos": [
+    10,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 155,
+   "move_cost": 100,
+   "pos": [
+    11,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 155,
+   "move_cost": 100,
+   "pos": [
+    12,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 153,
+   "move_cost": 100,
+   "pos": [
+    13,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 151,
+   "move_cost": 100,
+   "pos": [
+    14,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    15,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    16,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    17,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    18,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    6
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    5,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    6,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    7,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 151,
+   "move_cost": 100,
+   "pos": [
+    8,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 155,
+   "move_cost": 100,
+   "pos": [
+    9,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 159,
+   "move_cost": 100,
+   "pos": [
+    10,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 161,
+   "move_cost": 100,
+   "pos": [
+    11,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 160,
+   "move_cost": 100,
+   "pos": [
+    12,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 156,
+   "move_cost": 100,
+   "pos": [
+    13,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 152,
+   "move_cost": 100,
+   "pos": [
+    14,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 149,
+   "move_cost": 100,
+   "pos": [
+    15,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    16,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    17,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    18,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    7
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    5,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    6,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    7,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 152,
+   "move_cost": 100,
+   "pos": [
+    8,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 157,
+   "move_cost": 100,
+   "pos": [
+    9,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 163,
+   "move_cost": 100,
+   "pos": [
+    10,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 167,
+   "move_cost": 100,
+   "pos": [
+    11,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 168,
+   "move_cost": 100,
+   "pos": [
+    12,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 164,
+   "move_cost": 100,
+   "pos": [
+    13,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 158,
+   "move_cost": 100,
+   "pos": [
+    14,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 152,
+   "move_cost": 100,
+   "pos": [
+    15,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 149,
+   "move_cost": 100,
+   "pos": [
+    16,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    17,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    8
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    5,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    6,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 152,
+   "move_cost": 100,
+   "pos": [
+    7,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 157,
+   "move_cost": 100,
+   "pos": [
+    8,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 164,
+   "move_cost": 100,
+   "pos": [
+    9,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 171,
+   "move_cost": 100,
+   "pos": [
+    10,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 174,
+   "move_cost": 100,
+   "pos": [
+    11,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 172,
+   "move_cost": 100,
+   "pos": [
+    12,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 166,
+   "move_cost": 100,
+   "pos": [
+    13,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 158,
+   "move_cost": 100,
+   "pos": [
+    14,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 152,
+   "move_cost": 100,
+   "pos": [
+    15,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    16,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    17,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    9
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    5,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    6,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 151,
+   "move_cost": 100,
+   "pos": [
+    7,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 156,
+   "move_cost": 100,
+   "pos": [
+    8,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 164,
+   "move_cost": 100,
+   "pos": [
+    9,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 172,
+   "move_cost": 100,
+   "pos": [
+    10,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 179,
+   "move_cost": 100,
+   "pos": [
+    11,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 179,
+   "move_cost": 100,
+   "pos": [
+    12,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 174,
+   "move_cost": 100,
+   "pos": [
+    13,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 165,
+   "move_cost": 100,
+   "pos": [
+    14,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 157,
+   "move_cost": 100,
+   "pos": [
+    15,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 151,
+   "move_cost": 100,
+   "pos": [
+    16,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    17,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    10
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    5,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 150,
+   "move_cost": 100,
+   "pos": [
+    6,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 155,
+   "move_cost": 100,
+   "pos": [
+    7,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 162,
+   "move_cost": 100,
+   "pos": [
+    8,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 171,
+   "move_cost": 100,
+   "pos": [
+    9,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 180,
+   "move_cost": 100,
+   "pos": [
+    10,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 183,
+   "move_cost": 100,
+   "pos": [
+    11,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 180,
+   "move_cost": 100,
+   "pos": [
+    12,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 172,
+   "move_cost": 100,
+   "pos": [
+    13,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 163,
+   "move_cost": 100,
+   "pos": [
+    14,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 155,
+   "move_cost": 100,
+   "pos": [
+    15,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 150,
+   "move_cost": 100,
+   "pos": [
+    16,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    17,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    11
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    5,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 149,
+   "move_cost": 100,
+   "pos": [
+    6,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 154,
+   "move_cost": 100,
+   "pos": [
+    7,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 160,
+   "move_cost": 100,
+   "pos": [
+    8,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 169,
+   "move_cost": 100,
+   "pos": [
+    9,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 178,
+   "move_cost": 100,
+   "pos": [
+    10,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 185,
+   "move_cost": 100,
+   "pos": [
+    11,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 185,
+   "move_cost": 100,
+   "pos": [
+    12,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 179,
+   "move_cost": 100,
+   "pos": [
+    13,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 170,
+   "move_cost": 100,
+   "pos": [
+    14,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 160,
+   "move_cost": 100,
+   "pos": [
+    15,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 153,
+   "move_cost": 100,
+   "pos": [
+    16,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 149,
+   "move_cost": 100,
+   "pos": [
+    17,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    18,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    19,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    12
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    5,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 152,
+   "move_cost": 100,
+   "pos": [
+    6,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 158,
+   "move_cost": 100,
+   "pos": [
+    7,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 166,
+   "move_cost": 100,
+   "pos": [
+    8,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 46,
+   "elevation": 176,
+   "move_cost": 170,
+   "pos": [
+    9,
+    13
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 184,
+   "move_cost": 170,
+   "pos": [
+    10,
+    13
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 187,
+   "move_cost": 170,
+   "pos": [
+    11,
+    13
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 184,
+   "move_cost": 170,
+   "pos": [
+    12,
+    13
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 176,
+   "move_cost": 170,
+   "pos": [
+    13,
+    13
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 10,
+   "elevation": 166,
+   "move_cost": 100,
+   "pos": [
+    14,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 158,
+   "move_cost": 100,
+   "pos": [
+    15,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 152,
+   "move_cost": 100,
+   "pos": [
+    16,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    17,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    13
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    5,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 32,
+   "elevation": 150,
+   "move_cost": 145,
+   "pos": [
+    6,
+    14
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 155,
+   "move_cost": 145,
+   "pos": [
+    7,
+    14
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 163,
+   "move_cost": 145,
+   "pos": [
+    8,
+    14
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 46,
+   "elevation": 172,
+   "move_cost": 170,
+   "pos": [
+    9,
+    14
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 181,
+   "move_cost": 170,
+   "pos": [
+    10,
+    14
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 186,
+   "move_cost": 170,
+   "pos": [
+    11,
+    14
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 186,
+   "move_cost": 170,
+   "pos": [
+    12,
+    14
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 181,
+   "move_cost": 170,
+   "pos": [
+    13,
+    14
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 32,
+   "elevation": 172,
+   "move_cost": 145,
+   "pos": [
+    14,
+    14
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 162,
+   "move_cost": 145,
+   "pos": [
+    15,
+    14
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 155,
+   "move_cost": 145,
+   "pos": [
+    16,
+    14
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 10,
+   "elevation": 150,
+   "move_cost": 100,
+   "pos": [
+    17,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    18,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    19,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    14
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    3,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    4,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 32,
+   "elevation": 149,
+   "move_cost": 145,
+   "pos": [
+    5,
+    15
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 153,
+   "move_cost": 145,
+   "pos": [
+    6,
+    15
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 159,
+   "move_cost": 145,
+   "pos": [
+    7,
+    15
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 168,
+   "move_cost": 145,
+   "pos": [
+    8,
+    15
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 46,
+   "elevation": 177,
+   "move_cost": 170,
+   "pos": [
+    9,
+    15
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 184,
+   "move_cost": 170,
+   "pos": [
+    10,
+    15
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 187,
+   "move_cost": 170,
+   "pos": [
+    11,
+    15
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 184,
+   "move_cost": 170,
+   "pos": [
+    12,
+    15
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 176,
+   "move_cost": 170,
+   "pos": [
+    13,
+    15
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 32,
+   "elevation": 167,
+   "move_cost": 145,
+   "pos": [
+    14,
+    15
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 158,
+   "move_cost": 145,
+   "pos": [
+    15,
+    15
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 10,
+   "elevation": 152,
+   "move_cost": 100,
+   "pos": [
+    16,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    17,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    19,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    15
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    5,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 32,
+   "elevation": 150,
+   "move_cost": 145,
+   "pos": [
+    6,
+    16
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 155,
+   "move_cost": 145,
+   "pos": [
+    7,
+    16
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 162,
+   "move_cost": 145,
+   "pos": [
+    8,
+    16
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 46,
+   "elevation": 171,
+   "move_cost": 170,
+   "pos": [
+    9,
+    16
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 179,
+   "move_cost": 170,
+   "pos": [
+    10,
+    16
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 184,
+   "move_cost": 170,
+   "pos": [
+    11,
+    16
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 184,
+   "move_cost": 170,
+   "pos": [
+    12,
+    16
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 46,
+   "elevation": 179,
+   "move_cost": 170,
+   "pos": [
+    13,
+    16
+   ],
+   "terrain": "rocky"
+  },
+  {
+   "cover": 32,
+   "elevation": 170,
+   "move_cost": 145,
+   "pos": [
+    14,
+    16
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 162,
+   "move_cost": 145,
+   "pos": [
+    15,
+    16
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 155,
+   "move_cost": 145,
+   "pos": [
+    16,
+    16
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 10,
+   "elevation": 150,
+   "move_cost": 100,
+   "pos": [
+    17,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    18,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    19,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    16
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 32,
+   "elevation": 148,
+   "move_cost": 145,
+   "pos": [
+    5,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 152,
+   "move_cost": 145,
+   "pos": [
+    6,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 157,
+   "move_cost": 145,
+   "pos": [
+    7,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 165,
+   "move_cost": 145,
+   "pos": [
+    8,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 173,
+   "move_cost": 145,
+   "pos": [
+    9,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 179,
+   "move_cost": 145,
+   "pos": [
+    10,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 181,
+   "move_cost": 145,
+   "pos": [
+    11,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 179,
+   "move_cost": 145,
+   "pos": [
+    12,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 172,
+   "move_cost": 145,
+   "pos": [
+    13,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 164,
+   "move_cost": 145,
+   "pos": [
+    14,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 157,
+   "move_cost": 145,
+   "pos": [
+    15,
+    17
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 10,
+   "elevation": 151,
+   "move_cost": 100,
+   "pos": [
+    16,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    17,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    17
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    5,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 32,
+   "elevation": 149,
+   "move_cost": 145,
+   "pos": [
+    6,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 153,
+   "move_cost": 145,
+   "pos": [
+    7,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 159,
+   "move_cost": 145,
+   "pos": [
+    8,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 166,
+   "move_cost": 145,
+   "pos": [
+    9,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 172,
+   "move_cost": 145,
+   "pos": [
+    10,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 176,
+   "move_cost": 145,
+   "pos": [
+    11,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 176,
+   "move_cost": 145,
+   "pos": [
+    12,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 172,
+   "move_cost": 145,
+   "pos": [
+    13,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 165,
+   "move_cost": 145,
+   "pos": [
+    14,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 158,
+   "move_cost": 145,
+   "pos": [
+    15,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 153,
+   "move_cost": 145,
+   "pos": [
+    16,
+    18
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 10,
+   "elevation": 149,
+   "move_cost": 100,
+   "pos": [
+    17,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    18,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    19,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    18
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    4,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 32,
+   "elevation": 147,
+   "move_cost": 145,
+   "pos": [
+    5,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 150,
+   "move_cost": 145,
+   "pos": [
+    6,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 154,
+   "move_cost": 145,
+   "pos": [
+    7,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 159,
+   "move_cost": 145,
+   "pos": [
+    8,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 165,
+   "move_cost": 145,
+   "pos": [
+    9,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 169,
+   "move_cost": 145,
+   "pos": [
+    10,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 171,
+   "move_cost": 145,
+   "pos": [
+    11,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 169,
+   "move_cost": 145,
+   "pos": [
+    12,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 164,
+   "move_cost": 145,
+   "pos": [
+    13,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 159,
+   "move_cost": 145,
+   "pos": [
+    14,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 154,
+   "move_cost": 145,
+   "pos": [
+    15,
+    19
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 10,
+   "elevation": 150,
+   "move_cost": 100,
+   "pos": [
+    16,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 147,
+   "move_cost": 100,
+   "pos": [
+    17,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    19
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    0,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    1,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    2,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    3,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    4,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    5,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 32,
+   "elevation": 148,
+   "move_cost": 145,
+   "pos": [
+    6,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 150,
+   "move_cost": 145,
+   "pos": [
+    7,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 154,
+   "move_cost": 145,
+   "pos": [
+    8,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 158,
+   "move_cost": 145,
+   "pos": [
+    9,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 162,
+   "move_cost": 145,
+   "pos": [
+    10,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 165,
+   "move_cost": 145,
+   "pos": [
+    11,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 165,
+   "move_cost": 145,
+   "pos": [
+    12,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 162,
+   "move_cost": 145,
+   "pos": [
+    13,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 158,
+   "move_cost": 145,
+   "pos": [
+    14,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 154,
+   "move_cost": 145,
+   "pos": [
+    15,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 32,
+   "elevation": 150,
+   "move_cost": 145,
+   "pos": [
+    16,
+    20
+   ],
+   "terrain": "woods"
+  },
+  {
+   "cover": 10,
+   "elevation": 148,
+   "move_cost": 100,
+   "pos": [
+    17,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 146,
+   "move_cost": 100,
+   "pos": [
+    18,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    19,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    20,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    21,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    22,
+    20
+   ],
+   "terrain": "open"
+  },
+  {
+   "cover": 10,
+   "elevation": 145,
+   "move_cost": 100,
+   "pos": [
+    23,
+    20
+   ],
+   "terrain": "open"
+  }
+ ],
+ "cols": 24,
+ "height": 840,
+ "metres_per_hex": 50,
+ "radius": 25.5,
+ "rows": 21,
+ "setting": {
+  "location": "Little Round Top \u00b7 Gettysburg, Pennsylvania",
+  "start_local": "1863-07-02T16:30:00",
+  "time_basis": "Scenario local time; authored start time"
+ },
+ "source": "Library of Congress, Gettysburg topographic map (1876). Authored POC terrain; approximate registration.",
+ "source_url": "https://www.loc.gov/item/99447491/",
+ "width": 1080
+}
