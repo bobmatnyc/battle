@@ -131,4 +131,18 @@ Evidence under the git-ignored `apps/poc/artifacts/slice4a-64048b6/` in this wor
 
 ## Review notes
 
-pending PM
+code-critic at `e1dbd58`: **APPROVE**, no CRITICAL or HIGH. The critic re-ran `npm test` in `apps/web` (89 of 89), `tsc --noEmit` (clean) and `check_map_geometry.mjs` (pass). It re-ran `record.py`; `git status` stayed clean, so every fixture regenerates byte-identically. It confirmed:
+
+- `Playback` keeps at most one timer pending, and a read that is in flight after `stop()` is dropped.
+- Playback stops on reopen, step, scrub, return to live and pause.
+- There is no diff under `apps/poc/battle`, and `views.ts` changes a comment only.
+- The two test-helper edits made after the red commit strengthen `check_map_geometry.mjs`.
+
+Credential scan over `origin/main...HEAD`: clean.
+
+Two LOW notes, not fixed (below the fix bar):
+
+- `apps/web/src/desk.ts:274` sets the replay speed from the live `clock.speed`. If that value is not in `clock.speeds`, the select shows no option while playback runs at that speed. A fallback to the first listed speed would close it.
+- `apps/poc/scripts/check_map_geometry.mjs` runs only with `PYTHONPATH=.` from `apps/poc`. This predates the branch.
+
+Also carried from §11: the signals panel is confirmed on a headless-only Pegasus variant, not on a playable game. Hill 223's shack label is still cut off at the left edge and needs a label rule.
