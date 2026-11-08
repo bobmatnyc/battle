@@ -10,6 +10,24 @@ from .replay import ReplayService
 PLAYER_MODES = ("scripted", "openrouter")
 
 
+class ModelFallback(RuntimeError):
+    """Why: a model game in which any player decision fell back to the
+    scripted control is not a model result (doc 69 §8 gap 4), and a batch
+    must not keep paying for it.
+    What: raised by ``HeadlessRunner.run`` under ``abort_on_fallback`` before
+    the fallback decision is committed. ``decision`` is that record, kept so
+    the caller can read its stage, reason and any paid ``usage``.
+    Test: `test_abort_on_fallback_raises_before_the_fallback_is_committed`.
+    """
+
+    def __init__(self, decision):
+        super().__init__(
+            f"player decision at turn {decision.get('turn')} fell back: "
+            f"{decision.get('fallback_stage')} {decision.get('fallback_reason')}"
+        )
+        self.decision = decision
+
+
 class HeadlessRunner:
     """Why: a model must be able to play one side end to end, with a scripted
     control on the other side, and the run must replay without a provider.
@@ -31,7 +49,12 @@ class HeadlessRunner:
     instructions, and run metadata records it as ``opponent``.
     ``scenario_id`` selects the catalog entry (None: the catalog default);
     an unknown id raises ``UnknownScenario`` before anything is stored.
-    Test: `test_model_player_run_records_side_decisions_and_replays`,
+    ``abort_on_fallback`` (default False, for model runs) raises
+    ``ModelFallback`` at the first player decision that is not the model's
+    own; the run stops there and that decision is not committed. It needs
+    ``player_mode`` ``openrouter``. Off, every run plays and records as before.
+    Test: `test_abort_on_fallback_raises_before_the_fallback_is_committed`,
+    `test_model_player_run_records_side_decisions_and_replays`,
     `test_default_headless_run_keeps_baseline_path`,
     `test_duel_fixture_runs_headless_and_replays`,
     `test_gate_attacker_selection_and_refusal`.
@@ -50,6 +73,7 @@ class HeadlessRunner:
         opponent=None,
         scenario_id=None,
         player_policy=None,
+        abort_on_fallback=False,
     ):
         self.scenario = scenarios.resolve(scenario_id)
         sides = tuple(self.scenario.sides)
@@ -71,6 +95,9 @@ class HeadlessRunner:
         self.player_mode = player_mode
         self.opponent = self._opponent(opponent)
         self.player_policy = self._policy(player_policy)
+        if abort_on_fallback and player_mode != "openrouter":
+            raise ValueError("abort_on_fallback needs a model player side")
+        self.abort_on_fallback = abort_on_fallback
 
     @property
     def baseline(self):
@@ -170,6 +197,10 @@ class HeadlessRunner:
             decision = self.commander.decide(
                 state, side=self.player_side, mode=self.player_mode, policy=self.player_policy
             )
+            # Doc 69 §8 gap 4: a fallback is never a model decision; stop before it is stored.
+            model_made = decision.get("source") == "openrouter" and not decision.get("fallback")
+            if self.abort_on_fallback and not model_made:
+                raise ModelFallback(decision)
             return [{"type": "decision", "decision": decision}]
         view = self.simulation.view(state, self.player_side)
         standing, orders = scripted_actions(
