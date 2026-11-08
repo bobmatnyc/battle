@@ -108,3 +108,20 @@ test("no ring without the brief's ring flag or without a brief", () => {
     assert.match(svg, /<g class="objective" pointer-events="none"><circle/, "the objective mark stays");
   }
 });
+
+// bt-T23 (docs/research/80 §7): the objective's label at the map's edge stays inside the map. Measured with a
+// narrower text estimate than the placement rule's (6 px a character, 7.8 for capitals).
+test("the objective label stays inside the map when the objective is in an edge column", () => {
+  const terrain = map();
+  const label = /<g class="objective"[^>]*>.*?<text x="([-\d.]+)" y="([-\d.]+)" text-anchor="(\w+)">([^<]*)<\/text><\/g>/;
+  for (const [objective, anchor] of [[[0, 11], "start"], [[23, 10], "end"], [[11, 10], "middle"]] as const) {
+    const view = {...commander(), objective: [...objective] as [number, number]};
+    const m = label.exec(mapMarkup(view, terrain, {unitId: null, destination: null}));
+    assert.ok(m, "the objective label is drawn");
+    const [x, text] = [Number(m[1]), m[4]!];
+    const w = [...text].reduce((n, c) => n + (/[A-Z]/.test(c) ? 7.8 : 6), 0);
+    const x0 = m[3] === "middle" ? x - w / 2 : m[3] === "end" ? x - w : x;
+    assert.equal(m[3], anchor, `objective ${objective}`);
+    assert.ok(x0 >= 0 && x0 + w <= terrain.width, `objective ${objective}: "${text}" spans ${x0}..${x0 + w} of ${terrain.width}`);
+  }
+});

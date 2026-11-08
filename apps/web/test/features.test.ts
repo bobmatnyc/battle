@@ -6,7 +6,8 @@ import {readdirSync, readFileSync} from "node:fs";
 import {test} from "node:test";
 import vm from "node:vm";
 import {readMapFeatures, type MapFeature} from "@battle/contracts";
-import {featureLayer, featureLegend, featureNotes, footprint, placeLabels, type FeatureOptions, type LabelPlace, type LabelSpec, type Rect} from "../src/features.ts";
+import {featureLayer, featureLegend, featureNotes, footprint, labelBox, placeLabels, titlePlace, type FeatureOptions, type LabelPlace, type LabelSpec, type Rect,
+  type TitleLine} from "../src/features.ts";
 import {readStatusTable, statusTableFor} from "../src/feature-sources.ts";
 import {hexCenter} from "../src/geometry.ts";
 import {esc} from "../src/render.ts";
@@ -16,6 +17,8 @@ const POC_STATIC = new URL("../../poc/static/", import.meta.url);
 const catalog: Record<string, Doc> = JSON.parse(readFileSync(
   new URL("../../../packages/contracts/fixtures/map-features.json", import.meta.url), "utf8"));
 const RADIUS = 25.5;  // every catalog map's radius (map.json); the POC renderer's R
+// bt-T23 (docs/research/80 §7): every catalog map's width and height (map.json); the POC's 1080 x 840 scene.
+const FRAME: Rect = {x0: 0, y0: 0, x1: 1080, y1: 840};
 
 // The POC's own renderer and table, loaded as the POC desk loads them (classic scripts).
 const poc = vm.createContext({});
@@ -27,10 +30,11 @@ const pocCall = (expression: string, args: unknown[]): string => { poc["args"] =
 
 function options(id: string): FeatureOptions {
   const entry = catalog[id]!;
-  return {metresPerHex: entry["metres_per_hex"], cells: entry["bridge_cells"], sources: statusTableFor(sourcesModule, id), radius: RADIUS};
+  return {metresPerHex: entry["metres_per_hex"], cells: entry["bridge_cells"], sources: statusTableFor(sourcesModule, id), radius: RADIUS,
+    frame: FRAME};
 }
 const pocOptions = (id: string): Doc => ({metresPerHex: catalog[id]!["metres_per_hex"], cells: catalog[id]!["bridge_cells"],
-  sources: vm.runInContext(`BattleFeatureSources.forScenario(${JSON.stringify(id)})`, poc)});
+  sources: vm.runInContext(`BattleFeatureSources.forScenario(${JSON.stringify(id)})`, poc), frame: FRAME});
 const features = (id: string): MapFeature[] => readMapFeatures(catalog[id]!["map_features"]);
 
 test("every catalog entry's feature layer, legend and hex notes match the POC desk's", () => {
@@ -156,4 +160,54 @@ test("the POC desk and this desk place labels alike with the same counters in th
   const obstacles: Rect[] = [{x0: 380, y0: 440, x1: 460, y1: 480}, {x0: 880, y0: 400, x1: 960, y1: 440}];
   assert.equal(featureLayer(list, {...options(id), obstacles}),
     pocCall("BattleFeatures.render(args[0], center, esc, args[1])", [list, {...pocOptions(id), obstacles}]));
+  // bt-T23: the Ranville road runs to the east edge; its old first place there was cut by the frame. Both desks
+  // move it the same way, with and without the counters in the way.
+  for (const extra of [{}, {obstacles}]) {
+    const layer = featureLayer(list, {...options(id), ...extra});
+    assert.equal(layer, pocCall("BattleFeatures.render(args[0], center, esc, args[1])", [list, {...pocOptions(id), ...extra}]));
+    const ranville = drawnLabels(layer).find((l) => l.text === "Road from the Orne bridge to Ranville");
+    assert.ok(ranville && ranville.x1 <= FRAME.x1, `the Ranville road label is drawn inside the frame: ${JSON.stringify(ranville)}`);
+  }
+  // The objective's title (Hill 223's shack is in column 0): both desks choose the same place.
+  const [x, y] = hexCenter([0, 11], RADIUS);
+  const lines: TitleLine[] = [{text: "Command post at the shack", y: y - 118, size: 21}, {text: "PATROL OBJECTIVE", y: y - 97, size: 10, spacing: 1.4}];
+  assert.equal(JSON.stringify(titlePlace(lines, x, RADIUS, FRAME)), pocCall("JSON.stringify(BattleFeatures.titlePlace(args[0], args[1], args[2], args[3]))", [lines, x, RADIUS, FRAME]));
+});
+
+// bt-T23 (docs/research/80 §7): no label is cut by the edge of the map.
+const within = (b: Box, f: Rect): boolean => b.x0 >= f.x0 && b.y0 >= f.y0 && b.x1 <= f.x1 && b.y1 <= f.y1;
+
+test("a place outside the map frame is not taken, and a label with no place inside it is hidden", () => {
+  const spot = (x: number, y: number, anchor: LabelPlace["anchor"] = "start"): LabelPlace => ({x, y, anchor});
+  const a: LabelSpec = {key: "a", priority: 0, text: "Alpha", candidates: [spot(1060, 20), spot(1060, 20, "end")]};
+  const entries = (specs: LabelSpec[], frame?: Rect): unknown => [...placeLabels(specs, [], frame).entries()];
+  assert.deepEqual(entries([a]), [["a", spot(1060, 20)]], "with no frame the first place is taken, as before");
+  assert.deepEqual(entries([a], FRAME), [["a", spot(1060, 20, "end")]], "the first place crosses the right edge; the flipped one is taken");
+  assert.deepEqual(entries([{...a, candidates: [spot(10, 5), spot(-4, 60)]}], FRAME), [["a", null]], "no place inside the frame hides the label");
+  assert.ok(within(labelBox("Alpha", spot(1060, 20, "end")), FRAME));
+});
+
+test("every feature label lies inside the map frame on the five playable scenarios, with and without counters", () => {
+  for (const id of PLAYABLE) {
+    const list = features(id);
+    const counters: Rect[] = list.flatMap((f) => ("pos" in f ? [f.pos] : f.points)).map((p) => hexCenter(p, RADIUS))
+      .map(([x, y]) => ({x0: x - 37, y0: y - 17, x1: x + 37, y1: y + 17}));
+    const plain = featureLayer(list, options(id));
+    assert.doesNotMatch(plain, /data-label="hidden"/, `${id}: no label hidden by the frame without counters`);
+    for (const layer of [plain, featureLayer(list, {...options(id), obstacles: counters})]) {
+      for (const label of drawnLabels(layer)) assert.ok(within(label, FRAME), `${id}: "${label.text}" crosses the map frame ${JSON.stringify(label)}`);
+    }
+  }
+});
+
+test("the objective's title stays centred where it fits and moves inside the frame at an edge", () => {
+  const line = (text: string, y = 300): TitleLine => ({text, y, size: 21});
+  assert.deepEqual(titlePlace([line("Little Round Top")], 540, 25.5, FRAME), {x: 540, anchor: "middle"}, "a title that fits stays centred");
+  assert.deepEqual(titlePlace([line("Command post at the shack")], 46, 25.5, FRAME), {x: 20.5, anchor: "start"}, "at the left edge it starts left of the mark");
+  assert.deepEqual(titlePlace([line("Command post at the shack")], 1040, 25.5, FRAME), {x: 1065.5, anchor: "end"}, "at the right edge it ends right of the mark");
+  assert.deepEqual(titlePlace([line("x".repeat(200))], 540, 25.5, FRAME), {x: 540, anchor: "middle"}, "a title wider than the map stays centred");
+  const [x, y] = hexCenter([0, 11], RADIUS);
+  const lines: TitleLine[] = [{text: "Command post at the shack", y: y - 118, size: 21}, {text: "PATROL OBJECTIVE", y: y - 97, size: 10, spacing: 1.4}];
+  const place = titlePlace(lines, x, RADIUS, FRAME);
+  for (const l of lines) assert.ok(within(labelBox(l.text, {...place, y: l.y}, l.size, l.spacing), FRAME), `Hill 223: "${l.text}" inside the frame`);
 });

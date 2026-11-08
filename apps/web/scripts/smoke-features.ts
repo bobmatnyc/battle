@@ -161,24 +161,38 @@ const LABEL_BOXES = `(() => {
     labels: [...document.querySelectorAll("#map .battle-features .feature-label")].map(n => box(n, "label", n.textContent)),
     counters: [...document.querySelectorAll("#map .counter")].map(n => box(n, "counter", n.dataset.unit ?? n.dataset.contact)),
     hidden: document.querySelectorAll("#map .battle-features [data-label=hidden]").length,
+    // bt-T23: the map frame (the SVG's content box) and the objective's label.
+    frame: (() => { const svg = document.getElementById("map"), b = svg.getBoundingClientRect();
+      return {kind: "frame", name: "map", x0: b.left + svg.clientLeft, y0: b.top + svg.clientTop,
+        x1: b.left + svg.clientLeft + svg.clientWidth, y1: b.top + svg.clientTop + svg.clientHeight}; })(),
+    objective: [...document.querySelectorAll("#map .objective text")].map(n => box(n, "objective", n.textContent)),
   };
 })()`;
 type Box = {kind: string; name: string; x0: number; y0: number; x1: number; y1: number};
 const meets = (a: Box, b: Box): boolean => a.x0 < b.x1 - 0.5 && b.x0 < a.x1 - 0.5 && a.y0 < b.y1 - 0.5 && b.y0 < a.y1 - 0.5;
 
 /** Why: a feature label under another label or a counter cannot be read (docs/research/75 §8, 80).
- * What: measures the drawn boxes in the page; no feature label meets another, and no counter covers one.
+ * What: measures the drawn boxes in the page; no feature label meets another, and no counter covers one;
+ * every feature label and the objective label lie inside the map frame (bt-T23).
  * The desk has no zoom: its SVG scales as one, so these boxes at any size meet exactly where they do here.
  * Returns a one-line summary with the number of labels hidden by the placement rule. */
 export async function checkLabels(page: Page): Promise<string> {
-  const found = await page.evaluate<{labels: Box[]; counters: Box[]; hidden: number}>(LABEL_BOXES);
+  const found = await page.evaluate<{labels: Box[]; counters: Box[]; hidden: number; frame: Box; objective: Box[]}>(LABEL_BOXES);
   const all = [...found.labels, ...found.counters];
   for (let i = 0; i < found.labels.length; i++) {
     for (let j = i + 1; j < all.length; j++) {
       assert.ok(!meets(found.labels[i]!, all[j]!), `${all[j]!.kind} "${all[j]!.name}" meets label "${found.labels[i]!.name}"`);
     }
   }
-  return `${found.labels.length} feature labels, ${found.counters.length} counters, none meet; ${found.hidden} label(s) hidden by the rule`;
+  // bt-T23 (docs/research/80 §7): no feature label and no objective label is cut by the map frame.
+  const f = found.frame;
+  assert.equal(found.objective.length, 1, "the objective label is drawn");
+  for (const b of [...found.labels, ...found.objective]) {
+    assert.ok(b.x0 >= f.x0 - 0.5 && b.y0 >= f.y0 - 0.5 && b.x1 <= f.x1 + 0.5 && b.y1 <= f.y1 + 0.5,
+      `${b.kind} "${b.name}" ${[b.x0, b.y0, b.x1, b.y1].map(Math.round)} is cut by the map frame ${[f.x0, f.y0, f.x1, f.y1].map(Math.round)}`);
+  }
+  return `${found.labels.length} feature labels, ${found.counters.length} counters, none meet; ${found.hidden} label(s) hidden by the rule; `
+    + `every feature label and the objective label inside the map frame`;
 }
 
 const disabled = (page: Page, ids: string[]): Promise<boolean[]> =>
