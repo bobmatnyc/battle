@@ -1,12 +1,12 @@
 # 69 — Model runs: cost estimate for six entries (Cannae excluded)
 
-**Version:** 2 (2026-11-08). **Repo:** `main` at `ff8655b`. **Status:** an estimate for the Architect's approval. No model API was called and nothing was spent. Version 1 changed no code; version 2 adds the batch driver and its guards (section 9). The spend choice is the owner's D37. **Scope:** a model player against the scripted control on Little Round Top, Hougoumont, Concord North Bridge, Pegasus Bridge, Hill 223 and Gergovia. Cannae waits on the owner ruling (D34) and is priced only as a reference line (section 6).
+**Version:** 3 (2026-11-08). **Repo:** `main` at `ff8655b`. **Status:** an estimate for the Architect's approval. No model API was called and nothing was spent. Version 1 changed no code; version 2 adds the batch driver and its guards (section 9); version 3 adds the per-call budget, failure records and manifests (section 9), the action-set label (section 10), and the purpose of the runs against the paid ones with a smaller option A (section 11). The spend choice is the owner's D37. **Scope:** a model player against the scripted control on Little Round Top, Hougoumont, Concord North Bridge, Pegasus Bridge, Hill 223 and Gergovia. Cannae waits on the owner ruling (D34) and is priced only as a reference line (section 6).
 
 ## Summary
 
 - A model run is one provider call per 3 turns for the model's side. The scripted opponent costs nothing. Calls per game are `ceil(turns / 3)`.
 - Cost depends on game length, because the observation grows through the game. Little Round Top and Hougoumont are fixed at 60 turns (20 calls, about $0.38 each with Sonnet 5.5). Hill 223, Gergovia and Pegasus range from a few calls to 80 to 150 calls, so one game costs from $0.04 to $6.41 with Sonnet 5.5, depending on whether the model's game ends early or runs to the deadline.
-- **Smallest useful option (A):** Sonnet 5.5, 16 games, planning figure **$12.2**, proposed cap **$16**. The worst case, every game to its deadline, is $31.7.
+- **Smallest useful option (A):** Sonnet 5.5, 12 games, planning figure **$10.65**, proposed cap **$14**. The worst case, every game to its deadline, is $30.15. Version 2 had 16 games, $12.19 and a $16 cap; Little Round Top and Hougoumont drop from 3 games to 1 each (section 11).
 - **Fuller option (B):** Sonnet 5.5 plus Opus 5.5 plus Astra, 65 games, planning figure **$68.1**, proposed cap **$90**. The worst case is $190.6.
 - Past spend and the formula agree: the formula gives $0.38 for a Little Round Top Sonnet game, and batch A's Sonnet games averaged $0.39.
 
@@ -120,11 +120,14 @@ Sonnet 5.5, effort `high`, the entry's player side, against the scripted control
 
 | Block | Games | Planning | Worst case |
 |---|---|---|---|
-| Little Round Top, Hougoumont, Concord, Pegasus, 3 games each | 12 | $2.75 | $13.73 |
+| Little Round Top and Hougoumont, 1 game each (was 3 each, section 11) | 2 | $0.77 | $0.77 |
+| Concord and Pegasus, 3 games each | 6 | $0.44 | $11.42 |
 | Gergovia and Hill 223, 2 games each | 4 | $9.44 | $17.96 |
-| **Total** | **16** | **$12.19** | **$31.69** |
+| **Total** | **12** | **$10.65** | **$30.15** |
 
-**Proposed cap: $16** (planning plus 25 percent for output variance and failed or repeated calls, rounded up). It sits below the worst case, so the order of work matters (below). Stage 1 (the first block, $2.75 planning) can be approved alone with a $4 cap; its worst case needs a Pegasus game to run to turn 360.
+Version 2's total was 16 games, $12.19 planning and $31.69 worst case. Dropping 2 Little Round Top and 2 Hougoumont games saves $1.54 on both figures (2 x $0.38 + 2 x $0.39).
+
+**Proposed cap: $14** (planning plus 25 percent for output variance and failed or repeated calls, rounded up; was $16). It sits below the worst case, so the order of work matters (below). Stage 1 (the first two blocks, $1.21 planning, was $2.75) can be approved alone with a $2 cap (was $4); its worst case needs a Pegasus game to run to turn 360.
 
 ### Option B: fuller
 
@@ -179,11 +182,37 @@ None blocks a model run on a default entry. All six completed a model-path run (
 `apps/poc/scripts/model_runs.py` runs a batch of model games. It closes gaps 1, 2 and 3 of section 8 and makes gap 4 stop the batch. It does not set the key's credit limit: the third control of section 5 (the OpenRouter key's credit limit equal to the cap) stays open, pending D37.
 
 - **Plan.** `--plan ENTRY[/VARIANT]`, repeatable, names the games; `--games N` plays each item N times in plan order; `--model`, `--effort`, `--cap-usd` and `--dir` (a new directory per batch) complete the run. Items reach the six entries above and their named variants (Concord's 3, Pegasus's 7 plus its range and crossed sensitivities, Hill 223's 11, Gergovia's 13), for example `pegasus-bridge/guard-only`. Cannae is not offered. An unknown name is refused before any game starts. Each game is one model side (the entry's player) against the entry's scripted control, in its own `BatchStore` database.
-- **Cap.** After each game the driver adds the recorded `usage.cost` of every player decision to a running total. It starts no game once the total reaches the cap and exits 3. A game in flight is not stopped, so one game can pass the cap by its own cost.
+- **Source pin.** The driver refuses a dirty git tree (a tracked change or an untracked, unignored file) and records the commit.
+- **Budget before each call.** One `SpendGuard` (`battle/spend.py`) spans the batch. Before every model request, the commander's `before_request` hook (`services/commander.py` line 199) requires `cap - spent so far in the batch - reserve >= 0`; otherwise it raises `BudgetExhausted` before the provider is called (line 201 re-raises it, so it is not a fallback). The reserve is one worst-case call. Input tokens are taken as at most the UTF-8 bytes of the system prompt plus the JSON user message (a token covers at least one byte; Sonnet measured 2.25 characters per token, section 3), plus 64 framing tokens, at the input price. Output tokens are the request's `max_tokens` (4,000 with an effort; reasoning counts inside it), at the output price. No cache discount is assumed. Prices: Sonnet 5.5 $2 / $10, Opus 5.5 $4 / $20, Astra $12.50 / $50 per million (section 3); another model needs `--input-price` and `--output-price`. After each call the runner charges the decision's recorded `usage.cost` (`services/headless.py` line 213). A late Hill 223 Sonnet request (70,700 characters) reserves about $0.19. The game stops before the call, its database is kept as `*.stopped.sqlite`, and the batch exits 3. Spend passes the cap only if one call costs more than its reserve, so the overrun is bounded by one call. No game starts once the spend reaches the cap.
 - **Cost fails closed.** A player decision with no `usage.cost`, or a cost that is not a finite number of zero or more, fails the game. It is never counted as $0. The batch stops with exit 4.
-- **Fallback fails the game.** Fallbacks are made in `services/commander.py`, `CommanderService.decide`: a provider error or timeout (line 198), a reply that is not an object (line 205) and orders that fail validation (line 215), all through `_fallback` (line 260). The record has `fallback` true and the run goes on. The driver builds the runner with `abort_on_fallback`, a new opt-in on `HeadlessRunner` and `build_headless`: at the first player decision that is not the model's own, the run raises `ModelFallback` before that decision is committed, so no later call is made. A finished game is checked again (any fallback, any non-model decision, replay not `identical`). A failed game's database is renamed `*.failed.sqlite`, the cost already paid is still added, and the batch stops with exit 4. The option is off by default, so scripted runs, earlier model runs and replay are unchanged.
-- **Output.** One JSON line per game, then a summary (status, exit, spend, games played, model games, games not started, failures), also written to `batch-summary.json`. `spend_complete` false means a failed call had no readable cost and the spend shown is a floor. Exit 0 means every planned game finished as a model game below the cap.
-- **Tests.** `apps/poc/tests/test_model_runs.py`, fake providers only: one short model game each on Concord, Pegasus, Hill 223, Gergovia and Concord `two-companies`, each replay `identical` with 0 fallbacks; the stop at the cap; a missing cost; and a provider error, a timeout and a junk reply.
+- **Fallback fails the game.** Fallbacks are made in `services/commander.py`, `CommanderService.decide`: a provider error or timeout (line 209), a reply that is not an object (line 216) and orders that fail validation (line 226), all through `_fallback` (line 271). The record has `fallback` true and the run goes on. The driver builds the runner with `abort_on_fallback`, a new opt-in on `HeadlessRunner` and `build_headless`: at the first player decision that is not the model's own, the run raises `ModelFallback` (`services/headless.py` line 211) before that decision is committed, so no later call is made. A finished game is checked again (any fallback, any non-model decision, replay not `identical`). A failed game's database is renamed `*.failed.sqlite`, the cost already paid is still added, and the batch stops with exit 4. The option is off by default, so scripted runs, earlier model runs and replay are unchanged.
+- **Records.** `--dir` must hold no earlier batch; nothing is deleted or overwritten. `manifest.json`, written before the first game, pins the commit and clean flag, the model, effort, prices with the reserve basis, the cap and the plan; per entry it pins the rules edition, each side's prompt version, the sha256 of each side's system prompt, each side's scripted control and its version, and the action-set label (section 10). `runs.jsonl` gets one row per game with the same pins and its cost. A stopped or failed game's row adds the entry, variant, model, the turn and 0-based player decision index where it stopped, the reason, the cost so far, and its database path and sha256. `batch-summary.json` lists those rows. `spend_complete` false means a failed call had no readable cost and the spend shown is a floor. Exit 0 means every planned game finished as a model game within the cap.
+- **Tests.** `apps/poc/tests/test_model_runs.py`, fake providers only: one short model game each on Concord, Pegasus, Hill 223, Gergovia and Concord `two-companies`, each replay `identical` with 0 fallbacks; the stop at the cap between games; the stop mid-game before the call that would cross it; the reserve's growth with request size; a missing cost; a provider error, a timeout and a junk reply; the failure record and database hash; the dirty-tree refusal and the pins; the action-set labels. Each guard's test fails with the guard removed.
+
+## 10. Action sets: model and control
+
+The model's reply holds up to three orders and nothing else (section 8, gap 5). I took option (b) of the review: label the difference, do not widen the reply. Giving the model standing instructions would change the reply schema and the prompt text of `lrt-side-v3` and `hougoumont-side-v2`, the versions this plan runs, so both would need new versions and a new baseline. That is a design change for the owner, not a guard.
+
+I checked which actions each entry's player-side control issues. Only the gate controls in `command_policy.py` return standing instructions; every other control returns `([], orders)`. In the default games every scripted order used a stance in the model's catalog.
+
+| Entry, model side | Control | Control-only actions | Label |
+|---|---|---|---|
+| `hougoumont-north-gate`, allied | `scripted-gate-defender-v1` | standing instruction `close_on_breach` (issued once in the default game) | asymmetric |
+| `hougoumont-north-gate`, french (option B2) | `scripted-gate-attacker-v1` | standing instruction `firm` | asymmetric |
+| `little-round-top`, `concord-north-bridge`, `pegasus-bridge`, `hill-223-patrol`, `gergovia-recall` and their variants, player side | as in each entry | none | symmetric |
+
+The driver writes the label (`action_set`: control, `symmetric`, `control_only`) into the manifest and every game row. A Hougoumont model game compared with its control is asymmetric: the control can set `close_on_breach` and the model cannot. The Hill 223 and Gergovia controls send few or no orders, because most historical orders are entry data (the patrol's route, the Roman recall). That data applies in the model's game too, so it is not an action-set difference, but the model does not choose those actions.
+
+## 11. What the new runs add to the paid ones
+
+The paid runs answer how Sonnet 5.5 and Astra play Little Round Top (batch A, `poc-8`, `lrt-side-v2`, $11.69) and Hougoumont (doc 51, `poc-12`, `hougoumont-side-v1`, $3.25) against the scripted control. The answer was the defender's result. The model as Union held in 6 of 7 runs and as Confederate took the hill in 0 of 7. Every Hougoumont run, the control included, was an Allied win at turn 60, and the three Sonnet games were nearly identical. The paid runs also give the token and cost figures this estimate rests on.
+
+They cannot say how a model plays under `poc-13` (fire discipline, `hold_fire` and `open_fire`) with `lrt-side-v3` and `hougoumont-side-v2`; docs 47 and 51 say model results do not carry across a prompt change. The new runs add two things:
+
+1. The first model games on Concord, Pegasus, Hill 223 and Gergovia, where a defender's advantage does not fix the control's result. This is most of option A.
+2. On Little Round Top and Hougoumont, one comparison: does the paid result (the defender holds) still hold under `poc-13` and the new prompts. One game each answers it; a different outcome would justify more games. The Hougoumont game is asymmetric (section 10).
+
+So option A drops from 3 games to 1 on each of Little Round Top and Hougoumont, saving $1.54 (section 5). Option B's block B1 is unchanged here; the same reasoning would cut its 5 games each on those entries to 2 and save $2.31.
 
 ## Source files read
 
