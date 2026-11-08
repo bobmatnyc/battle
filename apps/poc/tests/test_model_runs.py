@@ -205,6 +205,8 @@ class ModelRunsTest(unittest.TestCase):
         self.assertEqual((record["status"], record["reason"], record["decision_index"]),
                          ("failed", "interrupted: KeyboardInterrupt", 1))
         self.assertEqual((summary["status"], summary["played"]), ("interrupted", 1))
+        self.assertIs(record["cost_complete"], False)
+        self.assertIs(summary["spend_complete"], False)
 
     def test_cli_exits_non_zero_at_the_cap(self):
         with dummy_env(), tempfile.TemporaryDirectory() as tmp:

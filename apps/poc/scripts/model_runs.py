@@ -223,6 +223,7 @@ def play(entry, stem, guard, *, provider, settings):
         record["reason"] = f"error: {type(exc).__name__}: {str(exc)[:200]}"
     except BaseException as exc:  # Recorded, renamed, then re-raised by the caller.
         interrupt, record["reason"] = exc, f"interrupted: {type(exc).__name__}"
+        cost_complete = False  # An interrupted call may be billed without being charged.
     game_id = summary["game_id"] if summary else runner.repository.latest()
     state = runner.repository.load(game_id) if game_id else {"decisions": [], "turn": None}
     committed = sum(1 for d in state["decisions"] if d.get("side") == runner.player_side)
