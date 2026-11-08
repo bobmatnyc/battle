@@ -75,6 +75,23 @@ export function dispatchesMarkup(view: CommanderView, clock: (turn: number) => s
     `<li data-dispatch-kind="${esc(d.kind)}"><small>received ${esc(clock(d.turn))} · ${esc(d.kind)}</small> ${esc(d.display_text)}</li>`).join("");
 }
 
+/** Why: a codeword is news headquarters learns only when its report arrives (docs/research/53);
+ * the player reads it as the commander did (docs/research/81 §4).
+ * What: null when the battle has no authored codeword (no `signals` in the view); else the
+ * received codewords, newest first, each with its meaning, bridge (by the name the view gives
+ * it), sender and battlefield arrival time.
+ * Test: `a delivered codeword is listed with its meaning, bridge, sender and arrival time`,
+ * `a battle with no authored codeword has no panel; one awaiting its codeword says so`,
+ * `signal text is escaped and the newest codeword comes first`. */
+export function signalsMarkup(view: CommanderView, clock: (turn: number) => string): string | null {
+  if (!view.signals) return null;
+  if (!view.signals.length) return "<li>No codeword received.</li>";
+  const name = (id: string): string => view.map_features.find((f) => f.id === id)?.name ?? id;
+  return [...view.signals].reverse().map((s) =>
+    `<li data-codeword="${esc(s.codeword)}"><strong>${esc(s.codeword)}</strong> · ${esc(s.meaning)}`
+    + `<br><small>${esc(name(s.bridge))} · received ${esc(clock(s.delivered_turn))} · from ${esc(s.sender_id)}</small></li>`).join("");
+}
+
 /** The brief's mission text: escaped, with its `**bold**` marks as <b>. */
 export function missionMarkup(view: CommanderView): string {
   const brief = view.scenario_brief;

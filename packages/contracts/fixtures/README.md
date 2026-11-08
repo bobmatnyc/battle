@@ -7,3 +7,5 @@ Recorded from the Python app at commit `c733662` by `python3 -I packages/contrac
 `scenarios.json` (`GET /api/scenarios`, the player-facing catalog) was added for desk slice 2; see [docs/research/71](../../../docs/research/71-ts-desk-slice-2.md). Re-recording rewrote no other fixture.
 
 `map-features.json` (desk slice 3, [docs/research/73](../../../docs/research/73-ts-desk-slice-3.md)) holds each catalog entry's opening commander `map_features` (the projection `/api/state` serves, read the way `apps/poc/scripts/check_map_features.mjs` reads it), with the map's `metres_per_hex` and its bridge crossing cells. Re-recording rewrote no other fixture.
+
+`replay-commander-pegasus.json` (desk slice 4a, [docs/research/81](../../../docs/research/81-ts-desk-slice-4-scope.md)) is the British commander replay (`GET /api/replay`) of a headless Pegasus Bridge run at the first revision holding a delivered codeword (Ham, revision 13). The catalog entry blows its bridge before Ham can be sent, so the run uses the headless-only `guard-only+relief-1h` entry, scripted on both sides. Re-recording rewrote no other fixture.

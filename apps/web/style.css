@@ -16,6 +16,10 @@ body { margin: 0; font: 14px/1.4 system-ui, sans-serif; color: #222; background:
 .replay-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 10px; margin-bottom: 6px; background: #3c3520; color: #f2e6c0; border-radius: 3px; }
 .replay-bar[hidden] { display: none; }
 .replay-bar button { margin: 0; }
+.replay-bar select { width: auto; margin: 0; }
+.replay-help { flex-basis: 100%; margin: 2px 0 0; font-size: 12px; color: #e6dab4; }
+.signals { font-size: 12px; }
+section[hidden] { display: none; }
 #replay-slider { flex: 1; min-width: 120px; }
 .feature-legend { margin-top: 8px; border: 1px solid #b7ad8f; border-radius: 3px; background: #fbf8ee; font-size: 11px; }
 .feature-legend summary { cursor: pointer; padding: 6px 10px; font-weight: bold; }
