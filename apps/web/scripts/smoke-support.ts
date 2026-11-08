@@ -2,18 +2,54 @@
 // (never throws from a callback) and kills the child it started, so the smoke
 // run always ends with an exit code and leaves no POC or browser behind.
 import type {ChildProcess} from "node:child_process";
+import {rmSync} from "node:fs";
 import {request} from "node:http";
 
 const KILL_GRACE_MS = 2000;
 
-/** Stops `child` and resolves once it has exited (SIGTERM, then SIGKILL after a grace period). */
-export function stop(child: ChildProcess): Promise<void> {
-  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+/** Why: a browser that stops answering (even a frozen one) and its helper processes must not outlive the run.
+ * What: sends SIGTERM (with `group`, to the child's whole process group, which `detached`
+ * spawning creates, plus SIGCONT so a stopped group can act on it), then SIGKILL after a
+ * grace period; resolves once the child has exited.
+ * Test: `stopping a process group also stops the children it started, even when it is frozen`. */
+export function stop(child: ChildProcess, options: {group?: boolean} = {}): Promise<void> {
+  const signal = (name: NodeJS.Signals): void => {
+    try {
+      if (options.group && child.pid !== undefined) process.kill(-child.pid, name); else child.kill(name);
+    } catch { /* already gone */ }
+  };
+  if (child.exitCode !== null || child.signalCode !== null) {
+    if (options.group) signal("SIGKILL");  // helpers may outlive the main process
+    return Promise.resolve();
+  }
   return new Promise((done) => {
-    const force = setTimeout(() => child.kill("SIGKILL"), KILL_GRACE_MS);
-    child.once("exit", () => { clearTimeout(force); done(); });
-    child.kill("SIGTERM");
+    const force = setTimeout(() => signal("SIGKILL"), KILL_GRACE_MS);
+    child.once("exit", () => {
+      clearTimeout(force);
+      if (options.group) signal("SIGKILL");
+      done();
+    });
+    signal("SIGTERM");
+    if (options.group) signal("SIGCONT");
   });
+}
+
+/** Why: one browser that stops answering with its socket open must not hang the smoke run (review #2).
+ * What: `work`'s result, or a rejection once `ms` have passed; a later failure of `work` is swallowed.
+ * Test: `the overall deadline rejects a run that never settles, and passes a run that does`. */
+export function withDeadline<T>(work: Promise<T>, ms: number, label: string): Promise<T> {
+  work.catch(() => { /* reported through the race, or moot after the deadline */ });
+  let timer: NodeJS.Timeout | undefined;
+  const deadline = new Promise<never>((_, failed) => {
+    timer = setTimeout(() => failed(new Error(`${label} passed its ${ms} ms deadline`)), ms);
+  });
+  return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
+}
+
+/** Removes a temporary directory and everything in it; a missing directory is not an error.
+ * Test: `a temporary directory is removed, and removing it again is harmless`. */
+export function removeDir(dir: string): void {
+  rmSync(dir, {recursive: true, force: true, maxRetries: 3, retryDelay: 100});
 }
 
 /** An error naming the process it stopped, so a caller (or test) can check it is gone. */

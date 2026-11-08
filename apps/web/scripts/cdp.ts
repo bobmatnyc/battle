@@ -4,7 +4,7 @@ import {spawn, type ChildProcess} from "node:child_process";
 import {existsSync, readdirSync} from "node:fs";
 import {homedir} from "node:os";
 import {join} from "node:path";
-import {ChildFailure, waitForOutput} from "./smoke-support.ts";
+import {ChildFailure, stop, waitForOutput} from "./smoke-support.ts";
 
 type Params = Record<string, unknown>;
 interface Reply { id?: number; result?: Params; error?: {message: string}; method?: string; sessionId?: string }
@@ -42,11 +42,13 @@ export async function launch(binary: string, profile: string, env: NodeJS.Proces
     "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-sync",
     "--disable-background-networking", "--disable-component-update", "--disable-default-apps",
     "--window-size=1400,1000", "about:blank",
-  ], {env, stdio: ["ignore", "ignore", "pipe"]});
+    // Its own process group, so `stop(child, {group: true})` also ends its helper processes.
+  ], {env, stdio: ["ignore", "ignore", "pipe"], detached: true});
   try {
     const found = await waitForOutput(child, /DevTools listening on (ws:\/\/\S+)/, timeoutMs, "browser");
     return {process: child, endpoint: found[1]!};
   } catch (error) {
+    await stop(child, {group: true});  // waitForOutput stopped the main process; end its helpers too
     if (error instanceof ChildFailure && /not ready/.test(error.message)) {
       throw new ChildFailure(`browser gave no DevTools endpoint in ${timeoutMs} ms`, error.pid);
     }

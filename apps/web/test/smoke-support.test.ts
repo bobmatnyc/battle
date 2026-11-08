@@ -1,14 +1,14 @@
 // The smoke test's own failure paths: no child process outlives a failure, and nothing hangs.
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
-import {chmodSync, mkdtempSync, writeFileSync} from "node:fs";
+import {chmodSync, existsSync, mkdtempSync, writeFileSync} from "node:fs";
 import {createServer} from "node:http";
 import type {AddressInfo} from "node:net";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {test} from "node:test";
 import {launch, Page, type SocketLike} from "../scripts/cdp.ts";
-import {pocRequest, waitForOutput} from "../scripts/smoke-support.ts";
+import {pocRequest, removeDir, stop, waitForOutput, withDeadline} from "../scripts/smoke-support.ts";
 
 const alive = (pid: number | undefined): boolean => {
   if (pid === undefined) return false;
@@ -61,6 +61,35 @@ test("a socket error also rejects pending calls", {timeout: 5000}, async () => {
   const pending = Page.attach(socket, "S1").send("Runtime.enable");
   socket.dispatchEvent(new Event("error"));
   await assert.rejects(pending, /DevTools connection closed/);
+});
+
+test("the overall deadline rejects a run that never settles, and passes a run that does", {timeout: 5000}, async () => {
+  const started = Date.now();
+  await assert.rejects(withDeadline(new Promise<never>(() => {}), 300, "smoke run"), /smoke run passed its 300 ms deadline/);
+  assert.ok(Date.now() - started < 2000);
+  assert.equal(await withDeadline(Promise.resolve(7), 300, "smoke run"), 7);
+  // A run that fails after the deadline has fired is not an unhandled rejection.
+  await assert.rejects(withDeadline(new Promise((_, failed) => setTimeout(() => failed(new Error("late")), 400)), 100, "x"), /deadline/);
+  await new Promise((done) => setTimeout(done, 400));
+});
+
+test("stopping a process group also stops the children it started, even when it is frozen", {timeout: 10000}, async () => {
+  const child = spawn("/bin/sh", ["-c", "sleep 300 & echo $!; wait"], {detached: true, stdio: ["ignore", "pipe", "ignore"]});
+  const grandchild = Number((await waitForOutput(child, /^(\d+)$/m, 5000, "group"))[1]);
+  assert.ok(alive(grandchild));
+  process.kill(-child.pid!, "SIGSTOP");  // a browser that stops answering with its sockets open
+  await stop(child, {group: true});
+  await new Promise((done) => setTimeout(done, 200));
+  assert.equal(alive(child.pid), false);
+  assert.equal(alive(grandchild), false);
+});
+
+test("a temporary directory is removed, and removing it again is harmless", () => {
+  const dir = mkdtempSync(join(tmpdir(), "battle-profile."));
+  writeFileSync(join(dir, "Preferences"), "{}");
+  removeDir(dir);
+  assert.equal(existsSync(dir), false);
+  removeDir(dir);
 });
 
 test("a POC reply that is not JSON rejects instead of throwing", {timeout: 5000}, async () => {
