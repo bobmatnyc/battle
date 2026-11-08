@@ -181,6 +181,34 @@ The last step reads only the stored final state, so it needs no battle code. Exp
 
 Git-ignored, under `apps/poc/artifacts/cannae-d38/` in the task worktree, copied to the same path in the main checkout. `MANIFEST.txt` lists every file. The scratch scripts are in `scripts/`: `tree_digests.sh`, `compare.sh`, `digest_commit.sh`, `red.sh`, `mutate.py`, `local.sh`, `local_run.py`, `replay_old.py`, `replay_commit.sh`, `replay_mutation.py`, `db_stats.py`, `horse.py`. Gate logs are `q2-*.log` to `q5-*.log`; red runs are in `red/`, mutations in `mutations/`, local games in `local-*/` and `runs-base/`, digests in `digests-*/`.
 
+## 9. EVO results
+
+`local-ops` ran the four §7 blocks on EVO, one run per change, from 19:30:17Z to 19:52:42Z. The runs used the scripted policy only, with no model and no spend. Each archive sha256 matched §7 on the Mac and on EVO. Every run exited 0 and replayed `identical`.
+
+| Change | Commit | Run | Winner, turn | Peak enclosed | Share intervals / longest | Breakthroughs (first interval) | Horse holds | Events | Wall |
+|---|---|---|---|---|---|---|---|---|---|
+| Q2 | `44c1979` | default | roman, 160 | 44,616@53 | 14 / 14 | none | none | 63,124 | 5:53 |
+| Q3 | `d295f6a` | default | roman, 160 | 6,901@32 | 0 / 0 | 9: L1 33, L2 36, L5 39, L6 41, L8 42, A1 46, L7 46, L3 48, L4 67 | none | 63,124 | 5:39 |
+| Q1 | `5689adb` | default | roman, 160 | 6,901@32 | 0 / 0 | same 9 as Q3 | none | 63,124 | 5:25 |
+| Q5 | `3629656` | cavalry-delayed-20 | roman, 160 | 6,938@32 | 0 / 0 | 8: L1 33, L2 36, L5 39, L8 44, A1 45, L7 47, L3 48, L4 100 | HC1 30, HC3 30 | 60,337 | 5:26 |
+
+Every value matches the local results in §6 and §7. Q1 equals Q3 in every field because Q1 does not fire in default. Max RSS was about 410 MB. Evidence: `apps/poc/artifacts/cannae-d38/evo/<sha>/` in the task worktree (git-ignored), and `evo-linux:/home/masa/bt19/`.
+
+**Outcome for the owner.** Under the four changes the default game is still a Roman win at turn 160. After Q2 the Carthaginians hold the share for at most 14 consecutive intervals, so Q1's 20-interval rule never fires. After Q3 nine Roman units break through on the rear edge, and the peak enclosure falls from 44,616 to 6,901 men.
+
 ## Review notes
 
-Pending PM.
+code-critic at `030e776`: **APPROVE**, no CRITICAL or HIGH. The critic ran the 25 Cannae tests (pass). It stopped the full suite at its 120 s limit; the builder's per-commit `make test-poc` runs are in §5. It confirmed in code that:
+
+- Every D38 branch tests `edition == D38`, so a snapshot without the key scores as before.
+- v1 cavalry-delay ids behave as before.
+- Q1 re-derives the run from the last 20 record rows, so a break resets it and nothing double-counts.
+- An unknown edition is refused at registration.
+
+It did not re-run the digest, replay or mutation checks. Credential scan: see the PR.
+
+Three LOW notes, not fixed (below the fix bar):
+
+- `victory_encircle.py:253`: a persisted snapshot with an unknown edition string would score under the old rules without notice. Registration blocks it today. Raising in `score` on an unknown edition would close it.
+- `scenario_cannae.py:295` duplicates the `"cannae-d38"` string to avoid an import cycle that predates this branch. A test pins the two together. §3's wording that the cycle is fixed overstates it: the change keeps the cycle from growing, and a lazy import in `victory.py` would remove it.
+- `cannae_policy.py:225-229`: in v2 the ride delay counts from the first hold sent. A unit whose hold the three-order cap delays is held for less than the delay. This is documented and tested.
