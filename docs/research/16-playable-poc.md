@@ -103,3 +103,5 @@ Terrain fills come from the existing scenario cells; contour segments interpolat
 Implementation: `static/cartography.js`, consumed by the existing SVG map. Rendering uses public scenario terrain only and adds no enemy observations. The current scenario exposes all terrain to the commander as a setup assumption. JavaScript syntax and existing UI smoke checks passed.
 
 Browser verification: loaded the new renderer, toggled elevation and hex visibility, selected U1 and targeted hex 12,13 with Dispatch runner enabled. No order was submitted and the paused battle was unchanged. Browser console reported no errors. Visual evidence: `artifacts/battle-stylized-map.jpg`.
+
+**2026-11-08 — map features, slice 1 ([72](72-roads-buildings-slice-1.md)).** The renderer adds water and marsh fills, the Hougoumont compound walls and gate, building footprints scaled from `metres_per_hex`, bridges that carry the road, and a status legend from a presentation-only table. The footprint sizes and wall line are authored and illustrative; walls stop movement but not sight in the engine.
