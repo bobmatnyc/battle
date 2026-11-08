@@ -12,10 +12,11 @@ import tempfile
 import unittest
 import urllib.error
 from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
-from battle.adapters.openrouter import KEY_INFO_URL, KeyInfoError, fetch_key_info
+from battle.adapters.openrouter import KEY_INFO_URL, KeyInfoError, OpenRouterProvider, fetch_key_info
 from battle.adapters.rules import ScenarioRegistry
 from battle.bootstrap import build_replay
 from battle.command_policy import scripted_actions, scripted_policy
@@ -32,6 +33,9 @@ _spec.loader.exec_module(model_runs)
 SOURCE = {"commit": "0" * 40, "clean": True}
 DUMMY_KEY = "dummy-not-a-key"  # A placeholder; no opener here reaches a network.
 SONNET = "anthropic/claude-sonnet-5.5"
+# Reserves of exactly $0.01 and $0.02 with a zero-byte body: 1,024 overhead tokens at
+# $0.0009765625 per million ($0.000001) plus 9,999 or 19,999 output tokens at $1 per million.
+CENT, TWO_CENTS = (0.0009765625, 1.0, 9999), (0.0009765625, 1.0, 19999)
 
 
 class Reply:
@@ -121,12 +125,12 @@ class ExactCapTest(unittest.TestCase):
     """Item 1: spend so far + the call's reserve may equal the cap, never pass it."""
 
     def test_a_call_landing_exactly_on_the_cap_is_allowed_and_one_cent_over_is_refused(self):
-        size = lambda instruction, payload: 0  # noqa: E731 - no input tokens priced.
-        cent = Price(0.0, 10.0, 1000)  # 1,000 output tokens at $10 per million: $0.01.
+        size = lambda instruction, payload: 0  # noqa: E731 - only the 1,024 overhead tokens are input.
+        cent = Price(*CENT)  # (1,024 x 0.0009765625 + 9,999 x 1) per million: $0.01.
         exact = SpendGuard(14.0, cent, size)
         exact.charge(13.99)
         exact.check("i", {})  # 13.99 + 0.01 == 14.00: allowed.
-        over = SpendGuard(14.0, Price(0.0, 10.0, 2000), size)
+        over = SpendGuard(14.0, Price(*TWO_CENTS), size)
         over.charge(13.99)
         with self.assertRaises(BudgetExhausted):
             over.check("i", {})  # 13.99 + 0.02 == 14.01: refused.
@@ -138,11 +142,12 @@ class ExactCapTest(unittest.TestCase):
     def test_the_exact_cap_call_is_sent_and_the_cent_over_call_is_never_sent(self):
         # Pegasus default makes 2 player calls: the first costs $13.99, the second's reserve is
         # $0.01 (exactly the cap) or $0.02 (a cent over).
-        for tokens, calls, status in ((1000, 2, "model_game"), (2000, 1, "stopped")):
+        for rates, calls, status in ((CENT, 2, "model_game"), (TWO_CENTS, 1, "stopped")):
             fakes = []
-            with self.subTest(tokens=tokens), tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
+            with self.subTest(rates=rates), tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()), \
+                    mock.patch.object(model_runs, "request_size", lambda settings: lambda i, p: 0):
                 code, summary = model_runs.run_batch(
-                    ["pegasus-bridge"], 1, 14.0, Path(tmp) / "b", price=Price(0.0, 10.0, tokens), source=SOURCE,
+                    ["pegasus-bridge"], 1, 14.0, Path(tmp) / "b", price=Price(*rates), source=SOURCE,
                     provider_for=lambda e: fakes.append(CostFake(e, [13.99, 0.01])) or fakes[-1])
                 self.assertEqual(fakes[0].calls, calls)
                 self.assertEqual(code, model_runs.EXIT_CAP)
@@ -170,6 +175,9 @@ class KeyLimitTest(unittest.TestCase):
             "limit not a number": {"limit": "14"},
             "limit a boolean": {"limit": True},
             "remaining missing": {"limit_remaining": float("nan")},
+            "limit resets monthly": {"limit_reset": "monthly"},  # D37 review C: a reset re-arms the key.
+            "limit resets daily": {"limit_reset": "daily"},
+            "limit_reset unrecognised": {"limit_reset": "hourly"},
         }
         for name, change in bad.items():
             with self.subTest(name):
@@ -350,7 +358,8 @@ class ProviderLimitTest(unittest.TestCase):
         out = Path(tmp.name) / "b"
         with redirect_stdout(io.StringIO()):
             code, summary = model_runs.run_batch(["little-round-top"], 2, 14.0, out, price=Price(2.0, 10.0, 4000),
-                                                 source=SOURCE, settings=settings, key_check=check, opener=chat)
+                                                 source=SOURCE, settings=settings, key_check=check, opener=chat,
+                                                 paid_plan=D37_OPTION_A.name)
         games = [json.loads(line) for line in (out / "runs.jsonl").read_text().splitlines()]
         manifest = json.loads((out / "manifest.json").read_text())
         return code, summary, games, manifest, chat, out
@@ -397,6 +406,70 @@ class ProviderLimitTest(unittest.TestCase):
                 self.assertEqual(games[0]["reason"], f"fallback: provider_error HTTP {refusal.code}")
                 self.assertNotIn("provider_limit", games[0])
                 self.assertEqual(len(chat.bodies), 3)
+
+
+GENERIC = ["--plan", "pegasus-bridge", "--model", SONNET, "--games", "1", "--cap-usd", "14"]
+
+
+class ReviewFixesTest(unittest.TestCase):
+    """Code-critic on 998063c, items A (price overrides), B (named plan) and D (redirects).
+    Item C is a case in `test_key_limit_check_accepts_only_a_key_limited_to_the_cap`."""
+
+    def refused(self, argv, **kwargs):
+        with tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err, \
+                redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as caught:
+            git_repo(tmp)
+            model_runs.main([*argv, "--dir", str(Path(tmp) / "b")], repo=tmp,
+                            environ={"OPENROUTER_API_KEY": DUMMY_KEY}, **kwargs)
+        self.assertEqual(caught.exception.code, 2)
+        self.assertFalse((Path(tmp) / "b").exists())
+        return err.getvalue()
+
+    def test_price_overrides_cannot_lower_a_listed_price_and_no_rate_is_zero(self):
+        for rates in (["0", "0"], ["0.001", "0.001"], ["2", "10"]):
+            with self.subTest(rates):
+                err = self.refused([*GENERIC, "--input-price", rates[0], "--output-price", rates[1]],
+                                   provider_for=never, key_opener=fake_key_opener(14.0), chat_opener=never)
+                self.assertIn("listed price", err)
+        for rates in ((0.0, 10.0, 1), (2.0, 0.0, 1), (-1.0, 10.0, 1), (2.0, -0.5, 1)):
+            with self.subTest(rates), self.assertRaises(ValueError):
+                Price(*rates)
+
+    def test_a_real_run_needs_a_named_plan(self):
+        err = self.refused(GENERIC, key_opener=never, chat_opener=never)
+        self.assertIn("named plan", err)
+        settings = Settings(api_key=DUMMY_KEY, model=SONNET, effort="high", max_tokens=4000, timeout=90.0)
+        for plan, cap, model in ((None, 14.0, SONNET), ("no-such-plan", 14.0, SONNET),
+                                 (D37_OPTION_A.name, 20.0, SONNET),
+                                 (D37_OPTION_A.name, 14.0, "anthropic/claude-opus-5.5")):
+            with self.subTest(plan=plan, cap=cap, model=model), tempfile.TemporaryDirectory() as tmp, \
+                    self.assertRaisesRegex(ValueError, "named plan"):
+                model_runs.run_batch(["pegasus-bridge"], 1, cap, Path(tmp) / "b", price=Price(2.0, 10.0, 4000),
+                                     source=SOURCE, settings=replace(settings, model=model),
+                                     key_check={"ok": True}, opener=never, paid_plan=plan)
+            self.assertFalse((Path(tmp) / "b").exists())
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
+            git_repo(tmp)  # A dry run of the generic path is still allowed: it spends nothing.
+            self.assertEqual(model_runs.main([*GENERIC, "--dry-run"], repo=tmp, environ={}, key_opener=never,
+                                             chat_opener=never), 0)
+
+    def test_the_key_header_is_not_copied_on_redirect(self):
+        sent = []
+
+        def opener(request, timeout):
+            sent.append(request)
+            raise OSError("no network in tests")
+
+        with self.assertRaises(KeyInfoError):
+            fetch_key_info(DUMMY_KEY, opener=opener)
+        settings = Settings(api_key=DUMMY_KEY, model=SONNET, effort="high", max_tokens=4000)
+        with self.assertRaises(Exception):
+            OpenRouterProvider(settings, opener=opener).request("i", {"observation": {}})
+        self.assertEqual(len(sent), 2)
+        for request in sent:
+            with self.subTest(request.full_url):
+                self.assertEqual(request.unredirected_hdrs.get("Authorization"), "Bearer " + DUMMY_KEY)
+                self.assertNotIn("Authorization", request.headers)  # urllib copies these on a redirect.
 
 
 if __name__ == "__main__":

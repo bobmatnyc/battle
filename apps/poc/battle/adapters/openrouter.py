@@ -364,11 +364,12 @@ class OpenRouterProvider:
             "https://openrouter.ai/api/v1/chat/completions",
             data=request_body(self._settings, instruction, payload),
             headers={
-                "Authorization": "Bearer " + self._settings.api_key,
                 "Content-Type": "application/json",
                 "X-OpenRouter-Title": "Battle local POC",
             },
         )
+        # D37 review D: urllib copies ``headers`` to a redirect target, never unredirected ones.
+        request.add_unredirected_header("Authorization", "Bearer " + self._settings.api_key)
         metadata = {}
         try:
             with self._open(request, timeout=self._settings.request_timeout) as response:
@@ -402,12 +403,14 @@ def fetch_key_info(api_key, *, opener=urllib.request.urlopen, timeout=15.0):
     What: GET ``KEY_INFO_URL`` with the key as a bearer token through
     ``opener`` and returns the response's ``data`` object. Any network, HTTP,
     decode or shape error raises ``KeyInfoError`` (fail closed); 401 and 403
-    are ``rejected``. The key goes only in the request header.
-    Test: `test_key_info_call_is_a_get_with_the_key_and_fails_closed`.
+    are ``rejected``. The key goes only in an unredirected request header.
+    Test: `test_key_info_call_is_a_get_with_the_key_and_fails_closed`,
+    `test_the_key_header_is_not_copied_on_redirect`.
     """
     if not api_key:
         raise KeyInfoError("no key", rejected=True)
-    request = urllib.request.Request(KEY_INFO_URL, headers={"Authorization": "Bearer " + api_key}, method="GET")
+    request = urllib.request.Request(KEY_INFO_URL, method="GET")
+    request.add_unredirected_header("Authorization", "Bearer " + api_key)  # D37 review D: not sent on a redirect.
     try:
         with opener(request, timeout=timeout) as response:
             body = json.loads(response.read(1000000))

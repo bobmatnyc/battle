@@ -33,8 +33,8 @@ _spec = importlib.util.spec_from_file_location("model_runs", POC / "scripts" / "
 model_runs = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(model_runs)
 
-# A zero reserve: only the spend already made counts against the cap.
-FREE = Price(0.0, 0.0, 1)
+# A near-zero reserve (D37: a rate must be above 0): only the spend made counts against the cap.
+FREE = Price(1e-9, 1e-9, 1)
 SOURCE = {"commit": "0" * 40, "clean": True}
 # D37: main() needs a key in its environment; this placeholder is never sent anywhere real.
 DUMMY_KEY = "dummy-not-a-key"
@@ -135,7 +135,7 @@ class ModelRunsTest(unittest.TestCase):
         # Hill 223 default makes 9 calls. The reserve is 4,000 output tokens at
         # $7.50 per million = $0.03, each call costs $0.03 and the cap is $0.10:
         # calls 1-3 fit; before call 4, 0.10 - 0.09 - 0.03 < 0, so it is never made.
-        price = Price(0.0, 7.5, 4000)
+        price = Price(1e-6, 7.5, 4000)  # Input priced at almost nothing.
         with tempfile.TemporaryDirectory() as tmp:
             code, summary, games, fakes = batch(tmp, ["hill-223-patrol"], 2, 0.10, price=price, cost=0.03)
             stopped = games[0]
@@ -169,8 +169,8 @@ class ModelRunsTest(unittest.TestCase):
         self.assertEqual(size, len(body))
         self.assertGreater(size, len(instruction.encode()) + len(json.dumps(payload).encode())
                            + len(json.dumps(RESPONSE_FORMAT)))
-        per_token = Price(1_000_000.0, 0.0, 16000)  # $1 a token: the reserve in dollars is the token bound.
-        self.assertEqual(worst_case_call(per_token, size), len(body) + PROVIDER_OVERHEAD_TOKENS)
+        per_token = Price(1_000_000.0, 1e-9, 16000)  # $1 a token: the reserve in dollars is the token bound.
+        self.assertAlmostEqual(worst_case_call(per_token, size), len(body) + PROVIDER_OVERHEAD_TOKENS, places=6)
 
     def test_reserve_and_pins_use_the_environment_settings(self):
         # Sonnet at 16,000 output tokens reserves over $0.16 for the first call, so a $0.15
@@ -219,7 +219,7 @@ class ModelRunsTest(unittest.TestCase):
             with redirect_stdout(io.StringIO()):
                 code = model_runs.main(
                     ["--plan", "pegasus-bridge", "--model", "fake/model-runs", "--games", "3",
-                     "--cap-usd", "0.05", "--input-price", "0", "--output-price", "0",
+                     "--cap-usd", "0.05", "--input-price", "0.000001", "--output-price", "0.000001",
                      "--dir", str(Path(tmp) / "b")],
                     provider_for=lambda entry: ScriptedFake(entry, cost=0.03), repo=tmp,
                     key_opener=fake_key_opener(0.05))

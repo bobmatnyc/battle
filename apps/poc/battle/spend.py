@@ -69,8 +69,9 @@ class Price:
 
     def __post_init__(self):
         rates = (self.input_per_mtok, self.output_per_mtok)
-        if any(not math.isfinite(r) or r < 0 for r in rates) or self.max_output_tokens < 1:
-            raise ValueError("prices must be finite and 0 or more, and max_output_tokens 1 or more")
+        # D37: a rate of 0 would make the reserve, and so the cap, ignore that side of the bill.
+        if any(not math.isfinite(r) or r <= 0 for r in rates) or self.max_output_tokens < 1:
+            raise ValueError("prices must be finite and above 0, and max_output_tokens 1 or more")
 
 
 def _usd(amount):

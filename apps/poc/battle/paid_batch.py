@@ -112,7 +112,8 @@ def key_limit_check(info, cap_usd):
     the reasons it fails, and ``limit``, ``limit_remaining``, ``limit_reset``,
     ``is_free_tier`` and ``usage`` as read (never ``label``, which can show
     part of the key). ``ok`` needs ``limit`` set and <= ``cap_usd``,
-    ``limit_remaining`` >= ``cap_usd``, and ``is_free_tier`` not true; a
+    ``limit_remaining`` >= ``cap_usd``, ``limit_reset`` None (a limit that
+    resets is refused), and ``is_free_tier`` not true; a
     missing or non-numeric amount fails. Amounts compare as exact decimals.
     Test: `test_key_limit_check_accepts_only_a_key_limited_to_the_cap`.
     """
@@ -129,6 +130,9 @@ def key_limit_check(info, cap_usd):
         reasons.append("limit_remaining is null or not a number")
     elif _usd(remaining) < _usd(cap_usd):
         reasons.append(f"the key's limit_remaining ${remaining} is below the ${cap_usd} cap")
+    if reset is not None:  # D37 review C: a limit that resets re-arms the key mid-batch.
+        reasons.append(f"the key's limit resets ({reset if reset in ('daily', 'weekly', 'monthly') else 'unrecognised'}); "
+                       "use a key whose limit never resets")
     if free is True:
         reasons.append("the key is on the free tier")
     elif "is_free_tier" in info and not isinstance(free, bool):

@@ -17,8 +17,11 @@ Guards, all fail-closed:
 - key (D37): the key comes only from ``OPENROUTER_API_KEY`` in the process
   environment, never ``.env.local``; missing, empty or rejected (401/403)
   refuses to start, before any file is written;
+- named plan (D37): a run that would spend needs ``--paid-plan``; without it
+  only a dry run (or a test's fake provider) is allowed; a listed model's
+  price cannot be overridden, and no rate may be 0;
 - key limit (D37): OpenRouter's key-info call must show a credit limit set,
-  at most the cap, with at least the cap remaining, not free tier; any
+  at most the cap, that never resets, with at least the cap remaining, not free tier; any
   failure refuses to start; the check (no key) is pinned in the manifest;
 - budget: before every model call, spend so far plus one worst-case call
   (``battle.spend.RESERVE_BASIS``) must not exceed the cap (landing on it is
@@ -315,7 +318,8 @@ def run_batch(plan, games, cap_usd, directory, *, price, source, settings=None, 
     ``provider_for(entry)`` gives the provider (tests); None builds the
     OpenRouter adapter from ``settings`` over ``opener`` (default urllib),
     which needs the key and a passing ``key_check`` (``paid_batch.check_key``),
-    pinned in the manifest. ``paid_plan`` names the fixed plan, if any.
+    pinned in the manifest, and ``paid_plan``, a name in ``PAID_PLANS`` whose
+    model and cap the batch has (``test_a_real_run_needs_a_named_plan``).
     Test: `test_batch_stops_at_the_cost_cap`,
     `test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap`,
     `test_missing_cost_fails_closed_and_stops_the_batch`,
@@ -337,6 +341,11 @@ def run_batch(plan, games, cap_usd, directory, *, price, source, settings=None, 
             raise ValueError("a batch on the OpenRouter adapter needs OPENROUTER_API_KEY in its environment")
         if not (isinstance(key_check, dict) and key_check.get("ok") is True):
             raise ValueError("a batch on the OpenRouter adapter needs a passing key-limit check")
+        # D37 review B: real spend only under an approved plan, with its own model and cap.
+        fixed = PAID_PLANS.get(paid_plan)
+        if fixed is None or settings.model != fixed.model or cap_usd != fixed.cap_usd:
+            raise ValueError("a batch that spends needs a named plan in PAID_PLANS (--paid-plan), "
+                             "with that plan's model and cap")
     if price.max_output_tokens != settings.request_max_tokens:
         raise ValueError("the price's output limit is not the request's max_tokens")
     guard = SpendGuard(cap_usd, price, request_size(settings))
@@ -406,9 +415,14 @@ def run_batch(plan, games, cap_usd, directory, *, price, source, settings=None, 
 
 
 def price_for(settings, input_price=None, output_price=None):
-    """The ``Price`` of ``settings.model``: ``PRICES`` unless both rates are
-    given; an unpriced model raises ValueError. The output limit is the
-    request's ``settings.request_max_tokens``."""
+    """The ``Price`` of ``settings.model``: ``PRICES`` for a listed model,
+    which refuses any override; an unlisted model needs both rates. The
+    output limit is the request's ``settings.request_max_tokens``.
+    Test: `test_price_overrides_cannot_lower_a_listed_price_and_no_rate_is_zero`."""
+    if settings.model in PRICES and (input_price is not None or output_price is not None):
+        # D37: an override could only lower the reserve below the real price.
+        raise ValueError(f"{settings.model} has a listed price in battle.spend.PRICES; "
+                         "--input-price and --output-price are refused for it")
     if (input_price is None) != (output_price is None):
         raise ValueError("give both --input-price and --output-price, or neither")
     if input_price is None:
@@ -505,6 +519,10 @@ def main(argv=None, provider_for=None, repo=POC, environ=None, key_opener=None, 
             return EXIT_DONE
         if not args.dir:
             raise ValueError("--dir is required")
+        if paid_plan is None and provider_for is None:
+            # D37 review B: refused before the key-info call; only fake-provider tests use this path.
+            raise ValueError("a real run needs a named plan: give --paid-plan "
+                             f"({', '.join(sorted(PAID_PLANS))}); another batch needs its plan approved and added")
         # D37: the key's own limit is checked before any spend, fail closed.
         key_check = check_key(settings.api_key, cap_usd, opener=key_opener or urlopen)
     except ValueError as exc:
