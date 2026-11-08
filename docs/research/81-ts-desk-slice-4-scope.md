@@ -206,3 +206,19 @@ Two LOW notes, not fixed (below the fix bar):
 - `apps/poc/scripts/check_map_geometry.mjs` runs only with `PYTHONPATH=.` from `apps/poc`. This predates the branch.
 
 Also carried from §11: the signals panel is confirmed on a headless-only Pegasus variant, not on a playable game. Hill 223's shack label is still cut off at the left edge and needs a label rule.
+
+### Slice 4b (bt-T20)
+
+code-critic at `a0f0eb5`: **APPROVE**, no CRITICAL or HIGH. The critic re-ran `npm test` (web 108 of 108, contracts 85 of 85) and `tsc --noEmit` in both packages (clean). It confirmed:
+
+- There is no diff under `apps/poc`.
+- Cancel sends the view's own first standing template, never a hard-coded Balanced, and is not offered when the unit already holds it.
+- The desk's split and combine checks follow `formations.validate` in order and use the engine's own refusal text.
+- `checkedBody` forwards only the parsed contract copy and rejects unknown keys, including `__proto__`.
+- A malformed body returns 400 before any upstream call, so the relay does not fail open.
+
+Credential scan over `origin/main...HEAD`: clean.
+
+One LOW note, not fixed (below the fix bar): the drift-guard test in `apps/web/test/formations.test.ts` falls back to a 60-character prefix match. A changed tail of a long engine refusal text would still pass. Comparing the full string would close it.
+
+Owner-visible behaviour: the engine cannot recall a standing order. Cancel therefore sends the battle's first template, which replaces the old order when it arrives. A true recall needs an engine change.
