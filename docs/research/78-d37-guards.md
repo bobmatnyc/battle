@@ -223,4 +223,32 @@ tm secrets exec --env OPENROUTER_API_KEY=OPENROUTER_API_KEY_BATTLE -- python3 sc
 
 ## Review notes (B62)
 
-pending PM
+**First review, at `b4f7bb2`: code-critic WARN.** The critic ran `test_d37_guards.py` (17 tests) and `test_model_runs.py` (15 tests); both passed. It probed `key_limit_check` with the following shapes, and every one refused:
+
+- `True` as the limit or the remaining amount
+- a NaN or infinite remaining amount, or a negative one
+- an infinite limit
+- exactly one of the two amounts null
+- both amounts absent
+
+It confirmed:
+
+- A failed key-info call still refuses.
+- Neither the key nor its label appears in any batch file.
+- Test (a) computes the reserve with its own arithmetic at the real Sonnet 5.5 rates and real request sizes, so it is independent of `battle.spend`.
+
+**MEDIUM finding, fixed in `506fc67` (red) and `49a166e` (fix).** A reply missing `is_free_tier` or `limit_reset` passed the check, so a bare `{"limit": null, "limit_remaining": null}` counted as an unlimited key. Both fields must now be present. Six new table cases refuse, and putting back the old check turned all six red.
+
+**Delta review, at `49a166e`: APPROVE.** The critic re-ran its earlier probes against the fix, and each refused. The full limited shape and the full both-null shape still pass. The fake key opener and the dry run needed no change. `test_d37_guards.py` (17 tests) and `test_model_runs.py` (15 tests) passed.
+
+Credential scan over `origin/main...HEAD`: clean. The only secret names are `OPENROUTER_API_KEY_BATTLE` and `OPENROUTER_API_KEY_D37`, and the test key is `dummy-not-a-key`.
+
+**One LOW note, not fixed (below the fix bar).** The check compares only `limit_remaining` with the cap. A reply with a negative `limit`, or a `limit` below `limit_remaining`, would pass. OpenRouter does not send such a reply.
+
+**What bounds the $14 cap with the current key:**
+
+- The worst-case reservation, before each call.
+- The cost charged after each call, which stops the run if that cost cannot be read.
+- The provider-limit stop, exit 5.
+
+The known limits in §8 still apply.
