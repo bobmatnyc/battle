@@ -83,7 +83,7 @@ Test fixtures that priced a side at $0 now use small positive rates (`FREE` is `
 | A | `test_price_overrides_cannot_lower_a_listed_price_and_no_rate_is_zero` | the zero-price, $0.001 and list-price overrides reach the provider ("this opener or provider must not be called"); `Price(0.0, 10.0, 1)` and `Price(2.0, 0.0, 1)` raise nothing | mA1: the override refusal removed, red; mA2: `r <= 0` back to `r < 0`, red |
 | B | `test_a_real_run_needs_a_named_plan` | the generic real run is not refused for a missing plan ("'named plan' not found") | mB1: the `main` refusal removed, red; mB2: the `run_batch` refusal removed, red |
 | C | `test_key_limit_check_accepts_only_a_key_limited_to_the_cap` (cases: resets monthly, daily, unrecognised) | 3 cases fail, "True is not false" | mC: the reset refusal removed, red |
-| D | `test_the_key_header_is_not_copied_on_redirect` | both requests carry the key in redirected headers ("None != 'Bearer …'") | mD1: key-info header back to `headers=`, red; mD2: chat header back to `headers=`, red |
+| D | `test_the_key_header_is_not_copied_on_redirect` | both requests carry the key in redirected headers ("None != 'Bearer …'") | mD1: key-info `add_unredirected_header` back to `headers=`, red; mD2: chat-completions `add_header`, red. The recorded mD2 log shows mD1's failure (stale bytecode: both mutated copies had the same size and mtime second); a re-run with `python3 -B` in a clean copy fails on the chat-completions subtest, so the test catches mD2 |
 
 ## 4. Gates, digests and evidence
 
@@ -126,11 +126,40 @@ First, the same command with `--dry-run` in place of `--dir …` and no `tm secr
 
 ## 7. Review notes
 
-Pending PM.
+**Round 1, code-critic on `998063c`: WARN.**
 
-Recorded from the code-critic review of `998063c`, not fixed in this round (the PM's ruling):
+| Severity | Finding | Disposition |
+|---|---|---|
+| HIGH | Generic-path price overrides could set a $0 reserve and allow a one-call overshoot past $14 | fixed in round 2, item A |
+| MEDIUM | The generic path could spend the D37 key on any model | fixed, item B: a real run needs a named plan |
+| MEDIUM | The key-limit check accepted a resetting limit | fixed, item C |
+| MEDIUM | A crash outside `runner.run()` (`build_headless`, repository load, rename, sha256, the `runs.jsonl` write) leaves no `runs.jsonl` line, summary or manifest `closed` block, and the DB stays `.partial.sqlite`. Spend stops, so no money is at risk | recorded, not fixed |
+| LOW | `CommanderService.chat` calls the provider without `before_request`; the batch cannot reach it | recorded |
+| LOW | The returned decision model is recorded but not compared with the pinned model | recorded |
+| LOW | The Authorization header was copied on redirect | fixed, item D |
 
-- A crash outside `HeadlessRunner.run` (for example while `build_headless` opens the database) leaves no `runs.jsonl` record for that game.
-- `CommanderService.chat` calls the provider without the `before_request` hook. The batch never calls `chat`.
-- The batch does not check that the model the provider returned is the requested model.
-- `test_degenerate_reply_under_cap_stays_fast` asserts a 0.25 s wall-clock bound and fails under machine load.
+Notes:
+
+1. Only `CommanderService.decide` reaches the provider in a batch, with `before_request` on the same instruction and payload. There is no adapter retry, repair or second request, and `BudgetExhausted` is re-raised before the generic except.
+2. The reserve is an upper bound: input counted as UTF-8 bytes of the exact request body, 1,024 authored overhead tokens, output charged at the full `max_tokens` of 4,000.
+3. The $2/$10 Sonnet 5.5 rate is backed by a stored bill (doc 69 §3).
+4. The reserve is 2 to 3 times more conservative than doc 69's $30.15 worst case (450 output tokens per call there). A batch can stop with up to one reserve (about $0.20) unspent below $14.
+5. The cap path is Decimal throughout; floats appear only in reporting.
+6. Fail-open check: every key-info, cost, provider, 200-with-error-body, interrupt and fallback branch fails closed. The only gap is the crash-record MEDIUM.
+7. Provider-limit detection: 402, or 403/429 with a listed `limit_source`, gives exit 5 and keeps `.stopped.sqlite`. Any other limit-like response falls back and stops with exit 4. The `limit_source` names are not checked against OpenRouter's docs (needs network).
+8. No key or `label` is written anywhere; `Settings.api_key` has `repr=False`.
+9. The paid plan reads only the key from the environment. A stale shell key is still stopped by the key-limit check unless it is also a $14 key with $14 left.
+10. The section 5 `tm secrets exec --env …` command matches the `tm` CLI source (exec: `--env NAME=KEY`, command after `--`). A key that does not resolve runs nothing and exits 1. Output is scrubbed only when stdout is not a terminal.
+11. The flaky wall-clock test `test_degenerate_reply_under_cap_stays_fast` (`test_openrouter_adapter.py:235-240`, 0.25 s bound) predates this branch; fix it separately.
+12. A successful call with no `usage.cost` raises `CostUnreadable` before the decision is committed, so that decision's record is lost. A 402/403 limit stop reports `spend_complete: false`.
+13. Evidence checked: red-first items 1 to 5 fail, 6 of 6 mutations red, `test-poc` OK.
+
+**Round 2 (delta), code-critic on `a0fdc84`: APPROVE.** A, B, C and D hold. No remaining path spends past $14, uses the wrong key or model, or leaks the key. The rebase changed no guard code (`git range-diff` all `=`). The fixture changes (CENT and TWO_CENTS exact reserves; `request_size` patched to 0 only in the exact-cap test) do not weaken the tests. Every new error branch exits 2 before any directory, key-info or provider call.
+
+Notes:
+
+1. The mD2 log issue in section 3a; run mutations with `python3 -B` or `PYTHONDONTWRITEBYTECODE=1`.
+2. `run_batch` checks only the named plan's model and cap, not its items, games, effort, `max_tokens` or timeout. Only `main` sets those from the plan, so the CLI cannot reach the gap, and the cap and key limit still bound spend.
+3. `battle/bootstrap.py` and `battle/inference.py` still call `Settings.load()` (reads `.env.local`); they are outside the batch path.
+
+**Disposition.** Nothing blocks after round 2 (Completion Standard fix bar). Recorded, not scheduled: the crash-record gap, `chat`'s missing `before_request`, the returned-model check, the flaky timing test, `run_batch`'s partial plan check.
