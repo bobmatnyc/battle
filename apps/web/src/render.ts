@@ -2,13 +2,16 @@
 // Every server string passes through `esc`. Enemy markers come from `contacts`
 // (estimates); exact enemy values are not in the view, and none is drawn.
 import type {CommanderView, Contact, MapDocument, UnitReport} from "@battle/contracts";
+import type {StatusTable} from "./feature-sources.ts";
+import {featureLayer, featureNotes, type FeatureOptions} from "./features.ts";
 import {hexCenter, hexPoints} from "./geometry.ts";
+import {esc} from "./markup.ts";
 import type {Selection} from "./selection.ts";
 
-const ENTITIES: Record<string, string> = {"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"};
-export const esc = (value: unknown): string => String(value ?? "").replace(/[&<>"']/g, (c) => ENTITIES[c] ?? c);
+export {esc};
 
-const TERRAIN_FILL: Record<string, string> = {open: "#e7e0c4", woods: "#b9c99a", rocky: "#c9c1b0"};
+// Water and marsh as the POC desk fills them (docs/research/72 §1).
+const TERRAIN_FILL: Record<string, string> = {open: "#e7e0c4", woods: "#b9c99a", rocky: "#c9c1b0", water: "#b9d3e3", marsh: "#d7e3cf"};
 const SYMBOLS: Record<string, string> = {infantry: "INF", cavalry: "CAV", artillery: "ART"};
 
 const percent = (value: unknown): number | null =>
@@ -42,18 +45,26 @@ function counter(kind: "friendly" | "contact", id: string, point: [number, numbe
     + `<text x="4" y="21">${esc(lines[0])}</text><text x="4" y="31">${esc(lines[1])}</text></g>`;
 }
 
+/** The feature options for `map`: its scale, briefing cells and radius, with `sources`' statuses. */
+export const featureOptions = (map: MapDocument, sources: StatusTable): FeatureOptions =>
+  ({metresPerHex: map.metres_per_hex, cells: map.cells, sources, radius: map.radius});
+
 /** Why: the map is the player's main view and must show only what the commander view holds.
- * What: SVG markup: one hex per map cell, the objective, a dashed line to the chosen
- * destination, a counter per own unit (`data-unit`) and per contact (`data-contact`).
+ * What: SVG markup: one hex per map cell (its tooltip names each feature mark on it, with
+ * status), the objective, the view's map features, a dashed line to the chosen destination,
+ * a counter per own unit (`data-unit`) and per contact (`data-contact`).
  * Test: `the map draws every cell and the player's own counters`,
- * `enemy counters come from contacts and carry no exact values`, `text from the server is escaped`. */
-export function mapMarkup(view: CommanderView, map: MapDocument, selection: Selection): string {
+ * `enemy counters come from contacts and carry no exact values`, `text from the server is escaped`,
+ * `the map draws the commander view's features above the hexes and below the counters, with status in each hex tooltip`. */
+export function mapMarkup(view: CommanderView, map: MapDocument, selection: Selection, sources: StatusTable = {}): string {
   const r = map.radius;
   const chosen = selection.destination ? String(selection.destination) : "";
+  const options = featureOptions(map, sources);
   const hexes = map.cells.map((cell) => {
     const cls = String(cell.pos) === chosen ? "hex destination" : "hex";
+    const notes = featureNotes(view.map_features, cell.pos, options).map((n) => ` · ${esc(n)}`).join("");
     return `<polygon class="${cls}" data-c="${cell.pos[0]}" data-r="${cell.pos[1]}" points="${hexPoints(cell.pos, r)}" `
-      + `fill="${TERRAIN_FILL[cell.terrain] ?? "#ddd"}"><title>Hex ${cell.pos.join(",")} · ${esc(cell.terrain)} · ${cell.elevation} m</title></polygon>`;
+      + `fill="${TERRAIN_FILL[cell.terrain] ?? "#ddd"}"><title>Hex ${cell.pos.join(",")} · ${esc(cell.terrain)} · ${cell.elevation} m${notes}</title></polygon>`;
   }).join("");
   const [ox, oy] = hexCenter(view.objective, r);
   const label = view.scenario_brief?.objective.label ?? "Objective";
@@ -70,7 +81,8 @@ export function mapMarkup(view: CommanderView, map: MapDocument, selection: Sele
     `${c.id} · ${c.estimate} · ${c.confidence} confidence`, false)).join("");
   const own = view.units.map((u) => counter("friendly", u.id, hexCenter(u.pos, r), unitLines(u),
     `${u.id} · ${u.name} · ${u.status}`, u.id === selection.unitId)).join("");
-  return `<g class="hexes">${hexes}</g>${objective}${route}<g class="contacts">${contacts}</g><g class="units">${own}</g>`;
+  return `<g class="hexes">${hexes}</g>${objective}${featureLayer(view.map_features, options)}${route}`
+    + `<g class="contacts">${contacts}</g><g class="units">${own}</g>`;
 }
 
 /** The enemy-intelligence list: each delivered sighting with its estimate and age. */
