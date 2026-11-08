@@ -100,6 +100,7 @@ def build_headless(
     player_policy=None,
     keyframe_every=None,
     abort_on_fallback=False,
+    spend_guard=None,
 ):
     """Why: the headless run composes its player provider here, never in services.
     What: ``scripted`` uses ``DisabledProvider``; ``openrouter`` builds the
@@ -113,7 +114,8 @@ def build_headless(
     ``keyframe_every`` None stores every revision's snapshot (``Store``); a
     whole number opts a batch run into ``BatchStore``: inputs and digests per
     revision, full snapshots at revision 0, the end and every K-th revision.
-    ``abort_on_fallback`` passes to ``HeadlessRunner`` (doc 69 §9).
+    ``abort_on_fallback`` passes to ``HeadlessRunner`` (doc 69 §9), as does
+    ``spend_guard``, whose ``check`` the commander runs before each request.
     Test: `test_build_headless_composes_openrouter_overrides`,
     `test_build_headless_refuses_openrouter_without_credential`,
     `test_build_headless_refuses_unknown_scenario`,
@@ -149,7 +151,8 @@ def build_headless(
         provider = DisabledProvider()
     repository = Store(db) if keyframe_every is None else BatchStore(db, keyframe_every)
     simulation = RulesSimulation()
-    commander = CommanderService(simulation, provider, scenarios=scenarios)
+    commander = CommanderService(simulation, provider, scenarios=scenarios,
+                                 before_request=spend_guard.check if spend_guard else None)
     return HeadlessRunner(
         repository,
         simulation,
@@ -162,4 +165,5 @@ def build_headless(
         scenario_id=scenario_id,
         player_policy=player_policy,
         abort_on_fallback=abort_on_fallback,
+        spend_guard=spend_guard,
     )

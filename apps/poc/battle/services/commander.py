@@ -8,6 +8,7 @@ from ..command_policy import (
     DEFAULT_SCENARIO, NAMED_POLICIES, scripted_actions, system_prompt,
 )
 from ..presentation import scripted_text
+from ..spend import BudgetExhausted
 
 # Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
 # the exception names the provider adapter reports. Anything else is replaced
@@ -89,6 +90,7 @@ class CommanderService:
         *,
         scenarios: ScenarioCatalog | None = None,
         timer=time.perf_counter,
+        before_request=None,
     ):
         self.simulation = simulation
         self.provider = provider
@@ -96,6 +98,9 @@ class CommanderService:
         self.scenarios = scenarios
         # Latency is measured here, at the service edge; replay never calls it.
         self.timer = timer
+        # Doc 69 §9: called with each model request before it is sent; it may
+        # raise BudgetExhausted, which stops the run instead of falling back.
+        self.before_request = before_request
 
     @property
     def available(self):
@@ -164,7 +169,10 @@ class CommanderService:
         `test_computer_gate_defender_orders_close_gate_on_a_delivered_breach`, `test_invalid_proposal_falls_back_flagged_with_rejected_orders`,
         `test_provider_timeout_falls_back_without_partial_state`,
         `test_truncated_reasoning_response_keeps_paid_telemetry`,
-        `test_reply_format_records_json_extracted_and_tool_call`.
+        `test_reply_format_records_json_extracted_and_tool_call`,
+        `test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap`.
+        A ``before_request`` hook that raises ``BudgetExhausted`` stops the
+        decision before the provider is called; it is re-raised, not a fallback.
         """
         observation = self.simulation.observation(state, side)
         observation.pop("dispatches", None)
@@ -182,13 +190,16 @@ class CommanderService:
         }
         started = self.timer()
         try:
-            result, metadata = self.provider.request(
-                system_prompt(side, scenario),
-                {
-                    "task": "Choose your next tactical orders.",
-                    "observation": deepcopy(observation),
-                },
-            )
+            instruction = system_prompt(side, scenario)
+            payload = {
+                "task": "Choose your next tactical orders.",
+                "observation": deepcopy(observation),
+            }
+            if self.before_request is not None:
+                self.before_request(instruction, payload)
+            result, metadata = self.provider.request(instruction, payload)
+        except BudgetExhausted:
+            raise  # Doc 69 §9: no call was made; the run stops, it does not fall back.
         except Exception as exc:
             telemetry["latency_ms"] = self._elapsed(started)
             # A decoded response that failed to parse was still paid for.

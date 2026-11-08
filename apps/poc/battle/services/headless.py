@@ -4,6 +4,7 @@ from ..command_policy import (
     NAMED_POLICIES, OPPONENT_POLICY, SCRIPTED_POLICIES, gate_policy_refusal,
     scripted_actions, scripted_policy,
 )
+from ..spend import decision_cost
 from ..contracts import BattleRepository, Commander, ScenarioCatalog, Simulation
 from .replay import ReplayService
 
@@ -53,6 +54,9 @@ class HeadlessRunner:
     ``ModelFallback`` at the first player decision that is not the model's
     own; the run stops there and that decision is not committed. It needs
     ``player_mode`` ``openrouter``. Off, every run plays and records as before.
+    ``spend_guard`` (default None, model runs only) is charged each player
+    decision's recorded cost (``CostUnreadable`` when it has none); its
+    ``check`` runs before each call through the commander (``build_headless``).
     Test: `test_abort_on_fallback_raises_before_the_fallback_is_committed`,
     `test_model_player_run_records_side_decisions_and_replays`,
     `test_default_headless_run_keeps_baseline_path`,
@@ -74,6 +78,7 @@ class HeadlessRunner:
         scenario_id=None,
         player_policy=None,
         abort_on_fallback=False,
+        spend_guard=None,
     ):
         self.scenario = scenarios.resolve(scenario_id)
         sides = tuple(self.scenario.sides)
@@ -98,6 +103,9 @@ class HeadlessRunner:
         if abort_on_fallback and player_mode != "openrouter":
             raise ValueError("abort_on_fallback needs a model player side")
         self.abort_on_fallback = abort_on_fallback
+        if spend_guard is not None and player_mode != "openrouter":
+            raise ValueError("spend_guard needs a model player side")
+        self.spend_guard = spend_guard
 
     @property
     def baseline(self):
@@ -201,6 +209,8 @@ class HeadlessRunner:
             model_made = decision.get("source") == "openrouter" and not decision.get("fallback")
             if self.abort_on_fallback and not model_made:
                 raise ModelFallback(decision)
+            if self.spend_guard is not None:
+                self.spend_guard.charge(decision_cost(decision))
             return [{"type": "decision", "decision": decision}]
         view = self.simulation.view(state, self.player_side)
         standing, orders = scripted_actions(
