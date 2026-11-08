@@ -1,10 +1,12 @@
 // Map-feature screenshot harness (docs/research/72 §6). Offline, localhost only, no credentials.
 // Starts an offline POC on a temporary SQLite file and a free port and a headless Chrome/Chromium
-// with its own profile, then captures the command map for Little Round Top and Hougoumont at the
-// fit view and zoomed in, each with the hex grid on and off, plus the feature legend; and one
-// read-only render each of the headless maps with features (Concord, Pegasus, Hill 223) through
-// the same static/cartography.js, feature-sources.js and map-features.js, from each entry's
-// commander view, without adding them to the player picker.
+// with its own profile, then captures the command map for Little Round Top, Hougoumont and
+// Concord at the fit view and zoomed in, each with the hex grid on and off, plus the feature
+// legend; plays Concord on the desk to a result (docs/research/74: header, water, roads and
+// bridge, an order accepted, the outcome headline); and one read-only render each of the
+// headless maps with features (Pegasus, Hill 223) through the same static/cartography.js,
+// feature-sources.js and map-features.js, from each entry's commander view, without adding
+// them to the player picker.
 // Usage: node scripts/map_screenshots.mjs <output dir>
 // Exit 0: passed. 1: failed. 3: BLOCKED, no runnable browser (never a pass).
 // Fault injection: MAP_HARNESS_FAULT=throw|sigint (after the page opens), MAP_HARNESS_POC_READY
@@ -24,7 +26,8 @@ mkdirSync(out,{recursive:true});
 const FAULT=process.env.MAP_HARNESS_FAULT||'';
 const READY=new RegExp(process.env.MAP_HARNESS_POC_READY||'Battle ready');
 const DEADLINE_MS=Number(process.env.MAP_HARNESS_DEADLINE_MS||180000);
-const HEADLESS=['concord-north-bridge','pegasus-bridge','hill-223-patrol'];
+const HEADLESS=['pegasus-bridge','hill-223-patrol'];
+const CONCORD='concord-north-bridge';
 
 function findBrowser(){
   if(process.env.BATTLE_BROWSER)return existsSync(process.env.BATTLE_BROWSER)?process.env.BATTLE_BROWSER:null;
@@ -140,7 +143,7 @@ document.documentElement.dataset.ready='true';
 }
 
 async function desk(page,port,sid,label,log){
-  if(sid==='hougoumont-north-gate'){
+  if(sid!=='little-round-top'){
     await page.eval(`(()=>{const s=document.getElementById('scenario-select');s.value=${JSON.stringify(sid)};s.onchange();document.getElementById('new-game').click();return true;})()`);
   }
   await page.until(`${sid} on the desk`,`(()=>{try{return state.scenario_brief.id===${JSON.stringify(sid)}&&!!document.querySelector('#map .battle-features')&&!/Loading/.test(document.getElementById('map-renderer').textContent);}catch{return false;}})()`,30000);
@@ -173,6 +176,54 @@ async function desk(page,port,sid,label,log){
   return shots;
 }
 
+// Direct POC reads and the clock speed, as the POC's own host (localhost only).
+async function api(port,path,body){
+  const r=await fetch(`http://127.0.0.1:${port}${path}`,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{});
+  const d=await r.json();
+  if(!r.ok)throw new Error(`${path}: ${d.error||r.status}`);
+  return d;
+}
+
+// docs/research/74: Concord through the desk's own controls, offline and scripted, to a result.
+async function concordPlay(page,port,log){
+  const head=await page.eval(`({clock:document.getElementById('clock').textContent,date:document.getElementById('battle-date').textContent,
+    location:document.getElementById('battle-location').textContent,campaign:document.getElementById('campaign-line').textContent,
+    header:[...document.querySelectorAll('.masthead,.field-heading')].map(n=>n.innerText).join(' ')})`);
+  assert.deepEqual([head.clock,head.campaign],['09:25','CONCORD · 19 APRIL 1775']);
+  assert.match(head.date,/Wednesday, (19 April|April 19,) 1775/);  // The browser's locale orders day and month.
+  assert.match(head.location,/North Bridge · Concord, Massachusetts/);
+  assert.doesNotMatch(head.header,/\bturn\b|revision/i,'no turn counter or revision label');
+  log.push(`concord: header ${head.clock} · ${head.date} · ${head.location}; no turn or revision label`);
+  const drawn=await page.eval(`({water:mapData.cells.filter(c=>c.terrain==='water').length,
+    fill:BattleMap.render(mapData.cells,true,false).includes('#b9d3e3'),
+    roads:[...document.querySelectorAll('#map [data-feature$="-road"] .road-casing')].map(n=>n.closest('[data-feature]').dataset.feature),
+    bridge:!!document.querySelector('#map [data-feature="crossing:12,10"] .bridge-deck'),
+    span:!!document.querySelector('#map [data-feature="crossing:12,10"] .road-span-fill')})`);
+  assert.ok(drawn.water>0&&drawn.fill,'the river is water and the renderer fills it');
+  assert.deepEqual(drawn.roads,['muster-road','town-road']);
+  assert.ok(drawn.bridge&&drawn.span,'the North Bridge deck and its road span are drawn');
+  log.push(`concord: ${drawn.water} water hexes filled #b9d3e3; roads ${drawn.roads.join(', ')}; North Bridge deck and span drawn`);
+  // An order through the desk: the Acton company to the bridge approach.
+  await page.eval(`(selectUnit('P1'),destination=[11,10],renderControls(),document.getElementById('send-order').click(),true)`);
+  const order=await page.until('the P1 order on record',`fetch('/api/state').then(r=>r.json()).then(s=>s.orders.find(o=>o.unit_id==='P1'&&o.stance==='move'&&String(o.destination)==='11,10')||null)`);
+  log.push(`concord: order accepted ${order.id} P1 move -> 11,10 (${order.status})`);
+  shots.push(await page.shot('concord-order.png','body'));
+  // Run the clock from the desk at 60x until the battle ends, then read the outcome headline.
+  const live=await api(port,'/api/state');
+  await api(port,'/api/clock',{game_id:live.game_id,command:'speed',speed:60});
+  await page.until('the clock control',`!document.getElementById('clock-toggle').disabled`);
+  await page.eval(`document.getElementById('clock-toggle').click(),true`);
+  const outcome=await page.until('the Concord outcome',`state.status==='complete'&&!document.getElementById('outcome').classList.contains('hidden')?document.getElementById('outcome').innerText:null`,90000);
+  const done=await api(port,'/api/state?view=god');
+  const british=done.decisions.filter(d=>d.side==='british'&&d.role!=='staff');
+  assert.ok(british.length>0&&british.every(d=>d.source==='scripted'&&d.policy==='scripted-concord-regulars-v1'),'the desk opponent played the regulars policy');
+  const headline=outcome.split('\n')[0];
+  assert.ok(['The bridge is carried.','The regulars hold the bridge.','The battle ends in a draw.'].includes(headline),headline);
+  log.push(`concord: played to ${done.winner} at ${done.turn} intervals; headline "${headline}"; ${british.length} British decisions, all scripted-concord-regulars-v1; mode ${done.mode}`);
+  shots.push(await page.shot('concord-outcome.png','body'));
+}
+let shots;
+
 async function run(held,log){
   const binary=findBrowser();
   if(!binary){console.error('HARNESS BLOCKED: no Chrome/Chromium found (set BATTLE_BROWSER). This is not a pass.');return BLOCKED;}
@@ -192,13 +243,15 @@ async function run(held,log){
   await held.page.send('Emulation.setDeviceMetricsOverride',{width:1440,height:1100,deviceScaleFactor:2,mobile:false});
   if(FAULT==='throw')throw new Error('MAP_HARNESS_FAULT=throw: injected failure after the page opened');
   if(FAULT==='sigint'){process.kill(process.pid,'SIGINT');await sleep(10000);}
-  const shots=[];
+  shots=[];
   await held.page.send('Page.navigate',{url:`http://127.0.0.1:${port}/`});
   shots.push(...await desk(held.page,port,'little-round-top','little-round-top',log));
   shots.push(...await desk(held.page,port,'hougoumont-north-gate','hougoumont',log));
-  // The picker still offers only the player scenarios.
+  shots.push(...await desk(held.page,port,CONCORD,'concord',log));
+  await concordPlay(held.page,port,log);
+  // The picker offers exactly the player scenarios.
   const picker=await held.page.eval(`[...document.querySelectorAll('#scenario-select option')].map(o=>o.value)`);
-  assert.deepEqual(picker,['little-round-top','hougoumont-north-gate']);
+  assert.deepEqual(picker,['little-round-top','hougoumont-north-gate',CONCORD]);
   log.push(`player picker: ${picker.join(', ')}`);
   const data=headlessData();
   for(const sid of HEADLESS){
@@ -248,7 +301,7 @@ async function main(){
     const deadline=new Promise((_,bad)=>{timer=setTimeout(()=>bad(new Error(`harness passed its ${DEADLINE_MS} ms deadline`)),DEADLINE_MS);});
     code=await Promise.race([run(held,log),deadline]).finally(()=>clearTimeout(timer));
     console.log(log.join('\n'));
-    if(code===0)console.log('HARNESS PASSED: desk screenshots with the grid on and off, legends, tooltips and read-only renders written.');
+    if(code===0)console.log('HARNESS PASSED: desk screenshots with the grid on and off, legends, tooltips, Concord played to a result and read-only renders written.');
   }catch(e){
     console.log(log.join('\n'));
     console.error(`HARNESS FAILED: ${e.stack||e}`);code=1;

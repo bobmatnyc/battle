@@ -27,6 +27,9 @@ CASES = {
     # The gate party leaves the north gate and marches up the lane to the ridge, from its own start.
     'hougoumont-north-gate': {'unit': 'A1', 'road': 'north-lane', 'start': None, 'goal': -1,
                               'sight': ('hougoumont', [11, 8], [11, 13])},
+    # docs/research/74: Laurie's company marches from its own start down the town road, away from
+    # the column. Concord has no building, so it has no sight case.
+    'concord-north-bridge': {'unit': 'B2', 'road': 'town-road', 'start': None, 'goal': -1, 'sight': None},
 }
 out = {}
 for sid in catalog.ids():
@@ -40,26 +43,35 @@ for sid in catalog.ids():
         s['friendly_reports'][u['side']][u['id']]['pos'] = list(u['pos'])
     start, goal = list(u['pos']), road['hexes'][case['goal']]
     shown = present_view(sim.view(s), entry)
-    s = sim.apply(s, {'type': 'orders', 'orders': [{'unit_id': u['id'], 'stance': 'move', 'destination': goal}]})
+    order = {'unit_id': u['id'], 'stance': 'move', 'destination': goal}
     moves, seen = [], len(s['events'])
+    if u['side'] == engine.player_side(s):
+        s = sim.apply(s, {'type': 'orders', 'orders': [order]})
+    else:  # The computer side's order goes out as its scripted decision does, in an interval.
+        s = sim.apply(s, {'type': 'advance', 'decision': {'side': u['side'], 'source': 'scripted', 'orders': [order]}})
+    moves += [[e['origin'], e['destination']] for e in s['events'][seen:] if e['kind'] == 'unit_moved' and e['unit_id'] == u['id']]
+    seen = len(s['events'])
     while next(x for x in s['units'] if x['id'] == u['id'])['pos'] != goal and s['turn'] < 60:
         s = sim.apply(s, {'type': 'advance', 'decision': None})
         moves += [[e['origin'], e['destination']] for e in s['events'][seen:] if e['kind'] == 'unit_moved' and e['unit_id'] == u['id']]
         seen = len(s['events'])
     cells = s['cells']
-    bid, a, b = case['sight']
-    bare = copy.deepcopy(s)
-    hexes = grid.line(a, b)
-    blocking = [p for p in hexes[1:-1] if cells[grid.key(p)].get('obstacle_height')]
-    for p in blocking:
-        bare['cells'][grid.key(p)]['obstacle_height'] = 0
+    sight = None
+    if case['sight']:
+        bid, a, b = case['sight']
+        bare = copy.deepcopy(s)
+        hexes = grid.line(a, b)
+        blocking = [p for p in hexes[1:-1] if cells[grid.key(p)].get('obstacle_height')]
+        for p in blocking:
+            bare['cells'][grid.key(p)]['obstacle_height'] = 0
+        sight = {'building': bid, 'from': a, 'to': b, 'line': hexes, 'blocking': blocking,
+                 'blocked': not recon.sees(s, {'pos': a}, b), 'clear_without': recon.sees(bare, {'pos': a}, b),
+                 'building_hex': next(f['pos'] for f in s['map_features'] if f['id'] == bid)}
     out[sid] = {
         'unit': u['id'], 'start': start, 'goal': goal, 'turn': s['turn'], 'road': road['id'], 'road_hexes': road['hexes'],
         'moves': moves, 'road_edges': [list(b) in cells[grid.key(a)].get('road_neighbors', []) for a, b in moves],
         'path': grid.path(build_state(entry)['cells'], start, goal) if case['start'] is None else None,
-        'sight': {'building': bid, 'from': a, 'to': b, 'line': hexes, 'blocking': blocking,
-                  'blocked': not recon.sees(s, {'pos': a}, b), 'clear_without': recon.sees(bare, {'pos': a}, b),
-                  'building_hex': next(f['pos'] for f in s['map_features'] if f['id'] == bid)},
+        'sight': sight,
         'features': shown['map_features'], 'metres_per_hex': map_document(entry)['metres_per_hex'],
         'cells': list(map_document(entry)['cells']),
     }
@@ -115,6 +127,8 @@ for(const [sid,c] of Object.entries(cases)){
   }
   // Sight: the engine blocks the line only because of the building hex's obstacle height.
   const sight=c.sight;
+  let seen='no building, no sight case',mark='';
+  if(sight){
   assert.ok(sight.blocked,`${sid}: ${sight.from}->${sight.to} blocked`);
   assert.ok(sight.clear_without,`${sid}: clear without the building's obstacle height`);
   assert.deepEqual(sight.blocking,[sight.building_hex],`${sid}: the building hex is the only obstacle`);
@@ -126,16 +140,19 @@ for(const [sid,c] of Object.entries(cases)){
   for(const m of layer.matchAll(/data-feature="([^"#]+)"[^>]*>(?:(?!<\/g>).)*?<rect class="footprint" x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"/g)){
     if(m[1]!==sight.building)assert.ok(!crossesRect(a,b,m.slice(2).map(Number)),`${sid}: the line also crosses ${m[1]}`);
   }
-  lines.push(`${sid}: ${c.unit} ${c.start}->${c.goal} along ${c.road} in ${steps.length} steps (${c.moves.filter(([a])=>along.includes(String(a))).length} over road edges) by turn ${c.turn}; sight ${sight.from}->${sight.to} blocked by ${sight.building} at ${sight.building_hex}, clear without it`);
+  seen=`sight ${sight.from}->${sight.to} blocked by ${sight.building} at ${sight.building_hex}, clear without it`;
+  mark=`<path d="M${a}L${b}" stroke="#a0281c" stroke-width="2.5" stroke-dasharray="6 4"/><circle cx="${a[0]}" cy="${a[1]}" r="5" fill="#a0281c"/><circle cx="${b[0]}" cy="${b[1]}" r="5" fill="none" stroke="#a0281c" stroke-width="2"/>`;
+  }
+  lines.push(`${sid}: ${c.unit} ${c.start}->${c.goal} along ${c.road} in ${steps.length} steps (${c.moves.filter(([a])=>along.includes(String(a))).length} over road edges) by turn ${c.turn}; ${seen}`);
   if(outDir){
     // An annotated read-only render: the route's hexes outlined, the sight line dashed.
     context.cells=c.cells;
     const terrain=vm.runInContext('BattleMap.render(cells,false,false)',context);
     const ring=p=>{const[x,y]=center(p);return Array.from({length:6},(_,i)=>{const t=(60*i-30)*Math.PI/180;return `${x+R*Math.cos(t)},${y+R*Math.sin(t)}`;}).join(' ');};
     const route=[c.start,...steps].map(p=>`<polygon points="${ring(p)}" fill="#2f6fa8" fill-opacity=".18" stroke="#2f6fa8" stroke-width="2"/>`).join('');
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 840" width="1080" height="840"><style>.feature-label{font:11px Arial,sans-serif;fill:#654e36;paint-order:stroke;stroke:#f7f3e9;stroke-width:3px}.terrain-label,.contour-label,.vector-scale text{font:10px Arial,sans-serif;fill:#6b7d6b}.vector-scale path{fill:none;stroke:#46553f}</style>${terrain}${layer}<g>${route}<path d="M${a}L${b}" stroke="#a0281c" stroke-width="2.5" stroke-dasharray="6 4"/><circle cx="${a[0]}" cy="${a[1]}" r="5" fill="#a0281c"/><circle cx="${b[0]}" cy="${b[1]}" r="5" fill="none" stroke="#a0281c" stroke-width="2"/></g></svg>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 840" width="1080" height="840"><style>.feature-label{font:11px Arial,sans-serif;fill:#654e36;paint-order:stroke;stroke:#f7f3e9;stroke-width:3px}.terrain-label,.contour-label,.vector-scale text{font:10px Arial,sans-serif;fill:#6b7d6b}.vector-scale path{fill:none;stroke:#46553f}</style>${terrain}${layer}<g>${route}${mark}</g></svg>`;
     writeFileSync(join(outDir,`${sid}-route-sight.svg`),svg);
   }
 }
-assert.deepEqual(Object.keys(cases).sort(),['hougoumont-north-gate','little-round-top']);
+assert.deepEqual(Object.keys(cases).sort(),['concord-north-bridge','hougoumont-north-gate','little-round-top']);
 console.log('Route and sight passed:\n  '+lines.join('\n  '));
