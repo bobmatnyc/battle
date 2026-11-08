@@ -96,7 +96,51 @@ def response_metadata(body):
     error = body_error(body)
     if error is not None:
         metadata["error_code"] = error_code(error)
+        limit = limit_refusal(metadata["error_code"], body)
+        if limit is not None:  # D37: an in-body 402 stops a paid batch too.
+            metadata["provider_limit"] = limit
     return metadata
+
+
+# D37: the ``error.metadata.limit_source`` values OpenRouter's limits doc
+# (openrouter.ai/docs/api/reference/limits, read 2026-11-08) names for credit
+# and budget refusals. Any other value is recorded as None, never as text.
+LIMIT_SOURCES = frozenset({
+    "openrouter_key_limit", "openrouter_credits", "openrouter_in_flight_budget",
+    "openrouter_guardrail_budget", "openrouter_workspace_budget",
+})
+
+
+def limit_refusal(status, body):
+    """Why: a paid batch must stop, not fall back, when OpenRouter refuses for
+    credit or a spend limit (D37, docs/research/78).
+    What: ``{"status", "limit_source"}`` when ``status`` is 402 (insufficient
+    credits or the key's limit), or 403 or 429 whose body names a credit or
+    budget ``limit_source``; else None. ``limit_source`` is one of
+    ``LIMIT_SOURCES`` or None; no message text is kept.
+    Test: `test_a_provider_credit_refusal_stops_the_batch_and_keeps_the_partial_game`.
+    """
+    error = body_error(body) if isinstance(body, dict) else None
+    details = error.get("metadata") if isinstance(error, dict) else None
+    source = details.get("limit_source") if isinstance(details, dict) else None
+    source = source if source in LIMIT_SOURCES else None
+    if status == 402 or (status in (403, 429) and source is not None):
+        return {"status": status, "limit_source": source}
+    return None
+
+
+def http_error_metadata(exc):
+    """Metadata for an HTTP error response: ``provider_limit`` when its body
+    is a credit or budget refusal (``limit_refusal``), else nothing. The body
+    is read up to 64 KiB and never kept."""
+    try:
+        body = json.loads(exc.read(64 * 1024))
+    except Exception:  # noqa: BLE001 - an unreadable body still has its status.
+        body = None
+    finally:
+        exc.close()
+    limit = limit_refusal(exc.code, body)
+    return {"provider_limit": limit} if limit is not None else {}
 
 
 def reasoning_field(effort):
@@ -271,6 +315,27 @@ def failure_reason(exc):
     return type(exc).__name__
 
 
+def request_body(settings, instruction, payload):
+    """Why: a spend reserve must size the exact request that is sent (doc 69 §9).
+    What: the serialized chat-completions body ``OpenRouterProvider.request``
+    sends for ``settings``; it carries no credential.
+    Test: `test_reserve_covers_the_full_request_body_the_adapter_sends`.
+    """
+    return json.dumps(
+        {
+            "model": settings.model,
+            "messages": [
+                {"role": "system", "content": instruction},
+                {"role": "user", "content": json.dumps(payload)},
+            ],
+            "temperature": 0.3,
+            "max_tokens": settings.request_max_tokens,
+            "response_format": RESPONSE_FORMAT,
+            **reasoning_field(settings.effort),
+        }
+    ).encode()
+
+
 class OpenRouterProvider:
     def __init__(self, settings: Settings, *, opener=urllib.request.urlopen):
         self._settings = settings
@@ -297,25 +362,14 @@ class OpenRouterProvider:
             raise ProviderUnavailable("No provider credential configured")
         request = urllib.request.Request(
             "https://openrouter.ai/api/v1/chat/completions",
-            data=json.dumps(
-                {
-                    "model": self.model,
-                    "messages": [
-                        {"role": "system", "content": instruction},
-                        {"role": "user", "content": json.dumps(payload)},
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": self._settings.request_max_tokens,
-                    "response_format": RESPONSE_FORMAT,
-                    **reasoning_field(self._settings.effort),
-                }
-            ).encode(),
+            data=request_body(self._settings, instruction, payload),
             headers={
-                "Authorization": "Bearer " + self._settings.api_key,
                 "Content-Type": "application/json",
                 "X-OpenRouter-Title": "Battle local POC",
             },
         )
+        # D37 review D: urllib copies ``headers`` to a redirect target, never unredirected ones.
+        request.add_unredirected_header("Authorization", "Bearer " + self._settings.api_key)
         metadata = {}
         try:
             with self._open(request, timeout=self._settings.request_timeout) as response:
@@ -325,7 +379,50 @@ class OpenRouterProvider:
             result, reply_format = decoded_reply(body, metadata)
             return result, {**metadata, "reply_format": reply_format}
         except Exception as exc:
+            if isinstance(exc, urllib.error.HTTPError):  # D37: keep a credit refusal's status and source.
+                metadata = {**metadata, **http_error_metadata(exc)}
             raise ProviderUnavailable(failure_reason(exc), metadata) from None
+
+
+# D37: OpenRouter's key-info endpoint (limits doc, "Checking your limits").
+KEY_INFO_URL = "https://openrouter.ai/api/v1/key"
+
+
+class KeyInfoError(ValueError):
+    """The key-info call failed; ``rejected`` is True for HTTP 401 or 403.
+    The message is ``HTTP <code>`` or an exception name, never content."""
+
+    def __init__(self, reason, rejected=False):
+        super().__init__(reason)
+        self.rejected = rejected
+
+
+def fetch_key_info(api_key, *, opener=urllib.request.urlopen, timeout=15.0):
+    """Why: a paid batch checks the key's own credit limit before any spend
+    (D37 backstop, docs/research/78).
+    What: GET ``KEY_INFO_URL`` with the key as a bearer token through
+    ``opener`` and returns the response's ``data`` object. Any network, HTTP,
+    decode or shape error raises ``KeyInfoError`` (fail closed); 401 and 403
+    are ``rejected``. The key goes only in an unredirected request header.
+    Test: `test_key_info_call_is_a_get_with_the_key_and_fails_closed`,
+    `test_the_key_header_is_not_copied_on_redirect`.
+    """
+    if not api_key:
+        raise KeyInfoError("no key", rejected=True)
+    request = urllib.request.Request(KEY_INFO_URL, method="GET")
+    request.add_unredirected_header("Authorization", "Bearer " + api_key)  # D37 review D: not sent on a redirect.
+    try:
+        with opener(request, timeout=timeout) as response:
+            body = json.loads(response.read(1000000))
+    except urllib.error.HTTPError as exc:
+        exc.close()  # The body is not read: only the status is kept.
+        raise KeyInfoError(f"HTTP {exc.code}", rejected=exc.code in (401, 403)) from None
+    except Exception as exc:  # noqa: BLE001 - every failure refuses the batch.
+        raise KeyInfoError(failure_reason(exc)) from None
+    data = body.get("data") if isinstance(body, dict) else None
+    if not isinstance(data, dict):
+        raise KeyInfoError("no data object")
+    return data
 
 
 class DisabledProvider:
