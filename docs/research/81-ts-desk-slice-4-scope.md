@@ -78,3 +78,57 @@ Three items are presentation only and can ship together as slice 4a: replay play
 - C needs a new `record.py` path to reach a Pegasus signal; the effort is unmeasured.
 - B's offset is as doc 80 reports it; no harness was run here.
 - Whether D and E touch a rules edition is unchecked beyond the code paths cited.
+
+## 11. Slice 4a as built
+
+**Task:** bt-T18. Branch `bt-t18-slice4a` from `b214cd1`. Commits: `4edb3f2` (tests, red), `04abe95` (B), `8d6fb99` (A and C), `64048b6` (smoke-web step), then this section. No engine, rules, routing or scenario file changed: `git diff --stat 130a6e5 HEAD -- apps/poc/battle` is empty. Under `packages/contracts/src` one comment line changed (below). No desk-server route was added.
+
+### A. Replay playback and help
+
+- `apps/web/src/replay.ts`: `Playback` holds at most one timer. Each tick reads the next record (`replayAt`), shows it and waits `playbackDelay`: the battle seconds between the two records divided by the speed, never under 100 ms (the POC desk's rule). `stop` clears the timer and bumps a generation counter, so a read in flight when the player steps, scrubs, pauses or returns to live is dropped. A tick that finds no replay stops. Play at the last record starts again from the first, as the POC desk does. A speed change while playing re-times the pending wait.
+- The speed list is the live clock's typed `clock.speeds`; the replay opens at the live clock's speed (POC desk behaviour).
+- `apps/web/src/desk.ts` and `index.html`: a Play/Pause button, a Speed select and a help line on the bar (`replayHelp`). Step, slider, Return to live and opening a replay call `stop` first. New battles and the clock stay disabled while replaying, as in slice 3.
+- Order help: `ordersClosedReason` gives the reason orders are closed. While replaying the order help shows only "Orders are closed while you replay the recorded commander view. Return to live to command." Live, a finished battle or a headquarters that cannot command adds a reason line above the template help.
+
+### B. POC desk 2× view
+
+- `apps/poc/static/map-view.js`: the + button now eases to `focusCentre` instead of zooming about the current centre. The focus comes from `app.js` `mapFocus`: `core` is the objective hex with its place label; `all` adds every mark with a hex (`map_features[].pos`). Per axis, the zoom takes the least move that keeps `all` in frame; if `all` is larger than the frame, the least move that keeps `core` in frame; then the frame is kept on the 1080 × 840 scene. With no focus the zoom is the old one. `fit()` and the − button are unchanged.
+- Hill 223 at 2×: the shack and all ten ravine hexes are now in frame (`screenshots/hill-223-zoom2x-grid-on.png`). Before, at `130a6e5`, all eleven were off the left edge (`red/map_screenshots.log`; the before picture is doc 80's `fords-labels-29cfd3e/screenshots/hill-223-zoom2x-grid-on.png`, copied to `before/`).
+- Fit view unchanged: the ten fit screenshots (five scenarios, grid on and off) are byte-identical before and after (`cmp`, `fit-cmp.log`). At 2×, Hougoumont and Little Round Top keep their camera (Little Round Top's grid-on file differs by rendering only: its grid-off file is identical and the picture matches); Concord and Pegasus move a little to bring their marks in (Pegasus shifts east to take in the Orne pillbox), with the objective still in frame.
+- The place label "Command post at the shack" is still cut at the left edge, at fit and at 2×, because the objective sits in column 0. Fixing it needs a label rule, not a camera change.
+
+### C. Signals panel
+
+- **Fixture.** The catalog's Pegasus Bridge blows its bridge at interval 5 (bt-D09 default) before Ham can be sent, so no desk game of the catalog entry reaches a delivery. `record.py` `record_pegasus_signal` runs the headless-only `guard-only+relief-1h` entry (no demolition, relief at one hour; the run `test_a_held_bridge_run_sends_ham_by_report_and_replays_identically` already uses), scripted on both sides, about 10 s. It writes the British commander replay (`BattleQueries.replay`, the `/api/replay` path) at revision 13, the first holding a received codeword: Ham, sent turn 11 by D25, delivered turn 12 to DHQ. The game id is pinned; two runs give the same file. Re-recording rewrote no other fixture.
+- **Contract.** The fixture matches `receivedSignal` as typed; no type was tightened or loosened. The only change under `packages/contracts/src` is the comment on `ReceivedSignal` in `views.ts`: "UNCONFIRMED by fixture (Pegasus Bridge only); keys from signals.py." became "Confirmed by fixture `replay-commander-pegasus.json` (Pegasus Bridge, docs/research/81 §4)." `CommanderBroadcast` stays unconfirmed (Gergovia).
+- **Panel.** `panels.ts` `signalsMarkup` lists received codewords newest first: codeword, meaning, the bridge by the name in the view's `map_features`, battlefield arrival time and sender; no turn number. The Signals section is hidden when the view has no `signals` field (a battle with no authored codeword) and reads "No codeword received." when the list is empty. It reads only the commander view, live or replayed.
+
+### Deviations
+
+- C is confirmed on a recorded replay of a headless-only Pegasus entry, not on a desk game of the catalog entry, which cannot deliver Ham (above).
+- After the red commit, two test edits: `check_map_geometry.mjs` passes results through JSON (a vm-made array is not deep-strict-equal to a local one) and its focus cases take `{core, all}`, because the first rule (box middle when too large) put Little Round Top's objective out of frame at 2×. The smoke-web step-stops-playback check was strengthened in `64048b6` after the first green run showed the second play ending on its own before the step.
+- smoke-web shows the Signals panel nowhere: its games (Little Round Top, Hougoumont, Concord) have no authored codeword. The panel is covered by `apps/web/test/signals.test.ts` on the fixture.
+
+### Gates
+
+Evidence under the git-ignored `apps/poc/artifacts/slice4a-64048b6/` in this worktree; `MANIFEST.txt` lists the files and each gate log ends with `EXIT=`.
+
+| Gate | Result |
+|---|---|
+| `npm ci --offline`, `npm run typecheck` | exit 0 |
+| `npm test` | web 89 of 89 (was 79), contracts 63 of 63 (was 62); exit 0 |
+| `make smoke-web` | `SMOKE PASSED`; replay played 5 records at 60× to the latest and stopped; at 30× a step back from record 3 stopped playback for 2.5 s |
+| `make test-poc` | `Ran 797 tests … OK`; `Zoom focus passed`; every smoke_ui and map check; exit 0 |
+| `make headless-poc` | winner union, 60 turns, 2,573 events, replay `identical` (63 revisions), as before |
+| `make smoke-poc` | exit 0 |
+| `node apps/poc/scripts/map_screenshots.mjs` | `HARNESS PASSED`; objective in frame on all five scenarios at fit and 2×, Hill 223 also its 11 ravine and shack hexes; labels none meet, 0 hidden |
+
+**Digests against `130a6e5`** (doc 80's `run_digests.sh` and doc 74's `digests.py`, copied unchanged), on a `git archive` of `130a6e5` and on this tree: every headless catalog entry without timings (8) and desk play of all five player scenarios to the end; `cmp desk EXIT=0`, `cmp catalog without timings EXIT=0` (`run-digests.log`, `digests/`).
+
+**Red first** (`red/`), the tests of `4edb3f2` on the previous sources: `npm test` fails to load the replay and signals test files (no `Playback`, no `signalsMarkup`) and the contract test (no fixture); with stub exports added for the run (not committed), web 10 of 89 and contracts 1 of 63 fail. `check_map_geometry.mjs`: `BattleMapView.focusCentre is not a function`. `map_screenshots.mjs`: "hill-223 2x: hexes outside the map frame: objective 0,11; ravine 0,6 … shack 0,11 …".
+
+**Mutations** (`mutations/`), each red, then restored: `Playback.stop` not bumping the generation, `npm test` 1 of 89 fails (`pausing, a step or a scrub stops playback, and a reply that arrives after it is not shown`); the desk's step handler not stopping playback, `make smoke-web` fails, "timed out waiting for the step to stop playback".
+
+## Review notes
+
+pending PM
