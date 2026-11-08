@@ -1,5 +1,8 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {"lib": ["ES2022"], "types": ["node"]},
-  "include": ["packages/contracts/src/**/*.ts", "packages/contracts/test/**/*.ts"]
+  "compilerOptions": {"lib": ["ES2022", "DOM"], "types": ["node"]},
+  "include": [
+    "packages/contracts/src/**/*.ts", "packages/contracts/test/**/*.ts",
+    "apps/web/src/**/*.ts", "apps/web/test/**/*.ts", "apps/web/server/**/*.ts", "apps/web/scripts/**/*.ts"
+  ]
 }

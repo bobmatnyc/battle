@@ -1,1 +1,12 @@
-{"name":"@battle/web","version":"0.0.0","private":true,"type":"module","dependencies":{"@battle/contracts":"0.0.0"}}
+{
+  "name": "@battle/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=4 \"test/**/*.test.ts\"",
+    "serve": "node --disable-warning=ExperimentalWarning server/desk-server.ts",
+    "smoke": "node --disable-warning=ExperimentalWarning scripts/smoke-browser.ts"
+  },
+  "dependencies": {"@battle/contracts": "0.0.0"}
+}
