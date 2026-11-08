@@ -38,9 +38,20 @@ const BattleFeatures = (() => {
 
   // Why: a road must read as one continuous line. What: casing and fill through its authored
   // points; the engine's routed hexes are the rasterised line (features.setup).
-  function road(f, info, center, esc) {
+  function road(f, info, center, esc, avoid = []) {
     const d = f.points.map((p, i) => (i ? 'L' : 'M') + pt(center(p))).join(' ');
-    const [x, y] = center(f.points[1]);
+    // The label sits at the first middle point, longest segment first, clear of other
+    // marks (`avoid`: centres of bridges, buildings and works), away from bridge ends and edges.
+    const legs = f.points.slice(1).map((p, i) => [center(f.points[i]), center(p)]);
+    const length = ([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const spots = [...legs].sort((l, m) => length(m) - length(l))
+      .flatMap(([a, b]) => [.5, .35, .65, .25, .75].map(t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]));
+    // The text box (about 6 px a character at 11 px) must keep 30 px from each mark's centre.
+    const clear = ([sx, sy]) => avoid.every(([qx, qy]) => {
+      const dx = Math.max(sx + 12 - qx, 0, qx - (sx + 12 + 6 * f.name.length)), dy = Math.max(sy - 25 - qy, 0, qy - (sy - 10));
+      return Math.hypot(dx, dy) > 30;
+    });
+    const [x, y] = spots.find(clear) || spots[0];
     return open('road', f.id, info, esc) + title(f.name, info, esc)
       + `<path class="road-casing" d="${d}" fill="none" stroke="${ROAD.casing}" stroke-width="${ROAD.casingWidth}" stroke-linejoin="round"/>`
       + `<path class="road-fill" d="${d}" fill="none" stroke="${ROAD.fill}" stroke-width="${ROAD.fillWidth}" stroke-linejoin="round"/>`
@@ -176,7 +187,8 @@ const BattleFeatures = (() => {
       const info = statusOf(key, feature, sources);
       list.push({key, kind, name, hexes, info, draw: (center, esc) => draw(info, center, esc)});
     };
-    for (const f of roads) push(f.id, 'road', f.name, f.hexes || f.points, f, (i, c, e) => road(f, i, c, e));
+    const placed = [...crossings, ...all.filter(f => f.kind === 'building' || f.kind === 'fortification').map(f => f.pos)];
+    for (const f of roads) push(f.id, 'road', f.name, f.hexes || f.points, f, (i, c, e) => road(f, i, c, e, placed.map(c)));
     for (const pos of crossings) {
       const f = bridges.get(String(pos)), key = f ? f.id : `crossing:${pos}`;
       push(key, 'bridge', f ? f.name : (sources[key] || {}).name || 'Bridge', [pos], f, (i, c, e) => bridge(pos, f, i, roads, c, e));

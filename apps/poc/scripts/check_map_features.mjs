@@ -130,9 +130,10 @@ for(const [sid,data] of Object.entries(scenarios)){
     const svg=render([f],sid,data);
     if(f.kind==='road'){
       roads++;keys.add(f.id);
-      const g=group(svg,f.id);
-      assert.ok(g,`${sid} ${f.id}: a road group`);
-      assert.ok(layer.includes(g.body),`${sid} ${f.id}: drawn in the full layer`);
+      // Read from the full layer: the label placement avoids the other marks drawn with it.
+      const g=group(layer,f.id);
+      assert.ok(g,`${sid} ${f.id}: a road group in the full layer`);
+      assert.deepEqual(group(svg,f.id).body.match(/<path[^>]+>/g),g.body.match(/<path[^>]+>/g),`${sid} ${f.id}: same line alone and in the layer`);
       checkStatus(sid,f.id,g);
       const ds=[...g.body.matchAll(/<path class="road-(?:casing|fill)" d="([^"]+)"/g)].map(m=>m[1]);
       assert.equal(ds.length,2,`${sid} ${f.id}: casing and fill`);
