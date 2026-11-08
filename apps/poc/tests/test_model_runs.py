@@ -6,21 +6,26 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 from battle.adapters.rules import ScenarioRegistry
 from battle.bootstrap import build_headless
 from battle.command_policy import scripted_actions, scripted_policy
+from battle.adapters.openrouter import RESPONSE_FORMAT, OpenRouterProvider
+from battle.command_policy import system_prompt
+from battle.config import Settings
 from battle.contracts import ProviderFailure
 from battle.scenario_concord import CONCORD_NORTH_BRIDGE
 from battle.scenario_hougoumont import HOUGOUMONT_NORTH_GATE
 from battle.scenario_pegasus import PEGASUS_BRIDGE
 from battle.services.headless import ModelFallback
-from battle.spend import FRAMING_TOKENS, CostUnreadable, Price, decision_cost, worst_case_call
+from battle.spend import PROVIDER_OVERHEAD_TOKENS, CostUnreadable, Price, decision_cost, worst_case_call
 
 POC = Path(__file__).resolve().parent.parent
 _spec = importlib.util.spec_from_file_location("model_runs", POC / "scripts" / "model_runs.py")
@@ -48,7 +53,7 @@ class ScriptedFake:
     def request(self, instruction, payload):
         self.calls += 1
         fault = self.fail.get(self.calls)
-        if isinstance(fault, Exception):
+        if isinstance(fault, BaseException):
             raise fault
         usage = {"prompt_tokens": 100, "completion_tokens": 20}
         if self.cost is not None:
@@ -77,6 +82,17 @@ def batch(tmp, plan, games, cap, price=FREE, **fake):
                                              provider_for=provider_for)
     lines = [json.loads(line) for line in out.getvalue().splitlines()]
     return code, summary, [r for r in lines if "summary" not in r], fakes
+
+
+@contextmanager
+def dummy_env(**variables):
+    """A dummy environment with no credential, and no .env.local file read."""
+    environ = {"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", ""), **variables}
+    load = Settings.load.__func__
+    with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, environ, clear=True), \
+            mock.patch.object(Settings, "load", classmethod(
+                lambda cls, path=None, environ=None: load(cls, Path(tmp) / "absent.env", os.environ))):
+        yield
 
 
 def git(repo, *args):
@@ -130,17 +146,68 @@ class ModelRunsTest(unittest.TestCase):
         self.assertLessEqual(summary["spent_usd"], 0.10)
         self.assertEqual((summary["played"], summary["not_started"]), (1, 1))
 
-    def test_worst_case_reserve_grows_with_the_request(self):
-        price = Price(2.0, 10.0, 4000)
-        small, large = {"observation": ""}, {"observation": "x" * 10_000}
-        self.assertAlmostEqual(worst_case_call(price, "sys", large) - worst_case_call(price, "sys", small),
-                               10_000 * 2.0 / 1e6)
-        size = len("sys") + len(json.dumps(small))
-        self.assertAlmostEqual(worst_case_call(price, "sys", small),
-                               ((size + FRAMING_TOKENS) * 2.0 + 4000 * 10.0) / 1e6)
+    def test_reserve_covers_the_full_request_body_the_adapter_sends(self):
+        # Capture the exact bytes the adapter would POST; the opener never touches the network.
+        settings = Settings(api_key="dummy-not-a-key", model="anthropic/claude-sonnet-5.5", effort="high",
+                            max_tokens=16000)
+        sent = []
+
+        def opener(request, timeout):
+            sent.append(request.data)
+            raise OSError("no network in tests")
+
+        instruction = system_prompt("british", PEGASUS_BRIDGE)
+        payload = {"task": "Choose your next tactical orders.", "observation": {"units": ["x" * 5000]}}
+        with self.assertRaises(ProviderFailure):
+            OpenRouterProvider(settings, opener=opener).request(instruction, payload)
+        body = sent[0]
+        self.assertIn(b'"response_format"', body)
+        size = model_runs.request_size(settings)(instruction, payload)
+        self.assertEqual(size, len(body))
+        self.assertGreater(size, len(instruction.encode()) + len(json.dumps(payload).encode())
+                           + len(json.dumps(RESPONSE_FORMAT)))
+        per_token = Price(1_000_000.0, 0.0, 16000)  # $1 a token: the reserve in dollars is the token bound.
+        self.assertEqual(worst_case_call(per_token, size), len(body) + PROVIDER_OVERHEAD_TOKENS)
+
+    def test_reserve_and_pins_use_the_environment_settings(self):
+        # Sonnet at 16,000 output tokens reserves over $0.16 for the first call, so a $0.15
+        # cap refuses it; at 650 tokens (Settings without the environment) it would play.
+        with dummy_env(OPENROUTER_EFFORT="high", OPENROUTER_MAX_TOKENS="16000"), \
+                tempfile.TemporaryDirectory() as tmp:
+            git(tmp, "init", "-q")
+            git(tmp, "commit", "-q", "--allow-empty", "-m", "base")
+            fakes = []
+            with redirect_stdout(io.StringIO()):
+                code = model_runs.main(
+                    ["--plan", "pegasus-bridge", "--model", "anthropic/claude-sonnet-5.5", "--games", "1",
+                     "--cap-usd", "0.15", "--dir", str(Path(tmp) / "b")],
+                    provider_for=lambda entry: fakes.append(ScriptedFake(entry)) or fakes[-1], repo=tmp)
+            manifest = json.loads((Path(tmp) / "b" / "manifest.json").read_text())
+            game = json.loads((Path(tmp) / "b" / "runs.jsonl").read_text().splitlines()[0])
+        self.assertEqual(manifest["prices"]["max_output_tokens"], 16000)
+        self.assertEqual((manifest["effort"], manifest["request_max_tokens"], manifest["request_timeout"]),
+                         ("high", 16000, 90.0))
+        self.assertEqual((game["pins"]["effort"], game["pins"]["request_max_tokens"]), ("high", 16000))
+        self.assertEqual((code, fakes[0].calls, game["status"]), (model_runs.EXIT_CAP, 0, "stopped"))
+
+    def test_interrupt_mid_game_records_the_game_and_propagates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "b"
+            with redirect_stdout(io.StringIO()), self.assertRaises(KeyboardInterrupt):
+                model_runs.run_batch(["pegasus-bridge"], 2, 100.0, out, price=FREE, source=SOURCE,
+                                     provider_for=lambda e: ScriptedFake(e, fail={2: KeyboardInterrupt()}))
+            names = sorted(p.name for p in out.iterdir())
+            record = json.loads((out / "runs.jsonl").read_text().splitlines()[0])
+            self.assertEqual(record["db_sha256"], hashlib.sha256(Path(record["db"]).read_bytes()).hexdigest())
+            summary = json.loads((out / "batch-summary.json").read_text())
+        self.assertNotIn("pegasus-bridge-1.sqlite", names)
+        self.assertIn("pegasus-bridge-1.failed.sqlite", names)
+        self.assertEqual((record["status"], record["reason"], record["decision_index"]),
+                         ("failed", "interrupted: KeyboardInterrupt", 1))
+        self.assertEqual((summary["status"], summary["played"]), ("interrupted", 1))
 
     def test_cli_exits_non_zero_at_the_cap(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with dummy_env(), tempfile.TemporaryDirectory() as tmp:
             git(tmp, "init", "-q")
             git(tmp, "commit", "-q", "--allow-empty", "-m", "base")
             with redirect_stdout(io.StringIO()):
@@ -165,7 +232,7 @@ class ModelRunsTest(unittest.TestCase):
             (repo / "a.txt").write_text("changed\n")
             with self.assertRaisesRegex(ValueError, "dirty"):
                 model_runs.source_pin(repo)
-            with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as refused:
+            with dummy_env(), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as refused:
                 model_runs.main(["--plan", "pegasus-bridge", "--model", "anthropic/claude-sonnet-5.5",
                                  "--games", "1", "--cap-usd", "1", "--dir", str(Path(tmp) / "b")],
                                 provider_for=lambda entry: ScriptedFake(entry), repo=repo)
@@ -175,7 +242,8 @@ class ModelRunsTest(unittest.TestCase):
             out = Path(tmp) / "c"
             with redirect_stdout(io.StringIO()):
                 model_runs.run_batch(["pegasus-bridge"], 1, 1.0, out, price=Price(2.0, 10.0, 4000), source=pin,
-                                     model="anthropic/claude-sonnet-5.5", provider_for=ScriptedFake)
+                                     settings=Settings(model="anthropic/claude-sonnet-5.5", effort="high",
+                                                       max_tokens=4000), provider_for=ScriptedFake)
             manifest = json.loads((out / "manifest.json").read_text())
             game = json.loads((out / "runs.jsonl").read_text().splitlines()[0])
         self.assertEqual(manifest["source"], pin)
@@ -188,12 +256,12 @@ class ModelRunsTest(unittest.TestCase):
         british = pins["sides"]["british"]
         self.assertEqual((british["control"], british["control_version"]), ("scripted-pegasus-coup-de-main-v1", "v1"))
         self.assertEqual(british["prompt_version"], PEGASUS_BRIDGE.prompt_version)
-        from battle.command_policy import system_prompt
         self.assertEqual(british["prompt_sha256"],
                          hashlib.sha256(system_prompt("british", PEGASUS_BRIDGE).encode()).hexdigest())
         self.assertEqual(set(pins["sides"]), {"british", "german"})
-        self.assertEqual(game["pins"], {**{k: manifest[k] for k in ("source", "model", "effort", "cap_usd",
-                                                                    "prices")}, **pins})
+        self.assertEqual((manifest["effort"], manifest["request_max_tokens"]), ("high", 4000))
+        keys = ("source", "model", "effort", "request_max_tokens", "request_timeout", "cap_usd", "prices")
+        self.assertEqual(game["pins"], {**{k: manifest[k] for k in keys}, **pins})
 
     def test_hougoumont_is_labelled_asymmetric_and_pegasus_symmetric(self):
         self.assertEqual(model_runs.action_set(HOUGOUMONT_NORTH_GATE, HOUGOUMONT_NORTH_GATE.player),
@@ -298,7 +366,7 @@ class ModelRunsTest(unittest.TestCase):
                                      provider_for=ScriptedFake)
             self.assertEqual((Path(tmp) / "runs.jsonl").read_text(), "earlier\n")
         with self.assertRaisesRegex(ValueError, "No price"):
-            model_runs.price_for("fake/unpriced", None, None)
+            model_runs.price_for(Settings(model="fake/unpriced"))
 
 
 if __name__ == "__main__":

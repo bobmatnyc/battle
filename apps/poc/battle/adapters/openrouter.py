@@ -271,6 +271,27 @@ def failure_reason(exc):
     return type(exc).__name__
 
 
+def request_body(settings, instruction, payload):
+    """Why: a spend reserve must size the exact request that is sent (doc 69 §9).
+    What: the serialized chat-completions body ``OpenRouterProvider.request``
+    sends for ``settings``; it carries no credential.
+    Test: `test_reserve_covers_the_full_request_body_the_adapter_sends`.
+    """
+    return json.dumps(
+        {
+            "model": settings.model,
+            "messages": [
+                {"role": "system", "content": instruction},
+                {"role": "user", "content": json.dumps(payload)},
+            ],
+            "temperature": 0.3,
+            "max_tokens": settings.request_max_tokens,
+            "response_format": RESPONSE_FORMAT,
+            **reasoning_field(settings.effort),
+        }
+    ).encode()
+
+
 class OpenRouterProvider:
     def __init__(self, settings: Settings, *, opener=urllib.request.urlopen):
         self._settings = settings
@@ -297,19 +318,7 @@ class OpenRouterProvider:
             raise ProviderUnavailable("No provider credential configured")
         request = urllib.request.Request(
             "https://openrouter.ai/api/v1/chat/completions",
-            data=json.dumps(
-                {
-                    "model": self.model,
-                    "messages": [
-                        {"role": "system", "content": instruction},
-                        {"role": "user", "content": json.dumps(payload)},
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": self._settings.request_max_tokens,
-                    "response_format": RESPONSE_FORMAT,
-                    **reasoning_field(self._settings.effort),
-                }
-            ).encode(),
+            data=request_body(self._settings, instruction, payload),
             headers={
                 "Authorization": "Bearer " + self._settings.api_key,
                 "Content-Type": "application/json",

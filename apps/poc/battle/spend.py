@@ -8,11 +8,10 @@ closed; ``worst_case_call`` prices the largest bill one request can produce;
 ``SpendGuard`` refuses a call unless the cap still covers the batch's spend
 plus that reserve. Nothing here reads a credential or calls a provider.
 Test: `test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap`,
-`test_worst_case_reserve_grows_with_the_request`,
+`test_reserve_covers_the_full_request_body_the_adapter_sends`,
 `test_missing_cost_fails_closed_and_stops_the_batch`.
 """
 
-import json
 import math
 from dataclasses import dataclass
 
@@ -24,13 +23,16 @@ PRICES = {
     "anthropic/claude-opus-5.5": (4.0, 20.0),
     "openai/gpt-6-astra": (12.5, 50.0),
 }
-# Tokens for message framing around the two messages; measured requests
-# carry far fewer, so this only adds margin.
-FRAMING_TOKENS = 64
+# Authored, not measured: tokens a provider adds that are not in the request
+# body, such as the chat template and the response_format schema restated as
+# instructions. The body itself (including the 532-byte schema) is counted.
+PROVIDER_OVERHEAD_TOKENS = 1024
 RESERVE_BASIS = (
-    "input tokens <= UTF-8 bytes of the system prompt plus the JSON user message (a token covers at least one "
-    f"byte) plus {FRAMING_TOKENS} framing tokens, at the input price; output tokens = the request's max_tokens "
-    "(reasoning counts inside it), at the output price; no cache discount"
+    "input tokens <= the UTF-8 bytes of the full serialized request body the adapter sends (model, both "
+    "messages, temperature, max_tokens, the response_format JSON schema, reasoning; a token covers at least one "
+    f"byte) plus {PROVIDER_OVERHEAD_TOKENS} provider-overhead tokens (authored), at the input price; output "
+    "tokens = the request's max_tokens from the same Settings (reasoning counts inside it), at the output price; "
+    "no cache discount"
 )
 
 
@@ -70,10 +72,10 @@ class Price:
             raise ValueError("prices must be finite and 0 or more, and max_output_tokens 1 or more")
 
 
-def worst_case_call(price, instruction, payload):
-    """The most one request of ``instruction`` and ``payload`` can cost, per ``RESERVE_BASIS``."""
-    size = len(instruction.encode()) + len(json.dumps(payload).encode())
-    return ((size + FRAMING_TOKENS) * price.input_per_mtok
+def worst_case_call(price, body_bytes):
+    """The most one request whose serialized body is ``body_bytes`` long can
+    cost, per ``RESERVE_BASIS``."""
+    return ((body_bytes + PROVIDER_OVERHEAD_TOKENS) * price.input_per_mtok
             + price.max_output_tokens * price.output_per_mtok) / 1_000_000
 
 
@@ -81,17 +83,20 @@ class SpendGuard:
     """Why: every provider call of a batch must fit under the batch's cap.
     What: ``check`` (before a call) raises ``BudgetExhausted`` when
     ``cap - spent - worst_case_call < 0``; ``charge`` (after it) adds the
-    call's recorded cost. One guard spans a whole batch.
-    Test: `test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap`.
+    call's recorded cost. ``body_size(instruction, payload)`` is the byte
+    length of the request body the provider will send; the composition edge
+    supplies it from the adapter. One guard spans a whole batch.
+    Test: `test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap`,
+    `test_reserve_covers_the_full_request_body_the_adapter_sends`.
     """
 
-    def __init__(self, cap_usd, price, spent_usd=0.0):
+    def __init__(self, cap_usd, price, body_size, spent_usd=0.0):
         if not (math.isfinite(cap_usd) and cap_usd > 0):
             raise ValueError("the cap must be a positive amount")
-        self.cap_usd, self.price, self.spent_usd = cap_usd, price, spent_usd
+        self.cap_usd, self.price, self.body_size, self.spent_usd = cap_usd, price, body_size, spent_usd
 
     def check(self, instruction, payload):
-        reserve = worst_case_call(self.price, instruction, payload)
+        reserve = worst_case_call(self.price, self.body_size(instruction, payload))
         if self.cap_usd - self.spent_usd - reserve < 0:
             raise BudgetExhausted(
                 f"cap ${self.cap_usd:.4f} - spent ${self.spent_usd:.4f} < reserve ${reserve:.4f} for the next call")
