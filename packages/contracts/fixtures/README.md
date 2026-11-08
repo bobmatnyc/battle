@@ -5,3 +5,5 @@ Recorded from the Python app at commit `c733662` by `python3 -I packages/contrac
 `map.json` (`GET /api/map`, the same game) was added for the TypeScript desk; see [docs/research/70](../../../docs/research/70-ts-desk-slice-1.md).
 
 `scenarios.json` (`GET /api/scenarios`, the player-facing catalog) was added for desk slice 2; see [docs/research/71](../../../docs/research/71-ts-desk-slice-2.md). Re-recording rewrote no other fixture.
+
+`map-features.json` (desk slice 3, [docs/research/73](../../../docs/research/73-ts-desk-slice-3.md)) holds each catalog entry's opening commander `map_features` (the projection `/api/state` serves, read the way `apps/poc/scripts/check_map_features.mjs` reads it), with the map's `metres_per_hex` and its bridge crossing cells. Re-recording rewrote no other fixture.

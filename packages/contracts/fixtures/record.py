@@ -57,6 +57,31 @@ def record(api):
     write("replay-god.json", api.read("/api/replay", {"revision": revision, "view": ["god"]}))
     write("map.json", api.read("/api/map", {}))
     write("scenarios.json", api.read("/api/scenarios", {}))
+    write("map-features.json", catalog_features())
+
+
+def catalog_features():
+    """docs/research/73: each catalog entry's opening commander ``map_features``
+    (the projection /api/state serves: ``present_view`` of ``RulesSimulation.view``,
+    as apps/poc/scripts/check_map_features.mjs reads it), with the map's
+    ``metres_per_hex`` and its bridge crossing cells from ``map_document``."""
+    from battle.adapters.rules import RulesSimulation
+    from battle.bootstrap import build_headless_scenarios
+    from battle.presentation import present_view
+    from battle.scenario_entry import build_state, map_document
+
+    catalog = build_headless_scenarios()
+    sim = RulesSimulation()
+    out = {}
+    for sid in catalog.ids():
+        entry = catalog.resolve(sid)
+        doc = map_document(entry)
+        out[sid] = {
+            "map_features": present_view(sim.view(build_state(entry)), entry)["map_features"],
+            "metres_per_hex": doc["metres_per_hex"],
+            "bridge_cells": [c for c in doc["cells"] if c.get("crossing") == "bridge"],
+        }
+    return out
 
 
 def main():

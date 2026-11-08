@@ -1,0 +1,1120 @@
+{
+ "cannae-envelopment": {
+  "bridge_cells": [],
+  "map_features": [],
+  "metres_per_hex": 200
+ },
+ "concord-north-bridge": {
+  "bridge_cells": [
+   {
+    "area": "north-bridge",
+    "cover": 0,
+    "crossing": "bridge",
+    "elevation": 34,
+    "move_cost": 100,
+    "pos": [
+     12,
+     10
+    ],
+    "terrain": "water",
+    "water": true
+   }
+  ],
+  "map_features": [
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      2,
+      10
+     ],
+     [
+      3,
+      10
+     ],
+     [
+      4,
+      10
+     ],
+     [
+      5,
+      10
+     ],
+     [
+      6,
+      10
+     ],
+     [
+      7,
+      10
+     ],
+     [
+      8,
+      10
+     ],
+     [
+      9,
+      10
+     ],
+     [
+      10,
+      10
+     ],
+     [
+      11,
+      10
+     ]
+    ],
+    "id": "muster-road",
+    "kind": "road",
+    "name": "Road from the muster field to the North Bridge",
+    "observed_turn": 0,
+    "points": [
+     [
+      2,
+      10
+     ],
+     [
+      11,
+      10
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      13,
+      10
+     ],
+     [
+      14,
+      10
+     ],
+     [
+      15,
+      10
+     ],
+     [
+      16,
+      10
+     ],
+     [
+      17,
+      10
+     ],
+     [
+      18,
+      10
+     ],
+     [
+      19,
+      10
+     ],
+     [
+      20,
+      10
+     ],
+     [
+      21,
+      10
+     ],
+     [
+      22,
+      10
+     ],
+     [
+      23,
+      10
+     ]
+    ],
+    "id": "town-road",
+    "kind": "road",
+    "name": "Road from the North Bridge to the town",
+    "observed_turn": 0,
+    "points": [
+     [
+      13,
+      10
+     ],
+     [
+      23,
+      10
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   }
+  ],
+  "metres_per_hex": 50
+ },
+ "concord-north-bridge-v1": {
+  "bridge_cells": [
+   {
+    "area": "north-bridge",
+    "cover": 0,
+    "crossing": "bridge",
+    "elevation": 34,
+    "move_cost": 100,
+    "pos": [
+     12,
+     10
+    ],
+    "terrain": "water",
+    "water": true
+   }
+  ],
+  "map_features": [
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      2,
+      10
+     ],
+     [
+      3,
+      10
+     ],
+     [
+      4,
+      10
+     ],
+     [
+      5,
+      10
+     ],
+     [
+      6,
+      10
+     ],
+     [
+      7,
+      10
+     ],
+     [
+      8,
+      10
+     ],
+     [
+      9,
+      10
+     ],
+     [
+      10,
+      10
+     ],
+     [
+      11,
+      10
+     ]
+    ],
+    "id": "muster-road",
+    "kind": "road",
+    "name": "Road from the muster field to the North Bridge",
+    "observed_turn": 0,
+    "points": [
+     [
+      2,
+      10
+     ],
+     [
+      11,
+      10
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      13,
+      10
+     ],
+     [
+      14,
+      10
+     ],
+     [
+      15,
+      10
+     ],
+     [
+      16,
+      10
+     ],
+     [
+      17,
+      10
+     ],
+     [
+      18,
+      10
+     ],
+     [
+      19,
+      10
+     ],
+     [
+      20,
+      10
+     ],
+     [
+      21,
+      10
+     ],
+     [
+      22,
+      10
+     ],
+     [
+      23,
+      10
+     ]
+    ],
+    "id": "town-road",
+    "kind": "road",
+    "name": "Road from the North Bridge to the town",
+    "observed_turn": 0,
+    "points": [
+     [
+      13,
+      10
+     ],
+     [
+      23,
+      10
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   }
+  ],
+  "metres_per_hex": 50
+ },
+ "gergovia-recall": {
+  "bridge_cells": [],
+  "map_features": [],
+  "metres_per_hex": 50
+ },
+ "hill-223-patrol": {
+  "bridge_cells": [],
+  "map_features": [
+   {
+    "briefed": true,
+    "cover": 30,
+    "effort": 400,
+    "id": "old-trench",
+    "kind": "fortification",
+    "name": "Old trench on the hillside",
+    "observed_turn": 0,
+    "pos": [
+     3,
+     16
+    ],
+    "progress": 100,
+    "provenance": "authored-poc",
+    "received_turn": 0,
+    "required": 400,
+    "updated_turn": 0
+   }
+  ],
+  "metres_per_hex": 50
+ },
+ "hougoumont-north-gate": {
+  "bridge_cells": [],
+  "map_features": [
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      11,
+      8
+     ],
+     [
+      11,
+      7
+     ],
+     [
+      11,
+      6
+     ],
+     [
+      11,
+      5
+     ],
+     [
+      12,
+      4
+     ],
+     [
+      12,
+      3
+     ],
+     [
+      12,
+      2
+     ],
+     [
+      12,
+      1
+     ]
+    ],
+    "id": "north-lane",
+    "kind": "road",
+    "name": "Lane from the north gate to the ridge",
+    "observed_turn": 0,
+    "points": [
+     [
+      11,
+      8
+     ],
+     [
+      11,
+      5
+     ],
+     [
+      12,
+      1
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      7,
+      18
+     ],
+     [
+      7,
+      17
+     ],
+     [
+      7,
+      16
+     ],
+     [
+      7,
+      15
+     ],
+     [
+      7,
+      14
+     ],
+     [
+      7,
+      13
+     ],
+     [
+      8,
+      12
+     ],
+     [
+      7,
+      11
+     ],
+     [
+      8,
+      10
+     ],
+     [
+      8,
+      9
+     ],
+     [
+      9,
+      9
+     ],
+     [
+      10,
+      8
+     ],
+     [
+      11,
+      8
+     ]
+    ],
+    "id": "west-lane",
+    "kind": "road",
+    "name": "Western lane round the farm",
+    "observed_turn": 0,
+    "points": [
+     [
+      7,
+      18
+     ],
+     [
+      7,
+      13
+     ],
+     [
+      8,
+      10
+     ],
+     [
+      10,
+      8
+     ],
+     [
+      11,
+      8
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      11,
+      20
+     ],
+     [
+      11,
+      19
+     ],
+     [
+      11,
+      18
+     ],
+     [
+      11,
+      17
+     ],
+     [
+      11,
+      16
+     ],
+     [
+      11,
+      15
+     ],
+     [
+      11,
+      14
+     ],
+     [
+      11,
+      13
+     ]
+    ],
+    "id": "wood-ride",
+    "kind": "road",
+    "name": "Ride through the wood",
+    "observed_turn": 0,
+    "points": [
+     [
+      11,
+      20
+     ],
+     [
+      11,
+      13
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "compound": [
+     [
+      11,
+      10
+     ],
+     [
+      12,
+      10
+     ],
+     [
+      10,
+      10
+     ],
+     [
+      11,
+      11
+     ],
+     [
+      11,
+      9
+     ],
+     [
+      10,
+      11
+     ],
+     [
+      10,
+      9
+     ]
+    ],
+    "cover": 45,
+    "height": 8,
+    "id": "hougoumont",
+    "kind": "building",
+    "name": "Hougoumont chateau and farm",
+    "observed_turn": 0,
+    "openings": [
+     {
+      "bar_effort": 0,
+      "effort": 0,
+      "force_effort": 0,
+      "id": "north-gate",
+      "inside": [
+       11,
+       9
+      ],
+      "name": "North gate",
+      "outside": [
+       11,
+       8
+      ],
+      "state": "open"
+     }
+    ],
+    "pos": [
+     11,
+     10
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0,
+    "updated_turn": 0
+   }
+  ],
+  "metres_per_hex": 50
+ },
+ "little-round-top": {
+  "bridge_cells": [],
+  "map_features": [
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      3,
+      2
+     ],
+     [
+      4,
+      2
+     ],
+     [
+      4,
+      3
+     ],
+     [
+      5,
+      3
+     ],
+     [
+      6,
+      4
+     ],
+     [
+      7,
+      4
+     ],
+     [
+      8,
+      4
+     ],
+     [
+      8,
+      5
+     ],
+     [
+      9,
+      5
+     ],
+     [
+      10,
+      6
+     ],
+     [
+      11,
+      6
+     ],
+     [
+      12,
+      6
+     ],
+     [
+      12,
+      7
+     ],
+     [
+      13,
+      8
+     ],
+     [
+      14,
+      8
+     ],
+     [
+      15,
+      8
+     ],
+     [
+      16,
+      8
+     ],
+     [
+      16,
+      9
+     ],
+     [
+      17,
+      9
+     ],
+     [
+      18,
+      9
+     ],
+     [
+      19,
+      9
+     ],
+     [
+      20,
+      10
+     ],
+     [
+      21,
+      10
+     ],
+     [
+      22,
+      10
+     ]
+    ],
+    "id": "north-lane",
+    "kind": "road",
+    "name": "North farm lane",
+    "observed_turn": 0,
+    "points": [
+     [
+      3,
+      2
+     ],
+     [
+      7,
+      4
+     ],
+     [
+      11,
+      6
+     ],
+     [
+      14,
+      8
+     ],
+     [
+      18,
+      9
+     ],
+     [
+      22,
+      10
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      1,
+      19
+     ],
+     [
+      2,
+      19
+     ],
+     [
+      3,
+      18
+     ],
+     [
+      4,
+      18
+     ],
+     [
+      5,
+      18
+     ],
+     [
+      6,
+      18
+     ],
+     [
+      6,
+      17
+     ],
+     [
+      7,
+      17
+     ],
+     [
+      8,
+      16
+     ],
+     [
+      9,
+      16
+     ]
+    ],
+    "id": "south-track",
+    "kind": "road",
+    "name": "Southern track",
+    "observed_turn": 0,
+    "points": [
+     [
+      1,
+      19
+     ],
+     [
+      4,
+      18
+     ],
+     [
+      7,
+      17
+     ],
+     [
+      9,
+      16
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "cover": 45,
+    "height": 8,
+    "id": "farmstead",
+    "kind": "building",
+    "name": "Farmstead",
+    "observed_turn": 0,
+    "pos": [
+     7,
+     3
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "cover": 40,
+    "height": 6,
+    "id": "barn",
+    "kind": "building",
+    "name": "Barn",
+    "observed_turn": 0,
+    "pos": [
+     17,
+     8
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "cover": 60,
+    "effort": 400,
+    "id": "prepared-works",
+    "kind": "fortification",
+    "name": "Prepared breastwork",
+    "observed_turn": 0,
+    "pos": [
+     11,
+     13
+    ],
+    "progress": 100,
+    "provenance": "authored-poc",
+    "received_turn": 0,
+    "required": 400,
+    "updated_turn": 0
+   }
+  ],
+  "metres_per_hex": 50
+ },
+ "pegasus-bridge": {
+  "bridge_cells": [
+   {
+    "area": "canal-bridge",
+    "cover": 0,
+    "crossing": "bridge",
+    "elevation": 8,
+    "move_cost": 100,
+    "pos": [
+     9,
+     10
+    ],
+    "terrain": "water",
+    "water": true
+   },
+   {
+    "area": "orne-bridge",
+    "cover": 0,
+    "crossing": "bridge",
+    "elevation": 8,
+    "move_cost": 100,
+    "pos": [
+     19,
+     10
+    ],
+    "terrain": "water",
+    "water": true
+   }
+  ],
+  "map_features": [
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      0,
+      10
+     ],
+     [
+      1,
+      10
+     ],
+     [
+      2,
+      10
+     ],
+     [
+      3,
+      10
+     ],
+     [
+      4,
+      10
+     ],
+     [
+      5,
+      10
+     ],
+     [
+      6,
+      10
+     ],
+     [
+      7,
+      10
+     ],
+     [
+      8,
+      10
+     ]
+    ],
+    "id": "benouville-road",
+    "kind": "road",
+    "name": "Road from B\u00e9nouville to the canal bridge",
+    "observed_turn": 0,
+    "points": [
+     [
+      0,
+      10
+     ],
+     [
+      8,
+      10
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      10,
+      10
+     ],
+     [
+      11,
+      10
+     ],
+     [
+      12,
+      10
+     ],
+     [
+      13,
+      10
+     ],
+     [
+      14,
+      10
+     ],
+     [
+      15,
+      10
+     ],
+     [
+      16,
+      10
+     ],
+     [
+      17,
+      10
+     ],
+     [
+      18,
+      10
+     ]
+    ],
+    "id": "bridges-road",
+    "kind": "road",
+    "name": "Road between the bridges",
+    "observed_turn": 0,
+    "points": [
+     [
+      10,
+      10
+     ],
+     [
+      18,
+      10
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "hexes": [
+     [
+      20,
+      10
+     ],
+     [
+      21,
+      10
+     ],
+     [
+      22,
+      10
+     ],
+     [
+      23,
+      10
+     ]
+    ],
+    "id": "ranville-road",
+    "kind": "road",
+    "name": "Road from the Orne bridge to Ranville",
+    "observed_turn": 0,
+    "points": [
+     [
+      20,
+      10
+     ],
+     [
+      23,
+      10
+     ]
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0
+   },
+   {
+    "briefed": true,
+    "cover": 50,
+    "effort": 400,
+    "id": "west-mg-posts",
+    "kind": "fortification",
+    "name": "Machine-gun emplacements, west bank",
+    "observed_turn": 0,
+    "pos": [
+     8,
+     10
+    ],
+    "progress": 100,
+    "provenance": "authored-poc",
+    "received_turn": 0,
+    "required": 400,
+    "updated_turn": 0
+   },
+   {
+    "briefed": true,
+    "cover": 40,
+    "effort": 400,
+    "id": "west-trenches",
+    "kind": "fortification",
+    "name": "Trench system, west bank",
+    "observed_turn": 0,
+    "pos": [
+     8,
+     9
+    ],
+    "progress": 100,
+    "provenance": "authored-poc",
+    "received_turn": 0,
+    "required": 400,
+    "updated_turn": 0
+   },
+   {
+    "briefed": true,
+    "cover": 50,
+    "effort": 400,
+    "id": "east-mg-post",
+    "kind": "fortification",
+    "name": "Machine gun and anti-tank gun, east bank",
+    "observed_turn": 0,
+    "pos": [
+     10,
+     10
+    ],
+    "progress": 100,
+    "provenance": "authored-poc",
+    "received_turn": 0,
+    "required": 400,
+    "updated_turn": 0
+   },
+   {
+    "briefed": true,
+    "cover": 60,
+    "effort": 400,
+    "id": "orne-pillbox",
+    "kind": "fortification",
+    "name": "Pillbox, east bank of the Orne",
+    "observed_turn": 0,
+    "pos": [
+     20,
+     10
+    ],
+    "progress": 100,
+    "provenance": "authored-poc",
+    "received_turn": 0,
+    "required": 400,
+    "updated_turn": 0
+   },
+   {
+    "briefed": true,
+    "id": "canal-bridge",
+    "kind": "bridge",
+    "name": "Caen Canal bridge",
+    "observed_turn": 0,
+    "pos": [
+     9,
+     10
+    ],
+    "provenance": "authored-poc",
+    "received_turn": 0,
+    "state": "charges",
+    "updated_turn": 0
+   }
+  ],
+  "metres_per_hex": 50
+ }
+}
