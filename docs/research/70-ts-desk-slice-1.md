@@ -76,6 +76,8 @@ Use `make poc` instead of `make poc-offline` for the usual commander; the desk i
 
 ## Deferred
 
+Slice 2 ([71](71-ts-desk-slice-2.md)) adds the order catalog, unit card, dispatches and scenario choice; its own deferred list supersedes this one.
+
 - Other scenarios. A Hougoumont map passes the contract, but no desk check covers it. Switching scenarios (`/api/new`, `/api/scenarios`) is not in the desk.
 - Staff chat, the twin, and recommendations.
 - Replay and God Mode.

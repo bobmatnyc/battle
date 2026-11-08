@@ -34,6 +34,6 @@ Saved battles live in `apps/poc/data/battle.sqlite`; server-only configuration i
 
 The workstation remains the current host. TypeScript for the web application and contracts is recommended; self-hosted Next.js or a later Vercel frontend are options. Keep the Python simulator independently runnable until a port proves replay equivalence.
 
-The playable app is in `apps/poc/`. `apps/web` holds the first TypeScript desk slice (Little Round Top map, counters and a move order against the running POC; see [70](docs/research/70-ts-desk-slice-1.md)), and `packages/contracts` holds its wire contracts. Build handoff notes are local only (`docs/build-handoff.md`, not published).
+The playable app is in `apps/poc/`. `apps/web` holds the TypeScript desk (map, counters, the full order catalog, unit card, dispatches and scenario choice against the running POC; see [70](docs/research/70-ts-desk-slice-1.md) and [71](docs/research/71-ts-desk-slice-2.md)), and `packages/contracts` holds its wire contracts. Build handoff notes are local only (`docs/build-handoff.md`, not published).
 
 [Design scale assessment](docs/research/30-design-scale-assessment.md): what the playable skirmish proves, what breaks at company and campaign scale, and which experiment to run next.
