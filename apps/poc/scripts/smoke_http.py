@@ -36,7 +36,8 @@ with tempfile.TemporaryDirectory() as tmp:
         assert state['scenario_brief']['mission']['title']=='Defend the summit'
         listing=request('/api/scenarios')
         assert listing['default']=='little-round-top'
-        assert [s['id'] for s in listing['scenarios']]==['little-round-top','hougoumont-north-gate']
+        # docs/research/74: Concord is the third player scenario.
+        assert [s['id'] for s in listing['scenarios']]==['little-round-top','hougoumont-north-gate','concord-north-bridge']
         assert len(request('/api/map')['cells'])==504
         assert request('/api/map')['setting']['location']=='Little Round Top · Gettysburg, Pennsylvania'
         assert state['rules']=='poc-13' and state['side']=='union'
