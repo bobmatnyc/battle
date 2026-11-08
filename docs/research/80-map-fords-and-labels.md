@@ -85,4 +85,10 @@ All under the git-ignored `apps/poc/artifacts/fords-labels-29cfd3e/` in the main
 
 ## 6. Review notes
 
-pending PM
+code-critic at `6bd7718`: **APPROVE**, no CRITICAL or HIGH. The critic re-ran `npm test` (79 of 79), `tsc --noEmit` (exit 0) and `check_map_features.mjs` (all eight scenarios pass). It confirmed the engine and contracts diff is empty, the two desks share priority, candidates and hide rule, and `check_map_features.mjs` still fails on an added, removed or re-typed feature. A grep finds no ford code. Credential scan over `origin/main...HEAD`: clean.
+
+Three LOW notes, not fixed (below the fix bar):
+
+- The desk-parity test in `apps/web/test/features.test.ts` (lines 152-159) uses one scenario and two hand-placed boxes. Parity under each desk's real counter layout is not asserted.
+- `wall` has a `PRIORITY` entry in both desks (`map-features.js:29`, `features.ts:69`), but walls carry no label, so the entry is unused.
+- The evidence in `apps/poc/artifacts/fords-labels-29cfd3e/` is git-ignored and exists only in the main checkout.
