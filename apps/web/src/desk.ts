@@ -4,7 +4,8 @@
 // is shown in #notice with the server's own text.
 import type {CommanderState, MapDocument, ScenarioList} from "@battle/contracts";
 import {DeskRefusal, type DeskApi} from "./api.ts";
-import {orderBody, orderOutcome, templateFor} from "./orders.ts";
+import {reread, sendOrder, startBattle, type Loaded} from "./commands.ts";
+import {orderBody, templateFor} from "./orders.ts";
 import {dispatchesMarkup, missionMarkup, scenarioOptions, templateHelp, templateOptions, unitCardMarkup} from "./panels.ts";
 import {contactsMarkup, mapMarkup, ordersMarkup} from "./render.ts";
 import {clickMap, emptySelection, ownUnit, type MapTarget, type Notice, type Selection} from "./selection.ts";
@@ -51,6 +52,7 @@ export async function startDesk(doc: Document, api: DeskApi): Promise<void> {
   const newButton = element<HTMLButtonElement>(doc, "new-battle");
   let view: CommanderState;
   let terrain: MapDocument;
+  let terrainGame = "";  // the game `terrain` belongs to
   let catalog: ScenarioList | null = null;
   let selection: Selection = emptySelection;
   let kind = "move";
@@ -107,10 +109,14 @@ export async function startDesk(doc: Document, api: DeskApi): Promise<void> {
     notice.dataset["kind"] = current?.kind ?? "info";
   }
 
+  const held = (): Loaded => ({view, terrain, terrainGame});
+  function adopt(next: Loaded): void {
+    if (next.view.game_id !== view.game_id) selection = emptySelection;
+    ({view, terrain, terrainGame} = next);
+  }
+
   async function refresh(): Promise<void> {
-    const gameId = view.game_id;
-    view = await api.state();
-    if (view.game_id !== gameId) { terrain = await api.map(); selection = emptySelection; }
+    adopt(await reread(api, held()));
   }
 
   // Commands are taken only while paused (BattleService._ensure_paused): pause and let an interval finish.
@@ -151,20 +157,11 @@ export async function startDesk(doc: Document, api: DeskApi): Promise<void> {
     await paused();
     const body = orderBody(view, selection, kind);
     if (!body) return {kind: "info", text: "Select a counter, an order and any destination it needs."};
-    const order = body.orders[0]!;
-    const before = view;
-    try {
-      view = await api.orders(body);
-    } catch (error) {
-      if (!unknownOutcome(error)) throw error;
-      // Review #6: the POC may have taken it; re-read and say what the battle now holds.
-      await refresh();
-      return orderOutcome(before, view, order.unit_id, order.stance);
-    }
-    selection = {unitId: selection.unitId, destination: null};
-    const label = templateFor(view, order.stance)?.label ?? order.stance;
-    const where = order.destination ? ` → hex ${order.destination.join(",")}` : "";
-    return {kind: "accepted", text: `Order accepted: ${order.unit_id} ${label}${where}. Start the clock to carry it out.`};
+    // Review #6: an unconfirmed order is followed by a re-read (commands.ts).
+    const step = await sendOrder(api, held(), body);
+    adopt(step.loaded);
+    if (step.notice.kind === "accepted") selection = {unitId: selection.unitId, destination: null};
+    return step.notice;
   }));
 
   clockButton.addEventListener("click", () => act(async () => {
@@ -176,24 +173,14 @@ export async function startDesk(doc: Document, api: DeskApi): Promise<void> {
     const chosen = catalog?.scenarios.find((s) => s.id === scenarioSelect.value);
     if (!chosen) return {kind: "info", text: "Choose a scenario."};
     await paused();
-    const gameId = view.game_id;
-    try {
-      view = await api.newBattle(chosen.id, view);
-    } catch (error) {
-      if (!unknownOutcome(error)) throw error;
-      await refresh();
-      const started = view.game_id !== gameId;
-      return {kind: "unknown", text: `The local simulation did not answer in time. Re-reading the battle shows `
-        + (started ? `a new battle: ${view.scenario_brief?.title ?? chosen.title}.` : "the same battle; no new one was started.")};
-    }
-    terrain = await api.map();
-    selection = emptySelection;
-    const header = battleClock(terrain.setting, view.turn, view.seconds_per_turn, view.display_locale);
-    return {kind: "accepted", text: `New battle: ${view.scenario_brief?.title ?? chosen.title}, ${header.date}, ${header.time}. The clock is paused.`};
+    const step = await startBattle(api, held(), chosen);
+    adopt(step.loaded);
+    return step.notice;
   }));
 
   try {
     [view, terrain] = await Promise.all([api.state(), api.map()]);
+    terrainGame = view.game_id;
   } catch (error) {
     notice.textContent = `Could not read the local simulation: ${message(error)}`;
     notice.dataset["kind"] = "refusal";
