@@ -6,7 +6,7 @@
 
 | Area | Change | Files |
 |---|---|---|
-| TS desk ring | When `scenario_brief.objective.ring` is true, the map draws a dashed, unfilled ring round the objective hex, r = 53/25.5 hex radii (the POC desk's 53 px on its 25.5 px hex), so it encloses the six neighbouring hexes. The ring has `pointer-events="none"` inside the objective group, which already had it. No brief, or `ring` false, draws no ring. No scenario id is read. | `apps/web/src/render.ts`, `apps/web/style.css` |
+| TS desk ring | When `scenario_brief.objective.ring` is true, the map draws a dashed, unfilled ring round the objective hex, r = 53/25.5 hex radii (the POC desk's 53 px on its 25.5 px hex), so it encloses the centres of the six neighbouring hexes. The ring has `pointer-events="none"` inside the objective group, which already had it. No brief, or `ring` false, draws no ring. No scenario id is read. | `apps/web/src/render.ts`, `apps/web/style.css` |
 | POC desk wording | `static/order-wording.js` (new) builds the send button, its tooltip, the map tip, the mission help line and the standing-order note from `command.profile` (label, methods, reach flags). It never reads an order's `transport`, which only the God view carries ([`views.ts`](../../packages/contracts/src/views.ts)). | `apps/poc/static/order-wording.js`, `app.js`, `index.html`, `troop-analysis.js` |
 | Not changed | The server's `order.move.sent` / `order.hold.sent` templates (`presentation.py`) and the `engine_v1.py` message still say "by runner": they are recorded state, so replay digests depend on them (§3). | — |
 
@@ -68,4 +68,25 @@ All under the git-ignored `apps/poc/artifacts/eras-3-e2f9180/` in the main check
 
 ## 5. Review notes
 
-pending critic and web-qa
+**code-critic on e2f9180: APPROVE.** No CRITICAL, HIGH or MEDIUM findings.
+
+1. §1 said the ring encloses the six neighbouring hexes. At r = 53/25.5 ≈ 2.08 hex radii it encloses their centres (1.73 radii), not the whole hexes (2.73 radii). The POC ring has the same proportion. Fixed in this doc.
+2. `apps/poc/static/order-wording.js` `means()` decides whether an order can go by voice from the profile flag `voice_reach_from_entry`, not from the entry's reach. `scenario_command._reach_problems` allows a reach of 0; such an entry would show "voice or runner" when no order travels by voice. Shipped entries are unaffected (Hill 223: 1, Cannae: 1, Gergovia: 2). The reach is already in the viewing side's own `command` object (`command.voice_reach`), so reading it there shows no other side's data.
+3. `apps/poc/static/app.js` `renderControls`: when the send button reads "Give local order ↗", its tooltip still holds the dispatch means.
+4. Observer safety: the wording reads only `state.command.profile`. In God Mode `command` is still the player side's own; other sides appear only under `commands`, which the wording never reads. No test proves the wording ignores God-view fields.
+5. Fail-Open Check: a missing profile or a label without " · " gives "runner". These fallbacks choose display text only, record nothing and advance no state.
+6. No stale ring on a scenario switch: `desk.ts` rebuilds the SVG through `mapMarkup` each render, and `make smoke-web` asserts ring count 0 after ringed scenarios.
+7. The ring selector `.objective .objective-ring` outranks `.objective circle`, so the `5 5` dash applies (measured 5px, 5px).
+8. Evidence in `apps/poc/artifacts/eras-3-e2f9180/` checked: mutations m1–m5 red, red-first logs fail for the stated reasons, gates as reported, contracts and POC engine diffs empty, no absolute home-directory paths in `git log -p`.
+9. No mutation covers a change that reads `order.transport` or God-view data.
+10. The `apps/poc/README.md` code map does not list `static/order-wording.js`; its general `static/` row covers it.
+
+**web-qa on e2f9180: PASS** (TS ring; POC wording per era; God Mode toggle). Evidence: `apps/poc/artifacts/eras-3-e2f9180/web-qa/`.
+
+1. Hill 223 (1918): the button says "voice or runner" while the brief says the out-of-earshot patrol is reached only by runner. The brief describes the patrol's reach and the button the side's methods, so they do not contradict, but a player could wonder why voice is offered.
+2. With the command's own HQ selected, "Give local order ↗" keeps the dispatch tooltip (as critic note 3).
+3. The server's recorded dispatch line "by runner" is unchanged. It reads consistently after the 1863 "foot courier" button, and in 1944 another template already says "by word of mouth".
+4. Coverage limits: Cannae and the opposing side's wording are not reachable in the player UI; POC desk console errors were not captured independently.
+5. The TS desk's "Start battle" resets the shared POC game (existing behaviour).
+
+None blocks (Completion Standard fix bar). Critic note 1 is fixed here; the rest are recorded, not scheduled.
