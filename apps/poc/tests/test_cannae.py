@@ -311,6 +311,8 @@ class CannaeRunTests(unittest.TestCase):
         self.assertEqual(len(final["victory"]["record"]), 12)
         self.assertIn(row["winner"], ("roman", "carthaginian"))
         self.assertEqual((row["edition"], row["broke_through"]), ("cannae-d38", {}))  # docs/research/82 Q3.
+        # docs/research/83: the share runs and breakthroughs, read from the same record.
+        self.assertEqual((row["share_intervals"], row["longest_share_run"], row["breakthroughs"]), (0, 0, []))
         self.assertEqual(sorted(runs.ENTRIES), sorted(["default", *VARIANTS]))
 
 

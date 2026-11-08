@@ -22,6 +22,7 @@ make poc-offline         # scripted commanders, no inference calls
 make test-poc            # Python components, UI smoke and map geometry
 make smoke-poc           # isolated local HTTP smoke
 make headless-poc        # scripted battle + exact replay; temporary database
+make headless-poc SCENARIO=pegasus-bridge  # the same for any headless catalog entry
 make web                 # TypeScript desk on http://127.0.0.1:8875, relaying to the POC on 8874
 make smoke-web           # real-browser click test of the TypeScript desk; isolated POC and ports
 ```
