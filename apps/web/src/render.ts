@@ -36,8 +36,8 @@ function counter(kind: "friendly" | "contact", id: string, point: [number, numbe
   const [x, y] = point;
   const data = kind === "friendly" ? `data-unit="${esc(id)}"` : `data-contact="${esc(id)}"`;
   const pressed = kind === "friendly" ? ` role="button" tabindex="0" aria-pressed="${selected}"` : "";
-  return `<g class="counter ${kind}${selected ? " selected" : ""}" ${data}${pressed} transform="translate(${(x - 30).toFixed(1)},${(y - 17).toFixed(1)})">`
-    + `<title>${esc(title)}</title><rect width="60" height="34" rx="3"/>`
+  return `<g class="counter ${kind}${selected ? " selected" : ""}" ${data}${pressed} transform="translate(${(x - 37).toFixed(1)},${(y - 17).toFixed(1)})">`
+    + `<title>${esc(title)}</title><rect width="74" height="34" rx="3"/>`
     + `<text x="4" y="11" class="counter-id">${esc(id)}</text>`
     + `<text x="4" y="21">${esc(lines[0])}</text><text x="4" y="31">${esc(lines[1])}</text></g>`;
 }
@@ -58,7 +58,7 @@ export function mapMarkup(view: CommanderView, map: MapDocument, selection: Sele
   const [ox, oy] = hexCenter(view.objective, r);
   const label = view.scenario_brief?.objective.label ?? "Objective";
   const objective = `<g class="objective" pointer-events="none"><circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="${(r * 0.6).toFixed(1)}"/>`
-    + `<text x="${ox.toFixed(1)}" y="${(oy - r * 0.7).toFixed(1)}" text-anchor="middle">${esc(label)}</text></g>`;
+    + `<text x="${ox.toFixed(1)}" y="${(oy + r * 0.6 + 12).toFixed(1)}" text-anchor="middle">${esc(label)}</text></g>`;
   const unit = view.units.find((u) => u.id === selection.unitId);
   let route = "";
   if (unit && selection.destination) {

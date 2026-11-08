@@ -3,7 +3,7 @@
     "target": "ES2022", "lib": ["ES2022", "DOM"],
     "module": "ESNext", "moduleResolution": "Bundler",
     "strict": true, "noEmit": true, "verbatimModuleSyntax": true,
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": true, "erasableSyntaxOnly": true,
     "types": [],
     "paths": {"@battle/contracts": ["./packages/contracts/src/index.ts"]}
   },

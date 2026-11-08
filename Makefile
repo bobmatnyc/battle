@@ -2,7 +2,16 @@ PYTHON ?= python3
 NODE ?= node
 POC_ARGS ?=
 
-.PHONY: poc poc-offline test-poc smoke-poc headless-poc
+.PHONY: poc poc-offline test-poc smoke-poc headless-poc web smoke-web
+WEB_ARGS ?=
+
+# TypeScript desk (docs/research/70) against a POC already running on 8874.
+web:
+	cd apps/web && $(NODE) --disable-warning=ExperimentalWarning server/desk-server.ts $(WEB_ARGS)
+
+# Real-browser click test on its own POC, SQLite file and ports; exit 3 = no browser (blocked).
+smoke-web:
+	cd apps/web && $(NODE) --disable-warning=ExperimentalWarning scripts/smoke-browser.ts
 
 poc:
 	cd apps/poc && $(PYTHON) -m battle $(POC_ARGS)

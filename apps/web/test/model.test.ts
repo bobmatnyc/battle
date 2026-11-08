@@ -26,6 +26,8 @@ test("battlefield time is the scenario's local time in every browser time zone",
     time: "16:36", date: "Thursday, 2 July 1863", location: "Little Round Top · Gettysburg, Pennsylvania",
   });
   assert.equal(battleClock(setting, 1, 15).time, "16:30:15");
+  // The desk passes the view's display_locale, as the POC desk does.
+  assert.equal(battleClock(setting, 0, 30, view.display_locale).date, "Thursday, July 2, 1863");
 });
 
 test("hex centres follow the POC's offset-row layout", () => {
