@@ -1,8 +1,9 @@
 """The paid model batch: its fixed plan, its key and the key's limit (D37, docs/research/78).
 
 Why: the spend cap in ``battle.spend`` is the batch's own bound. D37 adds a
-second, separate bound (the OpenRouter key's credit limit, equal to the cap),
-takes the key only from the environment the batch was started with, and fixes
+pre-spend check of the OpenRouter key (B62: the current key, with no credit
+limit, is accepted; a limited key needs the cap remaining), takes the key only
+from the environment the batch was started with, and fixes
 the model, plan and cap the owner approved, so none of them comes from a file
 or a flag by accident.
 What: ``PAID_PLANS`` (``d37-option-a``), ``plan_settings`` and
@@ -106,46 +107,62 @@ def _usd(value):
 
 
 def key_limit_check(info, cap_usd):
-    """Why: the key's own credit limit is a backstop separate from the cap
-    (D37); a key without one, or with more than the cap, is no backstop.
+    """Why: the batch must not start on a key that cannot pay for the cap, that
+    re-arms mid-batch, or that is free tier. B62 (Bob): the current key, which
+    has no credit limit, is used; the $14 cap rests on the reservation, cost
+    reconciliation and the provider-limit stop (docs/research/78 §8).
     What: the check record of the key-info ``data`` object ``info``: ``ok``,
-    the reasons it fails, and ``limit``, ``limit_remaining``, ``limit_reset``,
-    ``is_free_tier`` and ``usage`` as read (never ``label``, which can show
-    part of the key). ``ok`` needs ``limit`` set and <= ``cap_usd``,
-    ``limit_remaining`` >= ``cap_usd``, ``limit_reset`` None (a limit that
-    resets is refused), and ``is_free_tier`` not true; a
-    missing or non-numeric amount fails. Amounts compare as exact decimals.
-    Test: `test_key_limit_check_accepts_only_a_key_limited_to_the_cap`.
+    the reasons it fails, ``unlimited``, and ``limit``, ``limit_remaining``,
+    ``limit_reset``, ``is_free_tier`` and ``usage`` as read (never ``label``,
+    which can show part of the key). ``limit`` and ``limit_remaining`` both
+    present and null is an unlimited key (``unlimited`` true). Otherwise both
+    must be numbers and ``limit_remaining`` >= ``cap_usd``; the limit itself
+    may exceed the cap. Every key also needs ``limit_reset`` present and None
+    and ``is_free_tier`` present and false. A missing field, one
+    null of the two, or a non-numeric amount fails. Amounts compare as exact
+    decimals.
+    Test: `test_key_limit_check_accepts_an_unlimited_key_or_one_with_the_cap_remaining`,
+    `test_a_key_with_no_limit_passes_through_main_and_the_manifest_says_unlimited`.
     """
     info = info if isinstance(info, dict) else {}
     limit, remaining = _amount(info.get("limit")), _amount(info.get("limit_remaining"))
     free = info.get("is_free_tier")
     reset = info.get("limit_reset")
     reasons = []
-    if limit is None:
-        reasons.append("the key has no credit limit (limit is null or not a number)")
-    elif _usd(limit) > _usd(cap_usd):
-        reasons.append(f"the key's limit ${limit} is above the ${cap_usd} cap")
-    if remaining is None:
-        reasons.append("limit_remaining is null or not a number")
-    elif _usd(remaining) < _usd(cap_usd):
-        reasons.append(f"the key's limit_remaining ${remaining} is below the ${cap_usd} cap")
-    if reset is not None:  # D37 review C: a limit that resets re-arms the key mid-batch.
+    # B62: null means unlimited only when OpenRouter sent both fields as null; absent is not null.
+    nulls = [name for name in ("limit", "limit_remaining") if name in info and info[name] is None]
+    unlimited = len(nulls) == 2
+    if len(nulls) == 1:
+        reasons.append(f"only {nulls[0]} is null; an unlimited key has both limit and limit_remaining null")
+    elif not unlimited:
+        if limit is None:
+            reasons.append("limit is missing or not a number")
+        if remaining is None:
+            reasons.append("limit_remaining is missing or not a number")
+        elif _usd(remaining) < _usd(cap_usd):
+            reasons.append(f"the key's limit_remaining ${remaining} is below the ${cap_usd} cap")
+    # bt-T21 review: a reply missing either field is malformed, never a passing key.
+    if "limit_reset" not in info:
+        reasons.append("limit_reset is missing")
+    elif reset is not None:  # D37 review C: a limit that resets re-arms the key mid-batch.
         reasons.append(f"the key's limit resets ({reset if reset in ('daily', 'weekly', 'monthly') else 'unrecognised'}); "
                        "use a key whose limit never resets")
-    if free is True:
+    if "is_free_tier" not in info:
+        reasons.append("is_free_tier is missing")
+    elif free is True:
         reasons.append("the key is on the free tier")
-    elif "is_free_tier" in info and not isinstance(free, bool):
+    elif not isinstance(free, bool):
         reasons.append("is_free_tier is not a boolean")
     return {
-        "ok": not reasons, "reasons": reasons, "cap_usd": cap_usd, "limit": limit, "limit_remaining": remaining,
+        "ok": not reasons, "reasons": reasons, "unlimited": unlimited, "cap_usd": cap_usd,
+        "limit": limit, "limit_remaining": remaining,
         "limit_reset": reset if reset in (None, "daily", "weekly", "monthly") else "unrecognised",
         "is_free_tier": free if isinstance(free, bool) else None, "usage": _amount(info.get("usage")),
     }
 
 
 def check_key(api_key, cap_usd, *, opener, source="openrouter"):
-    """Why: the batch must not start on a key that is rejected or unlimited.
+    """Why: the batch must not start on a key that is rejected or fails the check.
     What: ``fetch_key_info`` through ``opener`` then ``key_limit_check``;
     returns the record (with ``endpoint`` and ``opener`` = ``source``) when
     it passes. A failed call (network, HTTP, decode; 401 or 403 is a rejected

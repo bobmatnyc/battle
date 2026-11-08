@@ -20,8 +20,9 @@ Guards, all fail-closed:
 - named plan (D37): a run that would spend needs ``--paid-plan``; without it
   only a dry run (or a test's fake provider) is allowed; a listed model's
   price cannot be overridden, and no rate may be 0;
-- key limit (D37): OpenRouter's key-info call must show a credit limit set,
-  at most the cap, that never resets, with at least the cap remaining, not free tier; any
+- key limit (D37, B62): OpenRouter's key-info call must show either no
+  credit limit (limit and limit_remaining both null: ``unlimited``) or at
+  least the cap remaining, a limit that never resets, and not free tier; any
   failure refuses to start; the check (no key) is pinned in the manifest;
 - budget: before every model call, spend so far plus one worst-case call
   (``battle.spend.RESERVE_BASIS``) must not exceed the cap (landing on it is

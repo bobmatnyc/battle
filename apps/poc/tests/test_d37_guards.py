@@ -13,15 +13,16 @@ import unittest
 import urllib.error
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import replace
+from decimal import Decimal
 from pathlib import Path
 from unittest import mock
 
-from battle.adapters.openrouter import KEY_INFO_URL, KeyInfoError, OpenRouterProvider, fetch_key_info
+from battle.adapters.openrouter import KEY_INFO_URL, KeyInfoError, OpenRouterProvider, fetch_key_info, request_body
 from battle.adapters.rules import ScenarioRegistry
 from battle.bootstrap import build_replay
 from battle.command_policy import scripted_actions, scripted_policy
 from battle.config import Settings
-from battle.paid_batch import D37_OPTION_A, check_key, fake_key_opener, key_limit_check
+from battle.paid_batch import D37_OPTION_A, check_key, fake_key_opener, key_limit_check, plan_settings
 from battle.scenario import LITTLE_ROUND_TOP
 from battle.spend import BudgetExhausted, Price, SpendGuard
 
@@ -160,16 +161,33 @@ class ExactCapTest(unittest.TestCase):
 class KeyLimitTest(unittest.TestCase):
     """Item 2: the key's own limit, checked before any spend, fail closed."""
 
-    def test_key_limit_check_accepts_only_a_key_limited_to_the_cap(self):
+    def test_key_limit_check_accepts_an_unlimited_key_or_one_with_the_cap_remaining(self):
         good = {"limit": 14.0, "limit_remaining": 14.0, "limit_reset": None, "is_free_tier": False, "usage": 0}
         record = key_limit_check(good, 14.0)
         self.assertTrue(record["ok"], record)
+        self.assertFalse(record["unlimited"])
         self.assertNotIn("label", record)
-        self.assertTrue(key_limit_check({**good, "limit": 10, "limit_remaining": 14}, 14.0)["ok"])
+        # B62: the limit itself may be above the cap; only the remaining credit must cover it.
+        for name, change in {"limit below remaining": {"limit": 10, "limit_remaining": 14},
+                             "limit above the cap": {"limit": 14.01}, "limit $20": {"limit": 20.0},
+                             "remaining above the cap": {"limit": 500.0, "limit_remaining": 312.5}}.items():
+            with self.subTest(name):
+                passed = key_limit_check({**good, **change}, 14.0)
+                self.assertTrue(passed["ok"], passed)
+                self.assertFalse(passed["unlimited"])
+        # B62: both null is an unlimited key; it passes and says so.
+        unlimited = key_limit_check({**good, "limit": None, "limit_remaining": None, "usage": 3.5}, 14.0)
+        self.assertEqual((unlimited["ok"], unlimited["unlimited"], unlimited["reasons"]), (True, True, []))
+        self.assertEqual((unlimited["limit"], unlimited["limit_remaining"]), (None, None))
+        absent = {k: v for k, v in good.items() if k not in ("limit", "limit_remaining")}
         bad = {
-            "unlimited": {"limit": None, "limit_remaining": None},
-            "limit above the cap": {"limit": 14.01},
+            "limit null, remaining set": {"limit": None},
+            "remaining null, limit set": {"limit_remaining": None},
             "remaining below the cap": {"limit_remaining": 13.99},
+            "unlimited but free tier": {"limit": None, "limit_remaining": None, "is_free_tier": True},
+            "unlimited but resets": {"limit": None, "limit_remaining": None, "limit_reset": "monthly"},
+            "remaining not a number": {"limit_remaining": "14"},
+            "remaining a boolean": {"limit_remaining": True},
             "free tier": {"is_free_tier": True},
             "free tier not a boolean": {"is_free_tier": "no"},
             "limit not a number": {"limit": "14"},
@@ -181,9 +199,20 @@ class KeyLimitTest(unittest.TestCase):
         }
         for name, change in bad.items():
             with self.subTest(name):
-                self.assertFalse(key_limit_check({**good, **change}, 14.0)["ok"])
-        self.assertFalse(key_limit_check({}, 14.0)["ok"])
-        self.assertFalse(key_limit_check("junk", 14.0)["ok"])
+                refused = key_limit_check({**good, **change}, 14.0)
+                self.assertFalse(refused["ok"])
+                self.assertEqual(refused["unlimited"], name.startswith("unlimited"))  # As read, not the verdict.
+        # A missing field is not a null one: absent limit fields, or no data, fail closed.
+        # bt-T21 review: a reply missing is_free_tier or limit_reset is refused, unlimited or not.
+        both_null = {**good, "limit": None, "limit_remaining": None}
+        without = lambda info, *names: {k: v for k, v in info.items() if k not in names}  # noqa: E731
+        shapes = (without(both_null, "limit_reset", "is_free_tier", "usage"),
+                  without(both_null, "is_free_tier"), without(both_null, "limit_reset"),
+                  without(good, "is_free_tier"), without(good, "limit_reset"),
+                  without(good, "limit_reset", "is_free_tier", "usage"))
+        for info in (absent, {**absent, "limit": None}, {}, "junk", *shapes):
+            with self.subTest(info=info):
+                self.assertFalse(key_limit_check(info, 14.0)["ok"])
 
     def test_key_info_call_is_a_get_with_the_key_and_fails_closed(self):
         seen = []
@@ -215,8 +244,9 @@ class KeyLimitTest(unittest.TestCase):
     def test_main_refuses_to_start_when_the_key_check_fails_and_records_a_passing_check_without_the_key(self):
         argv = ["--plan", "pegasus-bridge", "--model", SONNET, "--games", "1", "--cap-usd", "14"]
         env = {"OPENROUTER_API_KEY": DUMMY_KEY}
-        for opener in (key_reply(limit=None), key_reply(limit=20.0), key_reply(limit_remaining=1.0),
-                       key_reply(is_free_tier=True), lambda request, timeout: (_ for _ in ()).throw(OSError())):
+        for opener in (key_reply(limit=None), key_reply(limit_remaining=None), key_reply(limit_remaining=1.0),
+                       key_reply(is_free_tier=True), key_reply(limit_reset="monthly"),
+                       lambda request, timeout: (_ for _ in ()).throw(OSError())):
             with tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err, \
                     self.assertRaises(SystemExit) as refused:
                 git_repo(tmp)
@@ -408,12 +438,104 @@ class ProviderLimitTest(unittest.TestCase):
                 self.assertEqual(len(chat.bodies), 3)
 
 
+class SizedCostFake(CostFake):
+    """A ``CostFake`` that also keeps the byte length of the body the adapter
+    would send for each call under ``settings``."""
+
+    def __init__(self, entry, costs, settings):
+        super().__init__(entry, costs)
+        self.settings, self.sizes = settings, []
+
+    def request(self, instruction, payload):
+        self.sizes.append(len(request_body(self.settings, instruction, payload)))
+        return super().request(instruction, payload)
+
+
+def sonnet_reserve(body_bytes):
+    """The worst-case call at the D37 rates, worked by hand from RESERVE_BASIS (not
+    through battle.spend): (body + 1,024) input tokens at $2 and 4,000 output tokens at
+    $10 per million."""
+    return (Decimal(body_bytes + 1024) * 2 + Decimal(4000) * 10) / Decimal(1_000_000)
+
+
 GENERIC = ["--plan", "pegasus-bridge", "--model", SONNET, "--games", "1", "--cap-usd", "14"]
+
+
+class UnlimitedKeyTest(unittest.TestCase):
+    """B62: the current key has no credit limit; the $14 cap rests on the reservation,
+    cost reconciliation and the provider-limit stop."""
+
+    def test_the_call_whose_real_sonnet_reserve_would_pass_the_cap_is_never_sent(self):
+        settings = plan_settings(D37_OPTION_A)  # Sonnet 5.5, effort high, 4,000 tokens; no key.
+        price = model_runs.price_for(settings)
+        self.assertEqual((price.input_per_mtok, price.output_per_mtok, price.max_output_tokens), (2.0, 10.0, 4000))
+
+        def run(costs):
+            fakes = []
+            with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
+                code, summary = model_runs.run_batch(
+                    ["pegasus-bridge"], 1, 14.0, Path(tmp) / "b", price=price, source=SOURCE, settings=settings,
+                    provider_for=lambda e: fakes.append(SizedCostFake(e, costs, settings)) or fakes[-1])
+            return code, summary, fakes[0]
+
+        _, _, probe = run([0.01, 0.01])  # Pegasus default: two player calls; their real body sizes.
+        self.assertEqual(probe.calls, 2)
+        self.assertGreater(probe.sizes[1], 1000)  # The real body, not a zero-byte stand-in.
+        second = sonnet_reserve(probe.sizes[1])
+        self.assertGreater(second, Decimal("0.04"))  # 4,000 output tokens at $10 alone are $0.04.
+        # Landing exactly on the cap: the second call is sent.
+        code, summary, fake = run([float(Decimal(14) - second), float(second)])
+        self.assertEqual((fake.calls, fake.sizes), (2, probe.sizes))
+        self.assertEqual((code, summary["spent_usd"]), (model_runs.EXIT_CAP, 14.0))
+        # One millionth of a dollar more spent first: the second call's reserve would pass $14.
+        code, summary, fake = run([float(Decimal(14) - second + Decimal("0.000001")), 0.01])
+        self.assertEqual(fake.calls, 1)  # The second call is never sent.
+        self.assertEqual(code, model_runs.EXIT_CAP)
+        stopped = summary["stopped_or_failed"][0]
+        self.assertEqual(stopped["status"], "stopped")
+        self.assertTrue(stopped["reason"].startswith("budget: "), stopped["reason"])
+        self.assertLessEqual(summary["spent_usd"], 14.0)
+
+    def test_a_402_through_main_stops_the_paid_batch_with_exit_5_and_closes_the_manifest(self):
+        refusal = http_error(402, {"error": {"code": 402, "metadata": {"limit_source": "openrouter_credits"}}})
+        chat = ChatOpener(LITTLE_ROUND_TOP, refuse_at=3, refusal=refusal)
+        with tempfile.TemporaryDirectory() as tmp:
+            code, manifest, games, summary, out = paid_run(tmp, chat)
+            databases = sorted(p.name for p in out.iterdir() if p.suffix == ".sqlite")
+            kept = Path(games[0]["db"]).exists()
+        self.assertEqual(code, model_runs.EXIT_PROVIDER_LIMIT)
+        self.assertEqual(len(chat.bodies), 3)  # Nothing is sent after the refusal.
+        self.assertEqual(databases, ["little-round-top-1.stopped.sqlite"])
+        self.assertTrue(kept)
+        reason = "provider_limit: HTTP 402 openrouter_credits"
+        self.assertEqual((games[0]["status"], games[0]["reason"]), ("stopped", reason))
+        closed = manifest["closed"]
+        self.assertEqual((closed["status"], closed["exit"], closed["reason"], closed["played"], closed["not_started"]),
+                         ("provider_limit", 5, reason, 1, 11))
+        self.assertAlmostEqual(closed["spent_usd"], 0.02)
+        self.assertEqual((summary["status"], summary["exit"]), ("provider_limit", 5))
+
+    def test_a_key_with_no_limit_passes_through_main_and_the_manifest_says_unlimited(self):
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
+            git_repo(tmp)
+            code = model_runs.main([*GENERIC, "--dir", str(Path(tmp) / "b")], repo=tmp,
+                                   environ={"OPENROUTER_API_KEY": DUMMY_KEY},
+                                   key_opener=key_reply(limit=None, limit_remaining=None, usage=3.5),
+                                   provider_for=lambda e: CostFake(e, [0.01] * 10))
+            manifest = json.loads((Path(tmp) / "b" / "manifest.json").read_text())
+            written = batch_files(Path(tmp) / "b")
+        self.assertEqual(code, model_runs.EXIT_DONE)
+        check = manifest["key_check"]
+        self.assertEqual((check["ok"], check["unlimited"], check["limit"], check["limit_remaining"], check["usage"]),
+                         (True, True, None, None, 3.5))
+        self.assertEqual(check["endpoint"], KEY_INFO_URL)
+        self.assertNotIn(DUMMY_KEY, written)
+        self.assertNotIn("masked-key-label", written)
 
 
 class ReviewFixesTest(unittest.TestCase):
     """Code-critic on 998063c, items A (price overrides), B (named plan) and D (redirects).
-    Item C is a case in `test_key_limit_check_accepts_only_a_key_limited_to_the_cap`."""
+    Item C is a case in `test_key_limit_check_accepts_an_unlimited_key_or_one_with_the_cap_remaining`."""
 
     def refused(self, argv, **kwargs):
         with tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err, \
