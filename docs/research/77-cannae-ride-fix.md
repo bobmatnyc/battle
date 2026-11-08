@@ -88,10 +88,49 @@ This is a smoke on one machine, not the EVO measurement.
 
 ## 6. EVO run
 
-pending: one measured EVO run
+One measured run at `aa8789f`, scripted on both sides, no model, no spend. Command, from `apps/poc` under `/usr/bin/time -v`: `python3 scripts/cannae_runs.py --only default --dir <run>/runs`. It ran 2026-11-08 14:42:36Z to 14:48:07Z and exited 0.
 
-Planned: from `git archive` of the branch head, in `apps/poc`, `python3 scripts/cannae_runs.py --only default --dir <run dir>/runs`, scripted on both sides with no model. The JSON line answers whether the horse rides: `pursue` (turns of the pursuit orders), `ride` and `charge` (turns, `null` if never sent), `cavalry_fight` for EQ and HC1 to HC3, `routed` (EQ in it), `exited`, and `replay` `identical`.
+| Field | Result |
+|---|---|
+| Pursue (HC1 to HC3) | 3 and 15 |
+| Ride | HC1 30, HC3 30, HC2 none (routed 28) |
+| Charge | HC1 60 |
+| Routed | includes EQ, HC2, HC3 |
+| `cavalry_fight` first/left | EQ 1/2, HC1 1/2, HC2 3/5, HC3 7/8 |
+| Peak enclosed | 44,616 men (14 units) at 53 |
+| Winner | Roman at 160 (0 enclosed, 8,178 lost, 28,400 required) |
+| Losses (Carth.; Roman) | 21,260/50,020; 9,362/77,200 |
+| Events | 63,124 |
+| Replay | identical |
+| Wall; max RSS; Python | 5:30.67; 411,860 kB; 3.14.4 |
+
+The run matches the Mac run in every printed field. `cannae_runs.py` does not print the headless digests, so they were not compared.
+
+Evidence: `evo-linux:~/analytics/bt12-aa8789f/` and `apps/poc/artifacts/cannae-ride-4a766e7/evo/` (`MANIFEST.txt`; sqlite sha256 `36a9f1be`...`b7e5`).
+
+The ride now fires, but the outcome is still a Roman win. The 14-run batch waits for the Architect.
 
 ## 7. Review notes
 
-pending: review
+**code-critic on `aa8789f`: APPROVE.** No blocking findings. LOW findings, recorded, not scheduled:
+
+- F1: no mutation log covers the ride-built-outside-`_once` guard or the `not rode` pursuit guard (suggested m6 and m7). The new test catches both by reading.
+- F2: no unit test of the `scripts/cannae_runs.py` `summarise` pursue/charge split. Only the measured run checks it.
+
+Notes:
+
+1. With no pursuit sent the orders match `65775a1`. `_quarry` is truthy only when EQ is in the contact list and not routed. `_horse_gone` is true only when EQ is routed or absent after interval 7. They are never both true, so a pursuing decision is one where the base sent no horse order. The ride outside `_once` checks the same `_able` units in the same order and truncates as before. `_rear_sent` from `_ride_turn` matches the old set because a charge needs `rode`.
+2. Neither changed guard can send a second ride or charge. Both ride branches need `not rode`, and `charged` turns true at the first move off the ride hex at or after the first ride turn.
+3. The pursuit reads only the Carthaginian side's view (`engine.view(s, side)` contacts, no older than `CONTACT_MAX_AGE`), never a god-view position. This is the same input as `_horse_gone`.
+4. "In view" is the side's contact list (headquarters' view), as in the kept Dd8 Q5 rule, not a per-horse sight check. Section 2 describes this.
+5. A contact up to 6 intervals old counts as in view, so the horse may sit on EQ's last reported hex until it ages out; the ride then fires. If EQ stayed in view unrouted all game, the ride would never fire. The ruling allows this.
+6. In the cavalry-delayed variants the delay counts from the first `hold`. A pursuit can replace the hold, and once EQ is gone the ride can go at once. This happens only in runs with a pursuit. The ruling allows it.
+7. If EQ were reported on a horse unit's own `RIDE` hex, the pursuit would read as the ride. EQ starts at columns 20 to 21 and the `RIDE` hexes are at 10 to 12, so this is unlikely.
+8. Only `cannae-envelopment` is digest-compared. The deserters and cavalry-delayed variants rest on note 1 and their passing tests.
+9. The pursuit stops for good once the ride is sent (`not rode`; the new test's last assertion).
+10. The pursuit is re-sent only on a hex change (m5). A truncated pursuit re-sends at the next decision.
+11. Doc 77 matches the code and the local run (63,124 events, 173.9 s, 1.80 GB peak RSS; 766 tests OK; digests as recorded).
+12. No `/Users/` paths in the diff. `# D34:` marks every change site; helpers `_last_move` and `_ride_turn` are untagged.
+13. The red-first log proves only the first in-view assertion. The other conditions rest on mutations m1 to m5.
+
+None blocks (Completion Standard fix bar); recorded, not scheduled.
