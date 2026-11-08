@@ -117,6 +117,23 @@ async function checkLabels(page,label,view,log){
   log.push(`${label} ${view}: ${found.labels.length} feature labels, ${found.counters.length} counter boxes, none meet; ${found.hidden} label(s) hidden by the rule`);
 }
 
+// bt-T18 (docs/research/81 §3): the objective hex, and on Hill 223 every ravine and shack hex, lies
+// inside the map frame at the fit view and at 2x: its centre is inside #map-wrap's box, in screen pixels.
+const FRAMED={'hill-223-patrol':['ravine','shack']};
+async function checkFrame(page,sid,label,view,log){
+  const areas=FRAMED[sid]||[];
+  const found=await page.eval(`(()=>{
+    const wrap=document.getElementById('map-wrap').getBoundingClientRect(),svg=document.getElementById('map').getBoundingClientRect();
+    const screen=([x,y])=>[svg.left+x*svg.width/1080,svg.top+y*svg.height/840];
+    const inside=([x,y])=>x>=wrap.left&&x<=wrap.right&&y>=wrap.top&&y<=wrap.bottom;
+    const hexes=[{name:'objective',pos:state.objective},...mapData.cells.filter(c=>${JSON.stringify(areas)}.includes(c.area)).map(c=>({name:c.area,pos:c.pos}))];
+    return hexes.map(h=>({name:h.name,pos:h.pos,inside:inside(screen(center(h.pos)))}));
+  })()`);
+  const out=found.filter(h=>!h.inside);
+  assert.deepEqual(out,[],`${label} ${view}: hexes outside the map frame: ${out.map(h=>h.name+' '+h.pos).join('; ')}`);
+  log.push(`${label} ${view}: objective${areas.length?` and ${found.length-1} ${areas.join('/')} hexes`:''} inside the map frame`);
+}
+
 async function desk(page,port,sid,label,log){
   if(sid!=='little-round-top'){
     await page.eval(`(()=>{const s=document.getElementById('scenario-select');s.value=${JSON.stringify(sid)};s.onchange();document.getElementById('new-game').click();return true;})()`);
@@ -135,6 +152,7 @@ async function desk(page,port,sid,label,log){
       }else log.push(`${label}: SVG fallback has no camera; the zoomed shots are the fit view`);
     }
     await checkLabels(page,label,zoomed?'2x':'fit',log);
+    await checkFrame(page,sid,label,zoomed?'2x':'fit',log);
     for(const grid of ['on','off']){
       const off=await page.eval(`document.getElementById('map').classList.contains('no-grid')`);
       if((grid==='off')!==off)await page.eval(`document.getElementById('hex-toggle').click(),true`);

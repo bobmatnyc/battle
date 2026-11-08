@@ -223,6 +223,7 @@ export async function checkReplay(page: Page, pocPort: number, artifacts: string
   const earlier = await time();
   await choose(page, "replay-slider", "0", ["input", "change"]);
   await until("the scrub to the start", async () => (await index()) === 0 && (await time()) === at(history[0]!["turn"]));
+  const played = await checkPlayback(page, live, history.length, at);
   await clickOn(page, "#replay-forward");
   await until("a step forward", async () => (await index()) === 1);
   await clickOn(page, "#replay-live");
@@ -233,5 +234,33 @@ export async function checkReplay(page: Page, pocPort: number, artifacts: string
   assert.deepEqual([after["revision"], after["orders"].length, after["clock"]["running"]], [live["revision"], live["orders"].length, false],
     "replaying changed nothing in the battle");
   return `replay: opened at ${at(live["turn"])} (${history.length} records), stepped back to ${earlier}, `
-    + `scrubbed to ${at(history[0]!["turn"])}, stepped forward, orders closed throughout; back to live at ${at(live["turn"])}`;
+    + `scrubbed to ${at(history[0]!["turn"])}, ${played}, stepped forward, orders closed throughout; back to live at ${at(live["turn"])}`;
+}
+
+/** Slice 4a (docs/research/81 §2): from the first record, Play at the fastest offered speed runs to the
+ * latest record and stops there; Play again starts over, and a step stops it where it stands. The bar's
+ * help and the order help say that orders are closed. Leaves the replay at the first record. */
+async function checkPlayback(page: Page, live: Doc, records: number, at: (turn: number) => string): Promise<string> {
+  const text = (id: string): Promise<string> => page.evaluate<string>(`document.getElementById(${JSON.stringify(id)}).textContent`);
+  const index = async (): Promise<number> => Number(await page.evaluate<string>(`document.getElementById("replay-slider").value`));
+  assert.match(await text("replay-help"), /Play runs the record forward/);
+  assert.match(await text("order-help"), /Orders are closed while you replay/);
+  const speeds = await page.evaluate<string[]>(`[...document.getElementById("replay-speed").options].map(o => o.value)`);
+  assert.deepEqual(speeds.map(Number), live["clock"]["speeds"], "the speeds are the clock's own");
+  const fastest = speeds.at(-1)!;
+  await choose(page, "replay-speed", fastest);
+  await clickOn(page, "#replay-play");
+  await until("Pause while playing", async () => (await text("replay-play")) === "Pause");
+  await until("playback to the latest record", async () => (await index()) === records - 1 && (await text("replay-play")) === "Play", 60000);
+  assert.equal((await header(page))["time"], at(live["turn"]), "the header follows playback");
+  await clickOn(page, "#replay-play");  // at the end: starts over from the first record
+  await until("playback past the first record", async () => (await index()) >= 1);
+  await clickOn(page, "#replay-back");
+  await until("the step to stop playback", async () => (await text("replay-play")) === "Play");
+  const stopped = await index();
+  await new Promise((done) => setTimeout(done, 1500));
+  assert.equal(await index(), stopped, "no record is shown after the stop");
+  await choose(page, "replay-slider", "0", ["input", "change"]);
+  await until("the scrub back to the start", async () => (await index()) === 0);
+  return `played ${records} records at ${fastest}× to the latest and stopped; a step stopped a second play at record ${stopped}`;
 }

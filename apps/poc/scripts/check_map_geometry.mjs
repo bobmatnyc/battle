@@ -23,6 +23,18 @@ assert.ok(Math.abs(distance-50)<1e-6);
 assert.equal(JSON.stringify(cells),before);
 console.log('Map geometry passed: 504 terrain cells, closed rings, contours, 50 m spacing, unchanged input.');
 
+// bt-T18 (docs/research/81 §3): a zoom-in keeps the focus box (objective, its label and the point marks)
+// in frame with the least move from the current centre, centres a box larger than the frame, and keeps
+// the frame on the 1080 x 840 scene. No box: the current centre, as before.
+const focus=(centre,half,box)=>vm.runInContext(`BattleMapView.focusCentre(${JSON.stringify(centre)},${JSON.stringify(half)},${JSON.stringify(box)})`,context);
+assert.deepEqual(focus([540,420],[351,215],null),[540,420]);
+assert.deepEqual(focus([540,420],[351,215],[400,300,700,600]),[540,420],'a box already in frame does not move it');
+assert.deepEqual(focus([540,420],[351,215],[-84,312,183,664]),[351,449],'Hill 223: the left scene edge, the box bottom in frame');
+assert.deepEqual(focus([540,420],[351,215],[100,100,1000,800]),[550,450],'a box larger than the frame is centred');
+assert.deepEqual(focus([540,420],[351,215],[1000,780,1100,860]),[729,625],'the frame stays on the scene');
+assert.deepEqual(focus([540,420],[600,500],[0,0,10,10]),[540,420],'a frame larger than the scene shows the scene centre');
+console.log('Zoom focus passed: least move, centred when larger, clamped to the scene.');
+
 // Missing WebGL/library must restore the interactive SVG rather than leave a blank map.
 const nodes=new Map();
 function node(id){if(!nodes.has(id))nodes.set(id,{classList:{add(){},remove(){}},appendChild(){},removeAttribute(){},textContent:''});return nodes.get(id);}
