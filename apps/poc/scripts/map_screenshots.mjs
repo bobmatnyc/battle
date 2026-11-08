@@ -113,7 +113,9 @@ for sid in ${JSON.stringify(HEADLESS)}:
     out[sid] = {'title': entry.title, 'location': entry.location, 'map': map_document(entry),
                 'features': present_view(RulesSimulation().view(build_state(entry)), entry)['map_features']}
 print(json.dumps(out))`;
-  const r=spawnSync('python3',['-c',script],{cwd:POC,encoding:'utf8',maxBuffer:64<<20,env:cleanEnv()});
+  // A synchronous child blocks the deadline and signal handlers, so it has its own bound.
+  const r=spawnSync('python3',['-c',script],{cwd:POC,encoding:'utf8',maxBuffer:64<<20,env:cleanEnv(),timeout:60000});
+  if(r.error)throw new Error(`headless map data: ${r.error.message}`);
   assert.equal(r.status,0,r.stderr);
   return JSON.parse(r.stdout);
 }
@@ -228,7 +230,18 @@ async function main(){
     console.log('cleanup: '+report.join('; '));
     if(report.some(r=>/STILL/.test(r)))process.exitCode=1;
   })();
-  for(const sig of ['SIGINT','SIGTERM'])process.once(sig,()=>{console.error(`HARNESS FAILED: ${sig} received`);void cleanup().finally(()=>process.exit(1));});
+  // bt-T08 review: `on`, not `once`, so a second signal during cleanup's wait finds a listener and
+  // cannot kill the harness before the browser group is stopped; SIGHUP (a closed terminal) too.
+  // The first signal starts cleanup; later ones are ignored while it runs.
+  let signalled=false;
+  for(const sig of ['SIGINT','SIGTERM','SIGHUP'])process.on(sig,()=>{
+    if(signalled)return;
+    signalled=true;
+    console.error(`HARNESS FAILED: ${sig} received`);
+    void cleanup().finally(()=>process.exit(1));
+  });
+  // After SIGHUP the terminal may be gone; a failed write must not end the run before cleanup.
+  for(const stream of [process.stdout,process.stderr])stream.on('error',()=>{});
   let code;
   try{
     let timer;
