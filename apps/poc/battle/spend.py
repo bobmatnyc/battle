@@ -14,6 +14,7 @@ Test: `test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap`,
 
 import math
 from dataclasses import dataclass
+from decimal import Decimal
 
 # USD per million tokens, (input, output), doc 69 §3. Sonnet and Opus are the
 # Anthropic list prices that OpenRouter carries at no markup; Astra's are
@@ -72,34 +73,59 @@ class Price:
             raise ValueError("prices must be finite and 0 or more, and max_output_tokens 1 or more")
 
 
+def _usd(amount):
+    """``amount`` as an exact Decimal of its shortest float repr (13.99 is
+    13.99, not 13.9900000000000002131628...)."""
+    return Decimal(repr(float(amount)))
+
+
+def _reserve(price, body_bytes):
+    tokens_in = Decimal(body_bytes + PROVIDER_OVERHEAD_TOKENS)
+    return (tokens_in * _usd(price.input_per_mtok)
+            + Decimal(price.max_output_tokens) * _usd(price.output_per_mtok)) / Decimal(1_000_000)
+
+
 def worst_case_call(price, body_bytes):
     """The most one request whose serialized body is ``body_bytes`` long can
     cost, per ``RESERVE_BASIS``."""
-    return ((body_bytes + PROVIDER_OVERHEAD_TOKENS) * price.input_per_mtok
-            + price.max_output_tokens * price.output_per_mtok) / 1_000_000
+    return float(_reserve(price, body_bytes))
 
 
 class SpendGuard:
     """Why: every provider call of a batch must fit under the batch's cap.
     What: ``check`` (before a call) raises ``BudgetExhausted`` when
-    ``cap - spent - worst_case_call < 0``; ``charge`` (after it) adds the
-    call's recorded cost. ``body_size(instruction, payload)`` is the byte
-    length of the request body the provider will send; the composition edge
-    supplies it from the adapter. One guard spans a whole batch.
+    ``spent + worst_case_call > cap``; a call landing exactly on the cap is
+    allowed. ``charge`` (after it) adds the call's recorded cost. The sums are
+    exact decimals of each amount's float repr, so 14 - 13.99 - 0.01 is 0, not
+    -2e-16. ``body_size(instruction, payload)`` is the byte length of the
+    request body the provider will send; the composition edge supplies it from
+    the adapter. One guard spans a whole batch.
     Test: `test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap`,
-    `test_reserve_covers_the_full_request_body_the_adapter_sends`.
+    `test_reserve_covers_the_full_request_body_the_adapter_sends`,
+    `test_a_call_landing_exactly_on_the_cap_is_allowed_and_one_cent_over_is_refused`,
+    `test_the_exact_cap_call_is_sent_and_the_cent_over_call_is_never_sent`.
     """
 
     def __init__(self, cap_usd, price, body_size, spent_usd=0.0):
         if not (math.isfinite(cap_usd) and cap_usd > 0):
             raise ValueError("the cap must be a positive amount")
-        self.cap_usd, self.price, self.body_size, self.spent_usd = cap_usd, price, body_size, spent_usd
+        self.cap_usd, self.price, self.body_size = cap_usd, price, body_size
+        # D37: exact decimal sums; float drift refused a call landing exactly on the cap.
+        self._cap, self._spent = _usd(cap_usd), _usd(spent_usd)
+
+    @property
+    def spent_usd(self):
+        return float(self._spent)
 
     def check(self, instruction, payload):
-        reserve = worst_case_call(self.price, self.body_size(instruction, payload))
-        if self.cap_usd - self.spent_usd - reserve < 0:
+        reserve = _reserve(self.price, self.body_size(instruction, payload))
+        if self._spent + reserve > self._cap:
             raise BudgetExhausted(
-                f"cap ${self.cap_usd:.4f} - spent ${self.spent_usd:.4f} < reserve ${reserve:.4f} for the next call")
+                f"cap ${self.cap_usd:.4f} - spent ${self.spent_usd:.4f} < reserve ${float(reserve):.4f} for the next call")
 
     def charge(self, cost):
-        self.spent_usd += cost
+        self._spent += _usd(cost)
+
+    def at_cap(self):
+        """True once the spend has reached the cap; no game starts then."""
+        return self._spent >= self._cap
