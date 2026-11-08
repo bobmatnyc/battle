@@ -41,6 +41,9 @@ PEGASUS, HILL = "pegasus-bridge", "hill-223-patrol"
 DESK_SCRIPTED = ("concord-north-bridge", PEGASUS, HILL)
 BRIEF_KEYS = ("desk.campaign", "desk.place", "desk.conditions", "brief.{side}.headings", "brief.{side}.subhead",
               "brief.{side}.mission_text", "brief.{side}.win", "brief.{side}.loss")
+# bt-D09 default (keep the always-blown bridge, tell the player): the closing note of the Pegasus brief.
+PEGASUS_NOTE = ("Note: on this entry the bridge is blown at **00:27:30** whatever you order, because the "
+                "charge timings are authored, not sourced.")
 
 
 def every_known_entry():
@@ -160,6 +163,10 @@ class BriefTests(unittest.TestCase):
         text = brief["mission"]["text"]
         for phrase in ("intact", "24 Platoon", "Neilson", "charges", "Ham", "**03:25**", "one minute"):
             self.assertIn(phrase, text)
+        # bt-D09 default (keep + note): the brief says before play that the bridge is blown at 00:27:30.
+        self.assertTrue(text.endswith(PEGASUS_NOTE), text)
+        self.assertIn("docs/research/54 §5", PEGASUS_BRIDGE.provenance["brief.british.note"])
+        self.assertTrue(PEGASUS_BRIDGE.provenance["brief.british.note"].startswith("authored: bt-D09 default"))
         self.assertEqual(brief["objective"]["place"], "Caen Canal bridge")
         self.assertEqual(brief["outcomes"], {"win": "The bridge is held until relief.", "loss": "The bridge is lost.",
                                              "draw": "The battle ends in a draw."})

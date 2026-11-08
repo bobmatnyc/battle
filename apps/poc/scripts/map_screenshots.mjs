@@ -200,6 +200,7 @@ const ERAS=[
      return `${d.water} water and ${d.marsh} marsh hexes; roads ${d.roads.join(', ')}; canal bridge "${d.label}" and the Orne bridge drawn`;
    },
    order:{unit:'D24',to:[9,10],why:'24 Platoon, with the sappers, onto the canal bridge'},
+   note:'Note: on this entry the bridge is blown at 00:27:30 whatever you order, because the charge timings are authored, not sourced.',
    opponent:'german',policy:'scripted-pegasus-guard-v1'},
   {sid:'hill-223-patrol',label:'hill-223',clock:'06:45',campaign:'ARGONNE · 8 OCTOBER 1918',
    date:/Tuesday, (8 October|October 8,) 1918/,location:/Hill southwest of Hill 223 · Châtel-Chéhéry, Argonne/,
@@ -225,6 +226,11 @@ async function eraPlay(page,port,log,era){
   assert.doesNotMatch(head.header,/\bturn\b|revision/i,'no turn counter or revision label');
   log.push(`${era.label}: header ${head.clock} · ${head.date} · ${head.location}; no turn or revision label`);
   log.push(`${era.label}: ${era.check(await page.eval(era.drawn))}`);
+  if(era.note){  // bt-D09 default: the brief's note is on the desk, and visible, before play.
+    const seen=await page.eval(`(n=>({text:n.innerText,visible:n.checkVisibility()}))(document.getElementById('mission-text'))`);
+    assert.ok(seen.visible&&seen.text.endsWith(era.note),`the ${era.label} brief shows its note: ${seen.text}`);
+    log.push(`${era.label}: brief note visible before play: "${era.note}"`);
+  }
   const {unit,to}=era.order;
   await page.eval(`(selectUnit(${JSON.stringify(unit)}),destination=${JSON.stringify(to)},renderControls(),document.getElementById('send-order').click(),true)`);
   const order=await page.until(`the ${unit} order on record`,`fetch('/api/state').then(r=>r.json()).then(s=>s.orders.find(o=>o.unit_id===${JSON.stringify(unit)}&&o.stance==='move'&&String(o.destination)===${JSON.stringify(String(to))})||null)`);

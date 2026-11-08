@@ -231,6 +231,9 @@ PROVENANCE = {
     "brief.british.win": "sourced: the bridges were taken intact and held until relieved (S51 p. 1 para 3; S52 "
                          "sheet 4); the wording is authored",
     "brief.british.loss": "authored: the outcome the record does not show; no source",
+    "brief.british.note": "authored: bt-D09 default (keep the always-blown bridge, tell the player); the "
+                          "arming and firing intervals are authored (see 'demolition'), so the default entry "
+                          "blows the bridge at interval 5, 00:27:30 (docs/research/54 §5)",
 }
 # docs/research/75: the British player's desk text, in the entry's 1944 register. The
 # German side has no brief: the desk shows a side's brief only to that side's player.
@@ -243,7 +246,10 @@ BRITISH_BRIEF = SideBrief(
                   "and the guard has orders to blow it if capture threatens. 24 Platoon carries the sappers under "
                   "Capt Neilson RE; they clear the charges once they stand on the bridge itself. Hold the ground "
                   "within one hex of the bridge for one minute with no effective German post there, then keep it "
-                  "until relief at **03:25**. The platoon on the bridge reports it taken with the codeword Ham."),
+                  "until relief at **03:25**. The platoon on the bridge reports it taken with the codeword Ham. "
+                  # bt-D09 default (keep the always-blown bridge, tell the player): docs/research/75 §4.
+                  "Note: on this entry the bridge is blown at **00:27:30** whatever you order, because the "
+                  "charge timings are authored, not sourced."),
     win="The bridge is held until relief.", loss="The bridge is lost.")
 DESK = DeskBrief(campaign="NORMANDY · 6 JUNE 1944", place="Caen Canal bridge", objective_label="BRIDGE OBJECTIVE",
                  objective_key="BRIDGE", conditions="SUMMER · NIGHT, CLOUDY · FIXED POC CONDITION",

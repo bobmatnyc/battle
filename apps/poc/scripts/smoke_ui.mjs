@@ -434,6 +434,8 @@ assert.match(element('battle-date').textContent,/6 June 1944/);
 assert.match(element('battle-location').textContent,/Caen Canal bridge · Bénouville, Normandy/);
 assert.equal(element('mission-title').textContent,'Seize the canal bridge');
 assert.match(element('mission-text').innerHTML,/24 Platoon.*Neilson.*<strong>03:25<\/strong>.*Ham/);
+// bt-D09 default: the brief tells the player before play that the bridge is blown at 00:27:30.
+assert.match(element('mission-text').innerHTML,/Note: on this entry the bridge is blown at <strong>00:27:30<\/strong> whatever you order, because the charge timings are authored, not sourced\.$/);
 assert.equal(element('objective-key').textContent,'BRIDGE');
 assert.match(element('map').innerHTML,/class="place-label">Caen Canal bridge</);
 assert.match(element('map').innerHTML,/#b9d3e3/);  // The canal and the Orne.

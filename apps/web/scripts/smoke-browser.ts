@@ -258,11 +258,12 @@ async function concord(page: Page, pocPort: number, artifacts: string): Promise<
 // docs/research/75: Pegasus Bridge and Hill 223 from the picker, offline and scripted, each played to
 // its outcome headline with the server's reason; the computer side plays the entry's scripted control.
 interface Era { id: string; title: string; time: string; date: string; location: string; unit: string;
-  opponent: string; policy: string; shot: string }
+  opponent: string; policy: string; shot: string; note?: string }
 const ERAS: Era[] = [
   {id: "pegasus-bridge", title: "Pegasus Bridge", time: "00:25", date: "Tuesday, June 6, 1944",
     location: "Caen Canal bridge · Bénouville, Normandy", unit: "D24", opponent: "german",
-    policy: "scripted-pegasus-guard-v1", shot: "pegasus"},
+    policy: "scripted-pegasus-guard-v1", shot: "pegasus",
+    note: "Note: on this entry the bridge is blown at 00:27:30 whatever you order, because the charge timings are authored, not sourced."},
   {id: "hill-223-patrol", title: "Hill 223", time: "06:45", date: "Tuesday, October 8, 1918",
     location: "Hill southwest of Hill 223 · Châtel-Chéhéry, Argonne", unit: "A3", opponent: "german",
     policy: "scripted-hill-223-german-v1", shot: "hill-223"},
@@ -279,6 +280,11 @@ async function era(page: Page, pocPort: number, artifacts: string, spec: Era): P
   const head = await header(page);
   assert.deepEqual([head["title"], head["time"], head["date"], head["location"]], [spec.title, spec.time, spec.date, spec.location]);
   assert.doesNotMatch(head["text"], /\bturn\b|revision/i, "no turn counter or revision label");
+  if (spec.note) {  // bt-D09 default: the brief's note is on the desk, and visible, before play.
+    const seen = await page.evaluate<Doc>(`(n => ({text: n.innerText, visible: n.checkVisibility()}))(document.getElementById("mission"))`);
+    assert.ok(seen["visible"] && String(seen["text"]).includes(spec.note), `the ${spec.title} brief shows its note: ${seen["text"]}`);
+    console.log(`brief note visible before play: "${spec.note}"`);
+  }
   console.log(`scenario: ${started["text"]}`);
   console.log(`features: ${await checkFeatures(page, pocPort)}`);
   await screenshot(page, artifacts, `desk-${spec.shot}-features.png`);
