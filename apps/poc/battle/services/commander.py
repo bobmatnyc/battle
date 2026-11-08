@@ -7,7 +7,7 @@ from ..contracts import DecisionProvider, ProviderFailure, ScenarioCatalog, Simu
 from ..command_policy import (
     DEFAULT_SCENARIO, NAMED_POLICIES, scripted_actions, system_prompt,
 )
-from ..presentation import VOICE_ADDRESS, scripted_text
+from ..presentation import VOICE_ADDRESS, scripted_text, staff_orders_text
 
 # Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
 # the exception names the provider adapter reports. Anything else is replaced
@@ -286,9 +286,11 @@ class CommanderService:
         scenario prompt (an unmapped label raises, as in ``decide``); a
         provider failure, or scripted mode, gives the scripted summary, whose
         charge comes from ``display_scenario`` and so never fails on the label,
-        addressed by the voice's ``VOICE_ADDRESS`` title (else General).
+        addressed by the voice's ``VOICE_ADDRESS`` title (else General), with
+        the voice's line on how orders travel (``staff_orders_text``).
         Test: `test_scripted_paths_and_map_survive_an_unmapped_label`,
-        `test_1775_staff_answer_addresses_the_colonel`.
+        `test_1775_staff_answer_addresses_the_colonel`,
+        `test_the_closing_follows_each_voice_and_its_transport`.
         """
         side = self.simulation.player_side(state)
         observation = self.simulation.observation(state, side)
@@ -320,7 +322,7 @@ class CommanderService:
         answer = (
             f"{title}, our command comprises {len(observation['units'])} detachments, "
             f"with {len(observation['contacts'])} enemy sightings reported to headquarters. "
-            f"{charge}Send your instructions by runner; "
+            f"{charge}{staff_orders_text(shown.voice_profile)}"
             "the latest reports may already be out of date."
         )
         return {

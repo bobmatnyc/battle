@@ -21,7 +21,7 @@ from .presentation import WWII_VOICE_PROFILE
 from .scenario_command import WeaponEntry
 from .scenario_concord import Variant
 from .scenario_entry import (
-    ORDER_CATALOG, RULES_VERSION, MapEntry, ScenarioEntry, SideEntry, UnitEntry, VictoryEntry,
+    ORDER_CATALOG, RULES_VERSION, DeskBrief, MapEntry, ScenarioEntry, SideBrief, SideEntry, UnitEntry, VictoryEntry,
 )
 from .scenario_wwii import RADIO_COMMUNICATIONS, BridgeEntry, DemolitionEntry, SignalEntry
 
@@ -209,7 +209,45 @@ PROVENANCE = {
                "holder's radius that the holder sees (docs/research/54)",
     "scripted": "reconstruction: scripted policies from S51 and S52 (British) and inferred German intent "
                 "(battle/pegasus_policy.py)",
+    # docs/research/75: the command-desk text (``BRITISH_BRIEF``, ``DESK``). Display only.
+    "desk.campaign": "sourced: 6 June 1944 (S51, S52) at Bénouville in Normandy (S51 p. 1 para 2)",
+    "desk.place": "sourced: the Caen Canal bridge (S51 p. 1 para 2)",
+    "desk.conditions": "sourced: a cloudy night (S52 sheet 2); authored: a fixed POC condition",
+    "brief.british.headings": "authored: kicker, tagline and mission title are desk headings, not quotations; "
+                              "the kicker takes the words 'coup de main' from S51's title",
+    "brief.british.subhead": "sourced: D Company, 2nd Ox and Bucks, landed by glider beside the bridge (S51 p. 1 "
+                             "para 3; S52 sheets 1-2) against the bridge guard (S51 p. 1 para 2; S54, secondary); "
+                             "reconstruction: the reserve that answers the alarm stands in for the German response "
+                             "S54 times (two authored groups, docs/research/54 §4); authored: that the computer "
+                             "commands the Germans",
+    "brief.british.mission_text": "sourced: take the bridge intact and hold it until relieved (S51 p. 1 paras 2-3; "
+                                  "S52 sheet 1 §2); 24 Platoon with Capt Neilson RE (S52 sheet 2); sappers removed "
+                                  "the charges (S51 p. 1 para 3); the codeword Ham (S54, secondary); inferred: the "
+                                  "bridge wired and the guard's orders to blow it if capture threatened (S54, "
+                                  "secondary); reconstruction: relief at 03:25 is S51's 'reached us 3 hours after "
+                                  "our landing' from the 00:25 touchdown; authored: one hex, one minute (2 "
+                                  "intervals), clearing on the bridge hex and the Ham trigger restate the entry "
+                                  "(docs/research/54 §3)",
+    "brief.british.win": "sourced: the bridges were taken intact and held until relieved (S51 p. 1 para 3; S52 "
+                         "sheet 4); the wording is authored",
+    "brief.british.loss": "authored: the outcome the record does not show; no source",
 }
+# docs/research/75: the British player's desk text, in the entry's 1944 register. The
+# German side has no brief: the desk shows a side's brief only to that side's player.
+BRITISH_BRIEF = SideBrief(
+    kicker="COUP DE MAIN", tagline="Take the bridge intact.",
+    subhead="You command D Company, 2nd Ox and Bucks, landed by glider beside the bridge. The computer commands "
+            "the German bridge guard and the reserve that answers its alarm.",
+    mission_title="Seize the canal bridge",
+    mission_text=("Take the Caen Canal bridge intact and hold it until relieved. The bridge is wired with charges, "
+                  "and the guard has orders to blow it if capture threatens. 24 Platoon carries the sappers under "
+                  "Capt Neilson RE; they clear the charges once they stand on the bridge itself. Hold the ground "
+                  "within one hex of the bridge for one minute with no effective German post there, then keep it "
+                  "until relief at **03:25**. The platoon on the bridge reports it taken with the codeword Ham."),
+    win="The bridge is held until relief.", loss="The bridge is lost.")
+DESK = DeskBrief(campaign="NORMANDY · 6 JUNE 1944", place="Caen Canal bridge", objective_label="BRIDGE OBJECTIVE",
+                 objective_key="BRIDGE", conditions="SUMMER · NIGHT, CLOUDY · FIXED POC CONDITION",
+                 draw="The battle ends in a draw.")
 
 
 def pegasus_entry(variant=None, *, british=CANAL_PLATOONS, german=CANAL_GUARD, objectives=(CANAL,),
@@ -238,7 +276,8 @@ def pegasus_entry(variant=None, *, british=CANAL_PLATOONS, german=CANAL_GUARD, o
         sides={
             "british": SideEntry(
                 name="British", role="attacker", command_unit="DHQ", headquarters=(12, 17),
-                mission=BRITISH_MISSION, charge="seize the canal bridge intact and hold it until relieved"),
+                mission=BRITISH_MISSION, charge="seize the canal bridge intact and hold it until relieved",
+                brief=BRITISH_BRIEF if variant is None else None),
             "german": SideEntry(
                 name="German", role="defender", command_unit="GHQ", headquarters=(0, 15),
                 mission=GERMAN_MISSION, charge="hold the canal bridge or blow it"),
@@ -261,11 +300,14 @@ def pegasus_entry(variant=None, *, british=CANAL_PLATOONS, german=CANAL_GUARD, o
         signals=signals,
         observation_range=NIGHT_RANGE,
         scripted=scripted or {"british": BRITISH_POLICY, "german": GUARD_POLICY},
+        desk=DESK if variant is None else None,
         provenance={**PROVENANCE, **(notes or {})},
     )
 
 
-PEGASUS_BRIDGE = pegasus_entry()
+# docs/research/75 (default ruling bt-D08): on the command desk the German garrison and its
+# reserve play the guard's scripted control, as in headless runs. Variants are not on the desk.
+PEGASUS_BRIDGE = replace(pegasus_entry(), desk_scripted_opponent=True)
 
 
 def _variants():
@@ -329,7 +371,8 @@ RANGE_SENSITIVITY = _ranges()
 
 def _relabel(entry, name, note, **changes):
     ident = f"pegasus-bridge-{name}"
-    return replace(entry, id=ident, title=f"Pegasus Bridge ({name})", variant=name,
+    # docs/research/75 (slice 1 review): a sensitivity run is not a desk entry.
+    return replace(entry, id=ident, title=f"Pegasus Bridge ({name})", variant=name, desk_scripted_opponent=False,
                    labels={RULES_VERSION: f"{ident}-v1"},
                    provenance={**entry.provenance, "sensitivity": f"authored: sensitivity: {note}"}, **changes)
 

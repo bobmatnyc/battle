@@ -147,8 +147,11 @@ PROVENANCE = {
     "desk.place": "sourced: the North Bridge over the Concord River (S47, S49)",
     "desk.conditions": "authored: no weather source read; the entry's fixed April condition",
     "brief.provincial.headings": "authored: kicker, tagline and mission title are desk headings, not quotations",
-    "brief.provincial.subhead": "sourced: the provincial column against the British light infantry guarding the "
-                                "bridge (S47, S48); that the computer commands the British is authored (doc 43 §1)",
+    # docs/research/75 (slice 1 review): S49 is the source that has the companies guarding the bridge.
+    "brief.provincial.subhead": "sourced: the provincial companies (S47, S48) and the British companies guarding "
+                                "the bridge (S49; S47 has Laurie's three companies there); authored: 'light', "
+                                "the scenario spec's word (doc 43 §1), which S47 to S49 as read do not use; that "
+                                "the computer commands the British is authored (doc 43 §1)",
     "brief.provincial.mission_text": "sourced: Barrett's order not to fire unless first fired upon (S47, read through "
                                      "a summarising fetch, so the wording may be paraphrased); reconstruction: the "
                                      "command's word to fire once fired upon stands for Buttrick's order (S47, "
@@ -261,9 +264,12 @@ def before(entry):
     """Why: the change must keep its before run (build-handoff step 3).
     What: ``entry`` as it was before docs/research/50: ``FIRE_BEFORE`` (each
     company releases itself), its ``-v1`` label and no release provenance.
-    Test: `test_before_entry_keeps_its_pinned_digest`."""
+    It is not a desk entry, so it does not keep ``desk_scripted_opponent``.
+    Test: `test_before_entry_keeps_its_pinned_digest`,
+    `test_only_the_intended_entries_carry_the_desk_opponent_flag`."""
     label = entry.labels[RULES_VERSION].removesuffix("-v2") + "-v1"
-    return replace(entry, labels={RULES_VERSION: label}, fire=FIRE_BEFORE,
+    # docs/research/75 (slice 1 review): the desk opt-in belongs to the catalog entry only.
+    return replace(entry, labels={RULES_VERSION: label}, fire=FIRE_BEFORE, desk_scripted_opponent=False,
                    provenance={k: v for k, v in entry.provenance.items() if k not in RELEASE_PROVENANCE})
 
 

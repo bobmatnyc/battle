@@ -261,13 +261,15 @@ def earshot(entry):
     """Why: doc 50 must measure the earshot release on real runs of each case.
     What: ``entry`` (a v2 Concord entry) with ``release_scope`` ``earshot``,
     its id, title, variant and label suffixed with ``EARSHOT``, and an
-    ``authored: sensitivity:`` provenance note. Nothing else changes.
+    ``authored: sensitivity:`` provenance note. Nothing else changes, except
+    that it is no desk entry (``desk_scripted_opponent`` False).
     Test: `test_earshot_release_is_a_labelled_sensitivity_variant`.
     """
     ident = f"{entry.id}-{EARSHOT}"
     note = "; ".join(x for x in (entry.provenance.get("sensitivity", "").removeprefix("authored: sensitivity: "),
                                  _EARSHOT_NOTE) if x)
-    return replace(entry, id=ident, title=f"{entry.title} ({EARSHOT})",
+    # docs/research/75 (slice 1 review): a sensitivity run is not a desk entry.
+    return replace(entry, id=ident, title=f"{entry.title} ({EARSHOT})", desk_scripted_opponent=False,
                    variant=EARSHOT if entry.variant is None else f"{entry.variant}+{EARSHOT}",
                    labels={RULES_VERSION: f"{ident}-v2"}, fire=replace(entry.fire, release_scope="earshot"),
                    provenance={**entry.provenance, "sensitivity": f"authored: sensitivity: {note}"})

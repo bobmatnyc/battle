@@ -24,14 +24,15 @@ from .storage import Store
 
 # Player-facing scenarios; the first is the default. Test fixtures stay out.
 # docs/research/74: Concord joins after the two; both desks draw its river, bridge and roads.
-PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE, CONCORD_NORTH_BRIDGE)
+# docs/research/75: Pegasus Bridge and Hill 223 follow; both desks draw the canal, the
+# bridges and their charges, and Hill 223's ravine, woods and trench.
+PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE, CONCORD_NORTH_BRIDGE, PEGASUS_BRIDGE, HILL_223_PATROL)
 # Headless runs also offer Concord's v1 entry, so saved v1 games still open
-# (docs/research/50), and Pegasus Bridge (docs/research/54), Hill 223
-# (docs/research/56 §9 q6, 61), Gergovia (docs/research/57 §9 q7, 62) and
-# Cannae (docs/research/63 §9 q12, 68), which are not yet player scenarios.
-# The catalog order is unchanged by Concord's move: it stays third.
-HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE_V1, PEGASUS_BRIDGE,
-                                         HILL_223_PATROL, GERGOVIA_RECALL, CANNAE_ENVELOPMENT)
+# (docs/research/50), Gergovia (docs/research/57 §9 q7, 62) and Cannae
+# (docs/research/63 §9 q12, 68), which wait on the BCE date ruling bt-D07.
+# The catalog order is unchanged by the moves to the desk.
+HEADLESS_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE, CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1,
+                      PEGASUS_BRIDGE, HILL_223_PATROL, GERGOVIA_RECALL, CANNAE_ENVELOPMENT)
 
 
 def build_scenarios():

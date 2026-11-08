@@ -23,7 +23,8 @@ from .presentation import WWI_VOICE_PROFILE
 from .scenario_command import TACTICS_V11, WWI_COMMUNICATIONS, CommandEntry, WeaponEntry
 from .scenario_concord import Variant
 from .scenario_entry import (
-    ORDER_CATALOG, RULES_VERSION, FireEntry, MapEntry, ScenarioEntry, SideEntry, UnitEntry, VictoryEntry,
+    ORDER_CATALOG, RULES_VERSION, DeskBrief, FireEntry, MapEntry, ScenarioEntry, SideBrief, SideEntry, UnitEntry,
+    VictoryEntry,
 )
 
 DC0 = "default per Dc0 ruling 2026-11-07"  # doc 56 §9: every open question takes the proposed default.
@@ -178,7 +179,8 @@ PROVENANCE = {
     "sides": "sourced: Company G, 2nd Bn, 328th Infantry, against a German battalion; the German unit is a "
              f"disclosed conflict (S57 '45th Reserve Division'; S58 1st Bn 120th Landwehr); {DC0} (doc 56 §9 q7)",
     "player_side": f"authored: the Company G commander, who reaches the patrol only by runner; {DC0} (doc 56 §9 q1)",
-    "scope": f"authored: headless only, as Pegasus and Concord; {DC0} (doc 56 §9 q6)",
+    "scope": f"authored: headless only at first, as Pegasus and Concord; {DC0} (doc 56 §9 q6); a player "
+             "scenario since docs/research/75, with the German side on its scripted control (bt-D08 default)",
     "credit": f"authored: no individual is modelled; doc 37's R1 and R2 are the mechanism variants of doc 56 §8; "
               f"{DC0} (doc 56 §9 q2)",
     "american.mission": "sourced: encircle the hill and silence the guns (S57 p. 60; S40 diary), then bring the "
@@ -233,7 +235,46 @@ PROVENANCE = {
               "docs/research/59 §7)",
     "scripted": "reconstruction: scripted policies from S57 and S40 (American) and inferred German intent "
                 "(battle/hill223_policy.py)",
+    # docs/research/75: the command-desk text (``AMERICAN_BRIEF``, ``DESK``). Display only.
+    "desk.campaign": "sourced: 8 October 1918 (S57 p. 58; S40) at Châtel-Chéhéry (S57 p. 51-52), in the Argonne "
+                     "(S58, secondary)",
+    "desk.place": "sourced: the little shack (S40) where the battalion commander stood with his group (S57 p. 60); "
+                  "its hex is authored",
+    "desk.conditions": "sourced: mist clearing to a cloudless sky (S40 narrative); authored: a fixed POC condition",
+    "brief.american.headings": "authored: kicker, tagline and mission title are desk headings, not quotations; the "
+                               "tagline echoes S57 p. 60, 'silence the enemy guns'",
+    "brief.american.subhead": "sourced: Company G, 2nd Bn, 328th Infantry, on Hill 223, and a German battalion on "
+                              "the hill southwest across the valley (S57 p. 58-60); the German unit is a disclosed "
+                              "conflict (S57; S58), so the brief names none; authored: that the computer commands "
+                              f"the Germans; the player as the Company G commander is the {DC0} (doc 56 §9 q1)",
+    "brief.american.mission_text": "sourced: the guns on the hill southwest across the valley impede G Company (S57 "
+                                   "p. 59-60); four NCOs and thirteen privates under Acting Sergeant Early sent to "
+                                   "encircle the hill and silence the guns, by the woods on the east crest (S57 p. "
+                                   "60); the 10:30 counter-attack in the captured orders (S57 p. 60); the return "
+                                   "with prisoners (S57 p. 61-62); reconstruction: the command post at the shack in "
+                                   "the ravine (S40; S57 p. 60); authored: word only by runner (voice reach 1, doc "
+                                   "56 §6), one hex, 5 men (a quarter of 17), one prisoner and 10:30 as the battle's "
+                                   "end restate the entry's victory (doc 56 §5; docs/research/61 §3)",
+    "brief.american.win": "sourced: the patrol brought its prisoners to the battalion post (S57 p. 61-62); the "
+                          "wording is authored",
+    "brief.american.loss": "authored: the outcome the record does not show; no source",
 }
+# docs/research/75: the Company G commander's desk text, in the entry's 1918 register. The
+# German side has no brief: the desk shows a side's brief only to that side's player.
+AMERICAN_BRIEF = SideBrief(
+    kicker="HILL 223", tagline="Silence the guns.",
+    subhead="You command Company G, 328th Infantry, on Hill 223. The computer commands the German battalion on "
+            "the hill across the valley.",
+    mission_title="Bring the patrol back",
+    mission_text=("Machine guns on the hill southwest across the valley pin the company. Acting Sergeant Early's "
+                  "patrol of 17 has gone round by the woods to reach the rear of the guns and silence them. It is "
+                  "out of earshot: word reaches it only by runner. The patrol must stand within one hex of the "
+                  "German command post at the shack in the ravine, then bring at least 5 men and one prisoner back "
+                  "within one hex of the company post before the German counter-attack hour, **10:30**."),
+    win="The patrol is back with prisoners.", loss="The patrol has not come back with prisoners.")
+DESK = DeskBrief(campaign="ARGONNE · 8 OCTOBER 1918", place="Command post at the shack",
+                 objective_label="PATROL OBJECTIVE", objective_key="SHACK",
+                 conditions="AUTUMN · MIST, THEN CLEAR · FIXED POC CONDITION", draw="The battle ends in a draw.")
 
 
 def hill223_entry(variant=None, *, valley=VALLEY_HEXES, surrender=SURRENDER_G1, gun_turn=GUN_TURN,
@@ -258,7 +299,8 @@ def hill223_entry(variant=None, *, valley=VALLEY_HEXES, surrender=SURRENDER_G1, 
         sides={
             "american": SideEntry(
                 name="American", role="attacker", command_unit="AHQ", headquarters=(hill_223_col(valley), 9),
-                mission=AMERICAN_MISSION, charge="bring the patrol back from the guns' rear with prisoners"),
+                mission=AMERICAN_MISSION, charge="bring the patrol back from the guns' rear with prisoners",
+                brief=AMERICAN_BRIEF if variant is None else None),
             "german": SideEntry(
                 name="German", role="defender", command_unit="D1", headquarters=SHACK,
                 mission=GERMAN_MISSION, charge="hold the hill until the 10:30 counter-attack"),
@@ -283,11 +325,14 @@ def hill223_entry(variant=None, *, valley=VALLEY_HEXES, surrender=SURRENDER_G1, 
         tactics=TACTICS_V11,
         observation_range=observation,
         scripted=scripted or {"american": AMERICAN_POLICY, "german": GERMAN_POLICY},
+        desk=DESK if variant is None else None,
         provenance={**PROVENANCE, **(notes or {})},
     )
 
 
-HILL_223_PATROL = hill223_entry()
+# docs/research/75 (default ruling bt-D08): on the command desk the German battalion plays its
+# scripted control (G1: posture, facing and surrender are entry data), as in headless runs.
+HILL_223_PATROL = replace(hill223_entry(), desk_scripted_opponent=True)
 REINFORCE_TURN = 60  # company-reinforces: 07:15, half an hour in (authored).
 # Doc 56 §8 names that are the default's own reading; each is its own entry so it validates and runs.
 AS_DEFAULT = {

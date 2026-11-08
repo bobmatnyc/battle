@@ -26,12 +26,19 @@ CELL_FIELDS = ("pos", "elevation", "terrain", "move_cost", "cover")
 
 
 def scripted_problems(entry):
-    """An entry's own scripted controls name its sides and known controls."""
+    """An entry's own scripted controls name its sides and known controls, and
+    ``desk_scripted_opponent`` needs a control for every side (``scripted`` or gates).
+    Test: `test_the_desk_opponent_flag_needs_a_scripted_control_for_every_side`."""
     from .command_policy import SCRIPTED_POLICIES
 
-    return [f"scripted control for {side!r} must be a scenario side and one of {SCRIPTED_POLICIES}"
-            for side, policy in (entry.scripted or {}).items()
-            if side not in entry.sides or policy not in SCRIPTED_POLICIES]
+    problems = [f"scripted control for {side!r} must be a scenario side and one of {SCRIPTED_POLICIES}"
+                for side, policy in (entry.scripted or {}).items()
+                if side not in entry.sides or policy not in SCRIPTED_POLICIES]
+    # docs/research/75 (slice 1 review): the desk opponent plays ``command_policy.scripted_policy``,
+    # which falls back to the plain control for a side the entry names no control for.
+    if entry.desk_scripted_opponent and entry.gates is None and not set(entry.sides) <= set(entry.scripted or {}):
+        problems.append("desk_scripted_opponent needs a scripted control for every side, or gates")
+    return problems
 
 
 def side_problems(entry):

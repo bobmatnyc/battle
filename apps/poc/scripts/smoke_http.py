@@ -10,6 +10,8 @@ import urllib.error
 import urllib.request
 
 ROOT=Path(__file__).resolve().parent.parent
+sys.path.insert(0,str(ROOT))
+from battle.bootstrap import PLAYER_SCENARIOS  # noqa: E402  The catalog the server lists.
 with socket.socket() as sock:
     sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
 base=f'http://127.0.0.1:{port}'
@@ -36,8 +38,9 @@ with tempfile.TemporaryDirectory() as tmp:
         assert state['scenario_brief']['mission']['title']=='Defend the summit'
         listing=request('/api/scenarios')
         assert listing['default']=='little-round-top'
-        # docs/research/74: Concord is the third player scenario.
-        assert [s['id'] for s in listing['scenarios']]==['little-round-top','hougoumont-north-gate','concord-north-bridge']
+        # docs/research/74, 75: the list is the player catalog, in order (Concord, Pegasus, Hill 223 after the two).
+        assert [s['id'] for s in listing['scenarios']]==[e.id for e in PLAYER_SCENARIOS]
+        assert [s['id'] for s in listing['scenarios']][2:]==['concord-north-bridge','pegasus-bridge','hill-223-patrol']
         assert len(request('/api/map')['cells'])==504
         assert request('/api/map')['setting']['location']=='Little Round Top · Gettysburg, Pennsylvania'
         assert state['rules']=='poc-13' and state['side']=='union'

@@ -230,6 +230,23 @@ SCRIPTED_TEXTS = {COLONIAL_VOICE_PROFILE: 'Colonel, the companies will proceed a
 # docs/research/53: the 1944 player commands a company, as a Major (S51).
 VOICE_ADDRESS = {COLONIAL_VOICE_PROFILE: 'Colonel', WWII_VOICE_PROFILE: 'Major', WWI_VOICE_PROFILE: 'Sir',
                  ROMAN_VOICE_PROFILE: 'Imperator'}
+# docs/research/75 (slice 1 review): how the scripted staff answer says orders travel, by
+# voice, matching each voice's communications profile (comms.PROFILES): 1775 voice within
+# earshot, else runner; 1944 wireless, voice and runner; 1918 voice close by, else runner.
+# Voices not listed (1863, 1815) keep the runner-only line, unchanged.
+STAFF_ORDERS = 'Send your instructions by runner; '
+STAFF_ORDERS_BY_VOICE = {
+    COLONIAL_VOICE_PROFILE: 'Give your orders by word of mouth to the companies within earshot, '
+                            'or send them by runner; ',
+    WWII_VOICE_PROFILE: 'Send your orders by wireless, by word of mouth close by, or by runner; ',
+    WWI_VOICE_PROFILE: 'Pass your orders by word of mouth close by, or send them by runner; ',
+}
+
+
+def staff_orders_text(voice_profile):
+    """The scripted staff answer's line on how orders travel, in ``voice_profile``.
+    Test: `test_the_closing_follows_each_voice_and_its_transport`."""
+    return STAFF_ORDERS_BY_VOICE.get(voice_profile, STAFF_ORDERS)
 
 
 def _address(text, title):
