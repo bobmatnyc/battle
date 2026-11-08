@@ -93,10 +93,20 @@ export const godRecommendation: Check<Recommendation> = object(
   recommendationFields, {display_text: string, received_turn: count}, {rest: "keep"});
 
 /** A split or combine as the issuing side knows it (formations.observed):
- * the status is the last notice received; the true ready and completed turns are God-only. */
-export interface FormationOp { id: string; side: string; kind: string; status: string; [extra: string]: unknown }
+ * the status is the last notice received; the true ready and completed turns are God-only.
+ * `count` and `destination` come with a split, `partner_id` with a combine; `reason` and the
+ * notice turns once a notice has arrived. Confirmed by fixture `state-commander-commands.json`. */
+export interface FormationOp {
+  id: string; side: string; kind: "split" | "combine"; status: string; unit_id: string;
+  order_ids: string[]; sent_turn: number;
+  partner_id?: string; count?: number; destination?: Hex; reason?: string;
+  observed_turn?: number; received_turn?: number;
+  [extra: string]: unknown;
+}
 export const commanderFormationOp: Check<FormationOp> = object(
-  {id: string, side: string, kind: string, status: string}, {},
+  {id: string, side: string, kind: literal("split", "combine"), status: string, unit_id: string,
+    order_ids: array(string), sent_turn: count},
+  {partner_id: string, count, destination: hex, reason: string, observed_turn: integer, received_turn: integer},
   {rest: "keep", forbidden: ["ready_turn", "completed_turn"]});
 
 /** A delivered codeword (signals.receive): the report data plus its arrival turn.
@@ -121,12 +131,32 @@ export const commanderBroadcast: Check<CommanderBroadcast> = object({
   turn: nullable(integer), ordered_turn: nullable(integer), sounded_turn: nullable(integer),
 });
 
-/** A standing-order instruction (standing.visible). UNCONFIRMED: no fixture holds one. */
-export interface StandingOrder { id: string; side: string; status: string; [extra: string]: unknown }
-const standingFields = {id: string, side: string, status: string};
+/** A standing-order instruction (standing.visible): the commander's status is the last
+ * acknowledgement. Confirmed by fixture `state-commander-commands.json`. */
+export interface StandingOrder {
+  id: string; side: string; status: string; unit_id: string; profile_id: string; version: number;
+  sent_turn: number; arrival_turn: number | null; template_version: string;
+  [extra: string]: unknown;
+}
+const standingFields = {
+  id: string, side: string, status: string, unit_id: string, profile_id: string, version: count,
+  sent_turn: count, arrival_turn: nullable(integer), template_version: string,
+};
 export const commanderStandingOrder: Check<StandingOrder> =
   object(standingFields, {}, {rest: "keep", forbidden: ["transport"]});
 export const godStandingOrder: Check<StandingOrder> = object(standingFields, {}, {rest: "keep"});
+
+/** A standing-order template on offer (standing.catalog); a battle with a gate adds
+ * Close the gate on a breach. A standing-order request's `profile_id` is one of these ids. */
+export interface StandingTemplate {
+  id: string; label: string; intent: string; version: string; message_key: string;
+  morale_floor: number; suppression_limit: number; enemy_ratio: number; reserve_volleys: number; fire_range: number;
+  [extra: string]: unknown;
+}
+export const standingTemplate: Check<StandingTemplate> = object({
+  id: string, label: string, intent: string, version: string, message_key: string,
+  morale_floor: number, suppression_limit: number, enemy_ratio: number, reserve_volleys: count, fire_range: count,
+}, {}, {rest: "keep"});
 
 /** A briefed ammunition point (orders.known_sites); its stock is God-only. */
 export interface SupplySite { id: string; side: string; name: string; pos: Hex; weapon_class: string }
@@ -192,7 +222,7 @@ const sharedFields = {
   winner: nullable(string), reason: nullable(string), objective: hex,
   max_turns: count, seconds_per_turn: count, side: string, weather: jsonObject, hq: hex,
   command: commandLocation, units: array(unitReport), order_templates: array(orderTemplate),
-  standing_templates: jsonList,
+  standing_templates: array(standingTemplate),
   display_locale: literal("en"), voice_profile: string, analysis,
 };
 const sharedOptional = {scenario_brief: scenarioBrief};
@@ -202,7 +232,7 @@ interface SharedView {
   winner: string | null; reason: string | null; objective: Hex;
   max_turns: number; seconds_per_turn: number; side: string; weather: JsonObject; hq: Hex;
   command: CommandLocation; units: UnitReport[]; order_templates: OrderTemplate[];
-  standing_templates: JsonObject[]; recommendations: Recommendation[];
+  standing_templates: StandingTemplate[]; recommendations: Recommendation[];
   display_locale: "en"; voice_profile: string; analysis: Analysis;
   scenario_brief?: ScenarioBrief;
 }
