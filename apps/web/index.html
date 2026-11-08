@@ -23,8 +23,23 @@
 </header>
 <main class="desk">
   <section class="field">
+    <div class="map-toolbar">
+      <button id="grid-toggle" aria-pressed="true">Hex grid</button>
+      <button id="replay-toggle" disabled>Replay battle</button>
+    </div>
+    <div id="replay-bar" class="replay-bar" hidden>
+      <span id="replay-label"></span>
+      <button id="replay-back">◀ Step back</button>
+      <input id="replay-slider" type="range" min="0" max="0" value="0" aria-label="Battle timeline">
+      <button id="replay-forward">Step forward ▶</button>
+      <button id="replay-live">Return to live</button>
+    </div>
     <svg id="map" role="img" aria-label="Hex map of the battlefield"></svg>
     <p id="notice" class="notice" role="status" data-kind="info">Connecting to the local simulation…</p>
+    <details id="feature-legend-panel" class="feature-legend" open>
+      <summary>Map features <span>sourced · reconstructed · illustrative</span></summary>
+      <div id="feature-legend"></div>
+    </details>
   </section>
   <aside class="panel">
     <section>

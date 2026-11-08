@@ -56,13 +56,15 @@ export async function sendOrder(api: DeskApi, loaded: Loaded, body: OrderSubmiss
 }
 
 /** Why: after a 504 the POC may still start the new battle, so "no new battle" cannot be claimed.
- * What: posts `/api/new` for `chosen`, then reads the new game's map; the pair is returned
- * only when both succeed. On an unknown outcome it re-reads: a new game is reported as started;
+ * What: posts `/api/new` for `chosen`, then reads the new game's map. If that map read fails, the
+ * new view is returned with the old terrain still tagged with the old game, and the notice says
+ * the battle started and its map will be read again. On an unknown outcome it re-reads: a new game is reported as started;
  * the same game is reported as "so far", since a new battle may still start; a failed re-read
  * says so. Any other refusal is rethrown.
  * Test: `an unknown new battle that re-reads as the same game is still unknown: it may yet start`,
  * `an unknown new battle whose re-read fails stays unknown and says so`,
- * `an unknown new battle that re-reads as a new game loads that game's terrain`. */
+ * `an unknown new battle that re-reads as a new game loads that game's terrain`,
+ * `after a new battle whose map read fails, the next re-read fetches the new game's terrain`. */
 export async function startBattle(api: DeskApi, loaded: Loaded, chosen: {id: string; title: string}): Promise<Step> {
   let view: CommanderState;
   try {
@@ -82,8 +84,17 @@ export async function startBattle(api: DeskApi, loaded: Loaded, chosen: {id: str
       : `${SLOW}; the outcome is unknown. Re-reading shows the same battle so far; a new battle may still start. `
         + "Re-read before starting another."}};
   }
-  const terrain = await api.map();
+  const title = view.scenario_brief?.title ?? chosen.title;
+  let terrain: MapDocument;
+  try {
+    terrain = await api.map();
+  } catch (failure) {
+    // Slice 2 review: the battle did start. Keep the old terrain tagged with the old game, so no
+    // header or map pairs it with the new view, and the next re-read fetches the new map.
+    return {loaded: {...loaded, view}, notice: {kind: "accepted", text: `New battle started: ${title}. `
+      + `Its map could not be read (${message(failure)}); the desk will read it again.`}};
+  }
   const header = battleClock(terrain.setting, view.turn, view.seconds_per_turn, view.display_locale);
   return {loaded: {view, terrain, terrainGame: view.game_id},
-    notice: {kind: "accepted", text: `New battle: ${view.scenario_brief?.title ?? chosen.title}, ${header.date}, ${header.time}. The clock is paused.`}};
+    notice: {kind: "accepted", text: `New battle: ${title}, ${header.date}, ${header.time}. The clock is paused.`}};
 }
