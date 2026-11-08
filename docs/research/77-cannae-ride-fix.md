@@ -108,7 +108,56 @@ The run matches the Mac run in every printed field. `cannae_runs.py` does not pr
 
 Evidence: EVO run dir `bt12-aa8789f` and `apps/poc/artifacts/cannae-ride-4a766e7/evo/` (`MANIFEST.txt`; sqlite sha256 `36a9f1be`...`b7e5`).
 
-The ride now fires, but the outcome is still a Roman win. The 14-run batch waits for the Architect.
+The ride now fires, but the outcome is still a Roman win. The 14-run batch is in section 6.1.
+
+## 6.1 Batch: the 14 doc 68 runs at b5a8c9f
+
+The 14 entries of the doc 68 batch, run at `b5a8c9f`, scripted on both sides, no model, no spend. Architect GO 14:54Z.
+
+Setup:
+
+- Source: `git archive b5a8c9f`, sha256 `45f27ddbd55b839906cad366d27d089a63a8fe8b5b56742d1272b68bad4e8742`.
+- Procedure: doc 68 section 6.1. A serial `nohup` driver ran each entry under `/usr/bin/time -v`. A load guard waited if the 15-minute load was above 28 or MemAvailable was below 10 GB. It never waited.
+- Per run, from `apps/poc`: `python3 scripts/cannae_runs.py --only <entry> --dir <run dir>/runs`.
+- Window: 2026-11-08 14:55:08 to 16:08:42 UTC (73.5 min).
+- All 14 runs exited 0. Every replay was identical.
+
+Headline: all 14 runs are a Roman win at 160 with 0 enclosed at the deadline. The horse rides (a ride order is sent) in 11 of 14. It does not ride in `roman-reserve`, `roman-horse-holds` and `wide-front`, where EQ is not routed and the horse only pursues.
+
+Columns "ride" and "charge" give the turn for HC1/HC2/HC3 (`-` is none). "d829763" columns are doc 68's values.
+
+| Run | Pursue turns | Ride | Charge | EQ routed | Peak enclosed men@turn (units) | Roman losses | Wall | Max RSS kB | d829763 peak | d829763 Roman losses |
+|---|---|---|---|---|---|---|---|---|---|---|
+| default | 3,15 each | 30/-/30 | 60/-/- | yes | 44616@53 (14) | 9362 | 5:18.26 | 412392 | 26465@56 (8) | 6525 |
+| no-design | 3,15 each | 30/-/30 | -/-/- | yes | 26686@48 (8) | 7867 | 5:25.34 | 406152 | 12984@47 (4) | 5128 |
+| cavalry-delayed-10 | 3,15 each | 42/-/- | -/-/- | yes | 41124@54 (13) | 9184 | 5:32.99 | 393444 | 26465@56 (8) | 6525 |
+| cavalry-delayed-20 | 3,15 each | 51/-/- | -/-/- | yes | 32490@46 (10) | 8536 | 5:29.26 | 404276 | 26465@56 (8) | 6525 |
+| cavalry-delayed-40 | 3,15 each | 72/-/- | 84/-/- | yes | 32490@46 (10) | 8679 | 6:09.69 | 410680 | 26465@56 (8) | 6525 |
+| one-wing-fixed-af1 | 3,15 each | 30/-/30 | 60/-/- | yes | 35352@47 (11) | 8135 | 5:14.20 | 419280 | 23627@56 (7) | 5426 |
+| one-wing-fixed-af2 | 3,15 each | 30/-/30 | -/-/- | yes | 25266@64 (8) | 7186 | 5:09.78 | 425988 | 22895@48 (7) | 4490 |
+| roman-reserve | HC1 3,18; HC2 3,18,27; HC3 3,18,27,30 | -/-/- | -/-/- | no | 25424@46 (8) | 9002 | 4:44.27 | 365292 | 26907@66 (8) | 5954 |
+| aemilius-commands | 3,15 each | 21/21/21 | -/-/- | yes | 0@1 (0) | 1836 | 5:20.68 | 421556 | 23585@42 (7) | 7439 |
+| roman-horse-holds | 3,21,27 each | -/-/- | -/-/- | no | 16205@40 (5) | 6409 (of 83,600) | 5:18.61 | 401584 | 16383@43 (5) | 6371 (of 83,600) |
+| dust | 3,15 each | 30/-/30 | -/-/- | yes | 25606@46 (8) | 8848 | 4:11.66 | 333444 | 29677@52 (9) | 5855 |
+| deserters | 3,15 each | 30/-/30 | 60/-/- | yes | 44616@53 (14) | 9336 | 5:29.86 | 459884 | 36553@51 (11) | 5980 |
+| wide-front | HC1/HC2 3,15,21,24,30,33,36,39; HC3 3,15,21,24,30,33,36 | -/-/- | -/-/- | no | 18526@55 (6) | 9177 | 4:08.74 | 329600 | 20002@51 (6) | 3777 |
+| zoc-0 | 3,15 each | 30/-/30 | 60/-/- | yes | 0@1 (0) | 9362 | 5:59.56 | 413860 | 0@1 (0) | 6525 |
+
+In doc 68, ride and charge were null in all 14 runs. The cavalry-delayed rows' doc 68 values are the default's, as doc 68 reports them. Doc 68 gives wall time and max RSS per run only for default (5:46, 437172 kB), no-design (8:12) and wide-front (4:28). This batch ran 4:08 to 6:09 and 329 to 460 MB.
+
+Evidence: EVO run dir `bt14-b5a8c9f` and `apps/poc/artifacts/cannae-ride-b5a8c9f/` (`MANIFEST.txt`, `time-*.txt`, `SHA256SUMS-all`; local copy verified, 127 files).
+
+### Open observations
+
+Measured, not yet explained.
+
+1. In six runs the peak enclosed passes the 28,400 needed (default and deserters 44,616; cavalry-delayed-10 41,124; one-wing-fixed-af1 35,352; cavalry-delayed-20 and -40 32,490), yet every run ends with 0 enclosed at the deadline.
+2. `zoc-0` reports a peak of 0@1 but the same Roman losses as default (9,362). Doc 68 had `zoc-0` identical to default.
+3. `aemilius-commands` rides all three units at 21 and reports a peak of 0@1 with Roman losses of 1,836 (doc 68: 7,439).
+4. Only HC1 rides in the cavalry-delayed runs. Only `-40` charges (84).
+5. Roman losses are higher than doc 68 in 13 of 14 runs. `aemilius-commands` is the exception (lower). `roman-horse-holds` is higher by 38 (6,409 vs 6,371).
+
+No engine or policy change was made for this batch; what to change next is an owner decision.
 
 ## 7. Review notes
 
