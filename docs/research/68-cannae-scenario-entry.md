@@ -196,3 +196,5 @@ The default is left as built until the owner rules. The ride never fires (§6.2 
 | (i) | The horse pursues EQ's reported hex while EQ is in view and not routed, so the opening charge no longer rides past it |
 | (ii) | The trigger fires after N intervals with no Carthaginian unit adjacent to EQ, a different reading of 63 §8 row 20 (which would revise Dd8 q5) |
 | (iii) | Raise the cavalry's combat effect, so one horse unit routs EQ in fewer than about 20 intervals of contact |
+
+**Ruled:** D34 (Bob, relayed 2026-11-08 14:22Z) takes option (i), policy only, with the q5 view rule kept. The build and its checks are in [77](77-cannae-ride-fix.md).
