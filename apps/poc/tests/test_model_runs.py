@@ -1,12 +1,15 @@
-"""The model-run batch driver (scripts/model_runs.py, doc 69 §9) and the
-runner's abort on fallback, with fake providers only: no network, no spend."""
+"""The model-run batch driver (scripts/model_runs.py, doc 69 §9-§10), the
+runner's abort on fallback and its spend guard, with fake providers only:
+no network, no credential, no spend."""
 
+import hashlib
 import importlib.util
 import io
 import json
+import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from battle.adapters.rules import ScenarioRegistry
@@ -14,13 +17,19 @@ from battle.bootstrap import build_headless
 from battle.command_policy import scripted_actions, scripted_policy
 from battle.contracts import ProviderFailure
 from battle.scenario_concord import CONCORD_NORTH_BRIDGE
+from battle.scenario_hougoumont import HOUGOUMONT_NORTH_GATE
 from battle.scenario_pegasus import PEGASUS_BRIDGE
 from battle.services.headless import ModelFallback
+from battle.spend import FRAMING_TOKENS, CostUnreadable, Price, decision_cost, worst_case_call
 
 POC = Path(__file__).resolve().parent.parent
 _spec = importlib.util.spec_from_file_location("model_runs", POC / "scripts" / "model_runs.py")
 model_runs = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(model_runs)
+
+# A zero reserve: only the spend already made counts against the cap.
+FREE = Price(0.0, 0.0, 1)
+SOURCE = {"commit": "0" * 40, "clean": True}
 
 
 class ScriptedFake:
@@ -54,7 +63,7 @@ class ScriptedFake:
         return {"text": "Orders follow.", "orders": orders}, metadata
 
 
-def batch(tmp, plan, games, cap, **fake):
+def batch(tmp, plan, games, cap, price=FREE, **fake):
     """Runs the driver quietly; returns (exit code, summary, per-game lines, fakes)."""
     fakes = []
 
@@ -64,9 +73,15 @@ def batch(tmp, plan, games, cap, **fake):
 
     out = io.StringIO()
     with redirect_stdout(out):
-        code, summary = model_runs.run_batch(plan, games, cap, Path(tmp) / "b", provider_for=provider_for)
+        code, summary = model_runs.run_batch(plan, games, cap, Path(tmp) / "b", price=price, source=SOURCE,
+                                             provider_for=provider_for)
     lines = [json.loads(line) for line in out.getvalue().splitlines()]
     return code, summary, [r for r in lines if "summary" not in r], fakes
+
+
+def git(repo, *args):
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args],
+                   check=True, capture_output=True)
 
 
 class ModelRunsTest(unittest.TestCase):
@@ -97,37 +112,124 @@ class ModelRunsTest(unittest.TestCase):
         self.assertAlmostEqual(summary["spent_usd"], 0.12)
         self.assertEqual(len(games), 2)
 
-    def test_cli_exits_non_zero_at_the_cap(self):
-        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
-            code = model_runs.main(
-                ["--plan", "pegasus-bridge", "--model", "fake/model-runs", "--games", "3",
-                 "--cap-usd", "0.05", "--dir", str(Path(tmp) / "b")],
-                provider_for=lambda entry: ScriptedFake(entry, cost=0.03))
+    def test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap(self):
+        # Hill 223 default makes 9 calls. The reserve is 4,000 output tokens at
+        # $7.50 per million = $0.03, each call costs $0.03 and the cap is $0.10:
+        # calls 1-3 fit; before call 4, 0.10 - 0.09 - 0.03 < 0, so it is never made.
+        price = Price(0.0, 7.5, 4000)
+        with tempfile.TemporaryDirectory() as tmp:
+            code, summary, games, fakes = batch(tmp, ["hill-223-patrol"], 2, 0.10, price=price, cost=0.03)
+            stopped = games[0]
+            self.assertTrue(Path(stopped["db"]).exists())
         self.assertEqual(code, model_runs.EXIT_CAP)
+        self.assertEqual(fakes[0].calls, 3)
+        self.assertEqual((stopped["status"], stopped["decision_index"], stopped["turn"]), ("stopped", 3, 9))
+        self.assertTrue(stopped["db"].endswith(".stopped.sqlite"))
+        self.assertIn("budget:", stopped["reason"])
+        self.assertAlmostEqual(summary["spent_usd"], 0.09)
+        self.assertLessEqual(summary["spent_usd"], 0.10)
+        self.assertEqual((summary["played"], summary["not_started"]), (1, 1))
+
+    def test_worst_case_reserve_grows_with_the_request(self):
+        price = Price(2.0, 10.0, 4000)
+        small, large = {"observation": ""}, {"observation": "x" * 10_000}
+        self.assertAlmostEqual(worst_case_call(price, "sys", large) - worst_case_call(price, "sys", small),
+                               10_000 * 2.0 / 1e6)
+        size = len("sys") + len(json.dumps(small))
+        self.assertAlmostEqual(worst_case_call(price, "sys", small),
+                               ((size + FRAMING_TOKENS) * 2.0 + 4000 * 10.0) / 1e6)
+
+    def test_cli_exits_non_zero_at_the_cap(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            git(tmp, "init", "-q")
+            git(tmp, "commit", "-q", "--allow-empty", "-m", "base")
+            with redirect_stdout(io.StringIO()):
+                code = model_runs.main(
+                    ["--plan", "pegasus-bridge", "--model", "fake/model-runs", "--games", "3",
+                     "--cap-usd", "0.05", "--input-price", "0", "--output-price", "0",
+                     "--dir", str(Path(tmp) / "b")],
+                    provider_for=lambda entry: ScriptedFake(entry, cost=0.03), repo=tmp)
+        self.assertEqual(code, model_runs.EXIT_CAP)
+
+    def test_dirty_tree_is_refused_and_pins_appear(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            git(repo, "init", "-q")
+            (repo / "a.txt").write_text("a\n")
+            git(repo, "add", "a.txt")
+            git(repo, "commit", "-q", "-m", "base")
+            pin = model_runs.source_pin(repo)
+            self.assertEqual(pin["clean"], True)
+            self.assertEqual(len(pin["commit"]), 40)
+            (repo / "a.txt").write_text("changed\n")
+            with self.assertRaisesRegex(ValueError, "dirty"):
+                model_runs.source_pin(repo)
+            with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as refused:
+                model_runs.main(["--plan", "pegasus-bridge", "--model", "anthropic/claude-sonnet-5.5",
+                                 "--games", "1", "--cap-usd", "1", "--dir", str(Path(tmp) / "b")],
+                                provider_for=lambda entry: ScriptedFake(entry), repo=repo)
+            self.assertEqual(refused.exception.code, 2)
+            self.assertFalse((Path(tmp) / "b").exists())  # Refused before anything is written.
+
+            out = Path(tmp) / "c"
+            with redirect_stdout(io.StringIO()):
+                model_runs.run_batch(["pegasus-bridge"], 1, 1.0, out, price=Price(2.0, 10.0, 4000), source=pin,
+                                     model="anthropic/claude-sonnet-5.5", provider_for=ScriptedFake)
+            manifest = json.loads((out / "manifest.json").read_text())
+            game = json.loads((out / "runs.jsonl").read_text().splitlines()[0])
+        self.assertEqual(manifest["source"], pin)
+        self.assertEqual((manifest["model"], manifest["cap_usd"], manifest["plan"]),
+                         ("anthropic/claude-sonnet-5.5", 1.0, ["pegasus-bridge"]))
+        self.assertEqual(manifest["prices"]["input_per_mtok"], 2.0)
+        self.assertIn("reserve_basis", manifest["prices"])
+        pins = manifest["entries"]["pegasus-bridge"]
+        self.assertEqual((pins["rules"], pins["player_side"]), ("poc-13", "british"))
+        british = pins["sides"]["british"]
+        self.assertEqual((british["control"], british["control_version"]), ("scripted-pegasus-coup-de-main-v1", "v1"))
+        self.assertEqual(british["prompt_version"], PEGASUS_BRIDGE.prompt_version)
+        from battle.command_policy import system_prompt
+        self.assertEqual(british["prompt_sha256"],
+                         hashlib.sha256(system_prompt("british", PEGASUS_BRIDGE).encode()).hexdigest())
+        self.assertEqual(set(pins["sides"]), {"british", "german"})
+        self.assertEqual(game["pins"], {**{k: manifest[k] for k in ("source", "model", "effort", "cap_usd",
+                                                                    "prices")}, **pins})
+
+    def test_hougoumont_is_labelled_asymmetric_and_pegasus_symmetric(self):
+        self.assertEqual(model_runs.action_set(HOUGOUMONT_NORTH_GATE, HOUGOUMONT_NORTH_GATE.player),
+                         {"control": "scripted-gate-defender-v1", "symmetric": False,
+                          "control_only": ["standing instruction close_on_breach"]})
+        self.assertEqual(model_runs.action_set(HOUGOUMONT_NORTH_GATE, "french")["control_only"],
+                         ["standing instruction firm"])
+        for item in ("little-round-top", "concord-north-bridge", "pegasus-bridge", "hill-223-patrol",
+                     "gergovia-recall"):
+            entry = model_runs.resolve(item)
+            self.assertTrue(model_runs.action_set(entry, entry.player)["symmetric"], item)
 
     def test_missing_cost_fails_closed_and_stops_the_batch(self):
         with tempfile.TemporaryDirectory() as tmp:
-            code, summary, games, _ = batch(tmp, ["pegasus-bridge"], 3, 100.0, cost=None)
+            code, summary, games, fakes = batch(tmp, ["pegasus-bridge"], 3, 100.0, cost=None)
             failed_db = Path(games[0]["db"])
             self.assertTrue(failed_db.name.endswith(".failed.sqlite"), failed_db)
             self.assertTrue(failed_db.exists())
         self.assertEqual(code, model_runs.EXIT_FAILED)
         self.assertEqual((summary["played"], summary["model_games"], summary["spend_complete"]),
                          (1, 0, False), summary)
-        self.assertIsNone(games[0]["cost_usd"])
+        self.assertEqual(fakes[0].calls, 1)  # Stopped at the first call with no cost.
+        self.assertFalse(games[0]["cost_complete"])
         self.assertIn("cost unreadable", games[0]["reason"])
         for bad in ({}, {"cost": None}, {"cost": "0.01"}, {"cost": True}, {"cost": -1.0},
                     {"cost": float("nan")}):
-            with self.assertRaises(model_runs.GameFailed, msg=bad):
-                model_runs.decision_cost({"usage": bad})
+            with self.assertRaises(CostUnreadable, msg=bad):
+                decision_cost({"usage": bad})
 
     def test_provider_error_or_junk_reply_fails_the_game_and_stops_the_batch(self):
         cases = {
-            "provider_error HTTP 429": ProviderFailure("HTTP 429", {"usage": {"cost": 0.02}}),
-            "invalid_response TypeError": "not an order object",
-            "provider_error TimeoutError": TimeoutError(),
+            "provider_error HTTP 429": (ProviderFailure("HTTP 429", {"usage": {"cost": 0.02}}), 0.03, True),
+            "invalid_response TypeError": ("not an order object", 0.02, True),
+            "provider_error TimeoutError": (TimeoutError(), 0.01, False),
         }
-        for reason, fault in cases.items():
+        for reason, (fault, spent, complete) in cases.items():
             with self.subTest(reason), tempfile.TemporaryDirectory() as tmp:
                 code, summary, games, fakes = batch(tmp, ["pegasus-bridge"], 3, 100.0, cost=0.01,
                                                     fail={2: fault})
@@ -137,13 +239,25 @@ class ModelRunsTest(unittest.TestCase):
                 self.assertEqual(games[0]["reason"], f"fallback: {reason}")
                 self.assertEqual(fakes[0].calls, 2)  # Aborted at the fallback; no later call.
                 self.assertTrue(games[0]["db"].endswith(".failed.sqlite"))
-        # A paid failure is counted; an unpaid one with no cost leaves spend incomplete.
-        self.assertAlmostEqual(self._spent(ProviderFailure("HTTP 429", {"usage": {"cost": 0.02}})), 0.03)
+                # A paid failure is counted; an unpaid one with no cost leaves spend incomplete.
+                self.assertAlmostEqual(summary["spent_usd"], spent)
+                self.assertEqual(summary["spend_complete"], complete)
 
-    def _spent(self, fault):
+    def test_fallback_keeps_the_partial_run_and_its_record(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _, summary, _, _ = batch(tmp, ["pegasus-bridge"], 1, 100.0, cost=0.01, fail={2: fault})
-        return summary["spent_usd"]
+            code, summary, games, _ = batch(tmp, ["pegasus-bridge"], 2, 100.0, cost=0.01, fail={2: "junk"})
+            record = json.loads((Path(tmp) / "b" / "runs.jsonl").read_text().splitlines()[0])
+            db = Path(record["db"])
+            self.assertTrue(db.exists())
+            self.assertEqual(record["db_sha256"], hashlib.sha256(db.read_bytes()).hexdigest())
+            listed = json.loads((Path(tmp) / "b" / "batch-summary.json").read_text())["stopped_or_failed"]
+        self.assertEqual(code, model_runs.EXIT_FAILED)
+        self.assertEqual(
+            {k: record[k] for k in ("entry", "variant", "model", "turn", "decision_index", "reason", "cost_usd")},
+            {"entry": "pegasus-bridge", "variant": None, "model": "fake/model-runs", "turn": 3,
+             "decision_index": 1, "reason": "fallback: invalid_response TypeError", "cost_usd": 0.02})
+        self.assertEqual(listed, [{k: v for k, v in record.items() if k != "pins"}])
+        self.assertEqual(summary["stopped_or_failed"], listed)
 
     def test_finished_game_with_a_fallback_is_not_a_model_game(self):
         good = {"replay": {"status": "identical"}, "player_decisions": {"total": 3, "model": 3, "fallback": 0}}
@@ -172,10 +286,19 @@ class ModelRunsTest(unittest.TestCase):
         mine = [d for d in state["decisions"] if d.get("side") == "british"]
         self.assertEqual([d["fallback"] for d in mine], [False])
 
-    def test_unknown_plan_names_are_refused_before_any_game(self):
+    def test_unknown_plan_names_and_used_directories_are_refused(self):
         for item in ("cannae-envelopment", "pegasus-bridge/no-such-variant", "little-round-top/x"):
             with self.subTest(item), tempfile.TemporaryDirectory() as tmp, self.assertRaises(ValueError):
-                model_runs.run_batch([item], 1, 1.0, Path(tmp) / "b", provider_for=lambda e: None)
+                model_runs.run_batch([item], 1, 1.0, Path(tmp) / "b", price=FREE, source=SOURCE,
+                                     provider_for=lambda e: None)
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "runs.jsonl").write_text("earlier\n")
+            with self.assertRaisesRegex(ValueError, "already holds a batch"):
+                model_runs.run_batch(["pegasus-bridge"], 1, 1.0, tmp, price=FREE, source=SOURCE,
+                                     provider_for=ScriptedFake)
+            self.assertEqual((Path(tmp) / "runs.jsonl").read_text(), "earlier\n")
+        with self.assertRaisesRegex(ValueError, "No price"):
+            model_runs.price_for("fake/unpriced", None, None)
 
 
 if __name__ == "__main__":
