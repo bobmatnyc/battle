@@ -40,13 +40,16 @@ import argparse
 import hashlib
 import json
 import re
+import signal
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 POC = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(POC))
 
+from battle.adapters.openrouter import request_body  # noqa: E402
 from battle.adapters.rules import ScenarioRegistry  # noqa: E402
 from battle.bootstrap import build_headless  # noqa: E402
 from battle.command_policy import (  # noqa: E402
@@ -184,16 +187,25 @@ def _sha256(path):
     return digest.hexdigest()
 
 
-def play(entry, db, guard, *, provider, model, effort, max_tokens):
-    """One model game of ``entry`` in ``db``, charged to ``guard``. Returns its
-    record: ``status`` ``model_game``, ``stopped`` (budget) or ``failed``."""
+def play(entry, stem, guard, *, provider, settings):
+    """Why: a game must never sit under a model-game name unless it is one.
+    What: plays one model game of ``entry`` in ``<stem>.partial.sqlite``,
+    charged to ``guard``, and returns ``(record, interrupt)``. Only a
+    ``model_game`` is renamed ``<stem>.sqlite``; a ``stopped`` (budget) or
+    ``failed`` game becomes ``<stem>.stopped.sqlite`` or ``.failed.sqlite``.
+    A BaseException (KeyboardInterrupt, SystemExit from SIGTERM) fails the
+    game and is returned as ``interrupt`` for the caller to record and
+    re-raise. A process killed outright leaves only ``.partial.sqlite``.
+    Test: `test_interrupt_mid_game_records_the_game_and_propagates`.
+    """
+    db = stem.with_name(stem.name + ".partial.sqlite")
     runner = build_headless(
-        db, player_provider="openrouter", provider=provider, model=model, effort=effort, max_tokens=max_tokens,
+        db, player_provider="openrouter", provider=provider, settings=settings,
         scenario_id=entry.id, scenarios=ScenarioRegistry([entry]), keyframe_every=0,
         abort_on_fallback=True, spend_guard=guard,
     )
     record = {"entry": entry.id, "variant": entry.variant, "model": runner.commander.model, "status": "failed"}
-    before, cost_complete, aborted, summary = guard.spent_usd, True, None, None
+    before, cost_complete, aborted, summary, interrupt = guard.spent_usd, True, None, None, None
     try:
         summary = runner.run()
     except ModelFallback as exc:
@@ -209,6 +221,8 @@ def play(entry, db, guard, *, provider, model, effort, max_tokens):
         cost_complete, record["reason"] = False, str(exc)
     except Exception as exc:  # noqa: BLE001 - any error fails the game and stops the batch.
         record["reason"] = f"error: {type(exc).__name__}: {str(exc)[:200]}"
+    except BaseException as exc:  # Recorded, renamed, then re-raised by the caller.
+        interrupt, record["reason"] = exc, f"interrupted: {type(exc).__name__}"
     game_id = summary["game_id"] if summary else runner.repository.latest()
     state = runner.repository.load(game_id) if game_id else {"decisions": [], "turn": None}
     committed = sum(1 for d in state["decisions"] if d.get("side") == runner.player_side)
@@ -222,63 +236,85 @@ def play(entry, db, guard, *, provider, model, effort, max_tokens):
             record["reason"] = failure
     if "reason" not in record:
         record["status"] = "model_game"
-        record["db"] = str(db)
-        return record
+        final = db.rename(stem.with_name(stem.name + ".sqlite"))
+        record.update(db=str(final), db_sha256=_sha256(final))
+        return record, None
     # Where it stopped: the turn and the 0-based index of the player decision.
     record.update(turn=aborted["turn"] if aborted else state.get("turn"), decision_index=committed)
     if db.exists():
         # Kept for audit, under a name no comparison reads as a model game.
-        db = db.rename(db.with_suffix(f".{record['status']}.sqlite"))
+        db = db.rename(stem.with_name(f"{stem.name}.{record['status']}.sqlite"))
         record.update(db=str(db), db_sha256=_sha256(db))
     else:
         record.update(db=None, db_sha256=None)
-    return record
+    return record, interrupt
 
 
-def run_batch(plan, games, cap_usd, directory, *, price, source, model=None, effort=None, max_tokens=None,
-              provider_for=None, out=print):
+def request_size(settings):
+    """The byte length of the body the OpenRouter adapter sends for a request
+    under ``settings`` (``request_body``), as ``SpendGuard`` needs it.
+    Test: `test_reserve_covers_the_full_request_body_the_adapter_sends`."""
+    return lambda instruction, payload: len(request_body(settings, instruction, payload))
+
+
+def run_batch(plan, games, cap_usd, directory, *, price, source, settings=None, provider_for=None, out=print):
     """Why: a paid batch must stop on its cap and on the first unusable game.
     What: plays each plan item ``games`` times in order under one
     ``SpendGuard`` and returns ``(exit_code, summary)``. ``source`` is the
-    ``source_pin``; ``price`` the ``battle.spend.Price``. A budget stop or a
-    spend at the cap gives ``EXIT_CAP``; a failed game ``EXIT_FAILED``.
+    ``source_pin``, ``price`` the ``battle.spend.Price`` and ``settings`` the
+    one resolved ``Settings`` (``resolve_settings``) that sizes the reserve,
+    builds the provider and fills the pins; its output limit must equal the
+    price's. A budget stop or a spend at the cap gives ``EXIT_CAP``; a failed
+    game ``EXIT_FAILED``; an interrupt is recorded and re-raised.
     ``provider_for(entry)`` gives the provider (None: the OpenRouter adapter
-    from ``Settings``).
+    from ``settings``, which is then required).
     Test: `test_batch_stops_at_the_cost_cap`,
     `test_budget_stops_mid_game_before_the_call_that_would_cross_the_cap`,
     `test_missing_cost_fails_closed_and_stops_the_batch`,
     `test_provider_error_or_junk_reply_fails_the_game_and_stops_the_batch`,
     `test_fallback_keeps_the_partial_run_and_its_record`,
+    `test_interrupt_mid_game_records_the_game_and_propagates`,
     `test_model_runs_on_four_entries_replay_with_no_fallbacks`.
     """
     if games < 1:
         raise ValueError("games must be 1 or more")
-    guard = SpendGuard(cap_usd, price)
+    if settings is None:
+        if provider_for is None:
+            raise ValueError("a batch on the OpenRouter adapter needs the resolved Settings")
+        settings = Settings(max_tokens=price.max_output_tokens)  # Fake providers only.
+    if price.max_output_tokens != settings.request_max_tokens:
+        raise ValueError("the price's output limit is not the request's max_tokens")
+    guard = SpendGuard(cap_usd, price, request_size(settings))
     entries = [(item, resolve(item)) for item in plan]  # Every name is checked before any spend.
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     if any(directory.glob("*.sqlite")) or any((directory / name).exists() for name in BATCH_FILES):
         raise ValueError(f"{directory} already holds a batch; use a new directory")
-    pins = {"source": source, "model": model, "effort": effort, "cap_usd": cap_usd,
+    pins = {"source": source, "model": settings.model, "effort": settings.effort or None,
+            "request_max_tokens": settings.request_max_tokens, "request_timeout": settings.request_timeout,
+            "cap_usd": cap_usd,
             "prices": {"input_per_mtok": price.input_per_mtok, "output_per_mtok": price.output_per_mtok,
                        "max_output_tokens": price.max_output_tokens, "reserve_basis": RESERVE_BASIS}}
     manifest = {**pins, "plan": list(plan), "games_per_item": games,
                 "entries": {item: entry_pins(entry) for item, entry in entries}}
     (directory / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
-    played, status, code = [], "complete", EXIT_DONE
+    played, status, code, interrupt = [], "complete", EXIT_DONE, None
     queue = [(item, entry, n) for item, entry in entries for n in range(1, games + 1)]
     for item, entry, n in queue:
         if guard.spent_usd >= cap_usd:
             status, code = "cap_reached", EXIT_CAP
             break
-        db = directory / f"{item.replace('/', '--')}-{n}.sqlite"
+        stem = directory / f"{item.replace('/', '--')}-{n}"
         provider = provider_for(entry) if provider_for else None
-        record = play(entry, db, guard, provider=provider, model=model, effort=effort, max_tokens=max_tokens)
+        record, interrupt = play(entry, stem, guard, provider=provider, settings=settings)
         record.update(plan_item=item, game=n, pins={**pins, **manifest["entries"][item]})
         played.append(record)
         with open(directory / "runs.jsonl", "a") as runs:
             runs.write(json.dumps(record, sort_keys=True) + "\n")
         out(json.dumps(record, sort_keys=True), flush=True)
+        if interrupt is not None:
+            status, code = "interrupted", EXIT_FAILED
+            break
         if record["status"] == "stopped":
             status, code = "cap_reached", EXIT_CAP
             break
@@ -299,29 +335,47 @@ def run_batch(plan, games, cap_usd, directory, *, price, source, model=None, eff
     }
     (directory / "batch-summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
     out(json.dumps({"summary": summary}, sort_keys=True), flush=True)
+    if interrupt is not None:
+        raise interrupt
     return code, summary
 
 
-def price_for(model, effort, max_tokens, input_price=None, output_price=None):
-    """The ``Price`` of ``model``: ``PRICES`` unless both rates are given;
-    an unpriced model raises ValueError. The output limit is the one the
-    request will carry (``Settings.request_max_tokens``)."""
+def resolve_settings(model=None, effort=None, max_tokens=None, timeout=None, env_file=None):
+    """Why: the reserve, the request and the pins must use the same limits.
+    What: ``Settings.load`` (environment, then ``env_file``, default
+    ``apps/poc/.env.local``) with the given CLI overrides applied once, as
+    ``build_headless`` would. The key it may hold is never printed or pinned.
+    Test: `test_reserve_and_pins_use_the_environment_settings`.
+    """
+    loaded = Settings.load() if env_file is None else Settings.load(Path(env_file))
+    overrides = {"model": model, "effort": effort, "max_tokens": max_tokens, "timeout": timeout}
+    return replace(loaded, **{k: v for k, v in overrides.items() if v is not None})
+
+
+def price_for(settings, input_price=None, output_price=None):
+    """The ``Price`` of ``settings.model``: ``PRICES`` unless both rates are
+    given; an unpriced model raises ValueError. The output limit is the
+    request's ``settings.request_max_tokens``."""
     if (input_price is None) != (output_price is None):
         raise ValueError("give both --input-price and --output-price, or neither")
     if input_price is None:
-        if model not in PRICES:
-            raise ValueError(f"No price for {model!r}; give --input-price and --output-price")
-        input_price, output_price = PRICES[model]
-    limit = Settings(effort=effort or "", max_tokens=max_tokens).request_max_tokens
-    return Price(input_price, output_price, limit)
+        if settings.model not in PRICES:
+            raise ValueError(f"No price for {settings.model!r}; give --input-price and --output-price")
+        input_price, output_price = PRICES[settings.model]
+    return Price(input_price, output_price, settings.request_max_tokens)
 
 
-def main(argv=None, provider_for=None, repo=POC):
+def _terminate(signum, frame):
+    raise SystemExit(128 + signum)  # SIGTERM becomes an interrupt that play records.
+
+
+def main(argv=None, provider_for=None, repo=POC, env_file=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--plan", action="append", required=True, metavar="ENTRY[/VARIANT]")
     parser.add_argument("--model", required=True, help="OpenRouter model id")
-    parser.add_argument("--effort", choices=EFFORTS[1:])
+    parser.add_argument("--effort", choices=EFFORTS[1:], help="reasoning effort (default: Settings)")
     parser.add_argument("--max-tokens", type=int, help="completion token limit (default: Settings)")
+    parser.add_argument("--timeout", type=float, help="provider timeout, seconds (default: Settings)")
     parser.add_argument("--input-price", type=float, help="USD per million input tokens (default: PRICES)")
     parser.add_argument("--output-price", type=float, help="USD per million output tokens (default: PRICES)")
     parser.add_argument("--games", type=int, required=True, help="model games per plan item")
@@ -329,12 +383,19 @@ def main(argv=None, provider_for=None, repo=POC):
     parser.add_argument("--dir", required=True, help="a new directory for this batch's databases")
     args = parser.parse_args(argv)
     try:
-        price = price_for(args.model, args.effort, args.max_tokens, args.input_price, args.output_price)
-        code, _ = run_batch(args.plan, args.games, args.cap_usd, args.dir, price=price, source=source_pin(repo),
-                            model=args.model, effort=args.effort, max_tokens=args.max_tokens,
-                            provider_for=provider_for)
+        source = source_pin(repo)
+        settings = resolve_settings(args.model, args.effort, args.max_tokens, args.timeout, env_file)
+        price = price_for(settings, args.input_price, args.output_price)
     except ValueError as exc:
         parser.error(str(exc))
+    previous = signal.signal(signal.SIGTERM, _terminate)
+    try:
+        code, _ = run_batch(args.plan, args.games, args.cap_usd, args.dir, price=price, source=source,
+                            settings=settings, provider_for=provider_for)
+    except ValueError as exc:
+        parser.error(str(exc))
+    finally:
+        signal.signal(signal.SIGTERM, previous)
     return code
 
 
