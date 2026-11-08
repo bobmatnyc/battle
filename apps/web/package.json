@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "engines": {"node": ">=24.2"},
   "scripts": {
     "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=4 \"test/**/*.test.ts\"",
     "serve": "node --disable-warning=ExperimentalWarning server/desk-server.ts",

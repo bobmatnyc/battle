@@ -5,12 +5,15 @@ POC_ARGS ?=
 .PHONY: poc poc-offline test-poc smoke-poc headless-poc web smoke-web
 WEB_ARGS ?=
 
-# TypeScript desk (docs/research/70) against a POC already running on 8874.
+# TypeScript desk (docs/research/70, 71) against a POC already running on 8874.
+# Needs Node >= 24.2; the check fails loudly on an older Node instead of exiting 0 unserved.
 web:
+	$(NODE) apps/web/scripts/check-node.mjs
 	cd apps/web && $(NODE) --disable-warning=ExperimentalWarning server/desk-server.ts $(WEB_ARGS)
 
 # Real-browser click test on its own POC, SQLite file and ports; exit 3 = no browser (blocked).
 smoke-web:
+	$(NODE) apps/web/scripts/check-node.mjs
 	cd apps/web && $(NODE) --disable-warning=ExperimentalWarning scripts/smoke-browser.ts
 
 poc:
