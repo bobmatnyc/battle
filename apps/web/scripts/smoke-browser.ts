@@ -1,10 +1,12 @@
-// Browser smoke test for the TypeScript desk (docs/research/70, 71).
+// Browser smoke test for the TypeScript desk (docs/research/70, 71, 73).
 // Starts an offline POC on a temporary SQLite file and a free port, the desk
 // server on another free port, and a headless Chrome/Chromium in a time zone
-// far from the battle's. With real pointer input it selects a counter and reads
-// its unit card, sends a move and a non-move order, sees refusals carry the
-// server's text, runs the clock, then switches to Hougoumont and checks the
-// header, counters, unit card and a Hougoumont-only order.
+// far from the battle's. It checks the map features, their legend status and the
+// grid toggle; with real pointer input it selects a counter and reads its unit
+// card, sends a move and a non-move order, sees refusals carry the server's text,
+// runs the clock, replays the battle in the commander view and returns to live,
+// then switches to Hougoumont and checks the header, features (compound and gate),
+// counters, unit card and a Hougoumont-only order.
 //
 // Exit 0: passed. Exit 1: failed (also when the overall deadline passes). Exit 3:
 // BLOCKED, no runnable browser (never a pass).
@@ -16,7 +18,7 @@
 // the artifacts directory keeps only the screenshots and the SQLite file.
 import assert from "node:assert/strict";
 import {spawn, type ChildProcess} from "node:child_process";
-import {mkdtempSync, readdirSync, writeFileSync} from "node:fs";
+import {mkdtempSync, readdirSync} from "node:fs";
 import {createServer} from "node:http";
 import type {AddressInfo} from "node:net";
 import {tmpdir} from "node:os";
@@ -24,13 +26,14 @@ import {join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createDeskServer, type DeskServer} from "../server/desk-server.ts";
 import {findBrowser, launch, Page} from "./cdp.ts";
-import {pocRequest, removeDir, stop, waitForOutput, withDeadline} from "./smoke-support.ts";
+import {checkFeatures, checkGridToggle, checkReplay} from "./smoke-features.ts";
+import {checkCard, choose, clickOn, header, nextNotice, noticeText, openHex, poc, screenshot, selectUnit, until, type Doc} from "./smoke-page.ts";
+import {removeDir, stop, waitForOutput, withDeadline} from "./smoke-support.ts";
 
 const POC_DIR = fileURLToPath(new URL("../../poc/", import.meta.url));
 const BROWSER_ZONE = "Pacific/Kiritimati";  // UTC+14: a browser-zone shift would move 16:30 to another day
 const BLOCKED = 3;
 const HOUGOUMONT = "hougoumont-north-gate";
-type Doc = Record<string, any>;
 
 function freePort(): Promise<number> {
   return new Promise((done) => {
@@ -60,90 +63,6 @@ function spawnPoc(port: number, db: string): ChildProcess {
     {cwd: POC_DIR, env: cleanEnv(), stdio: ["ignore", "pipe", "pipe"]});
 }
 
-// Direct POC calls, as the POC's own host; used only to check, to stale the cursor and to run the clock elsewhere.
-const poc = (port: number, path: string, body?: unknown): Promise<Doc> => pocRequest(port, path, body);
-
-async function until<T>(what: string, probe: () => Promise<T | null | false>, ms = 15000): Promise<T> {
-  const end = Date.now() + ms;
-  for (;;) {
-    const value = await probe();
-    if (value) return value;
-    if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
-    await new Promise((done) => setTimeout(done, 100));
-  }
-}
-
-interface Point { x: number; y: number }
-const centre = (selector: string): string => `(() => { const n = document.querySelector(${JSON.stringify(selector)});
-  if (!n) return null; const b = n.getBoundingClientRect(); return {x: b.x + b.width / 2, y: b.y + b.height / 2}; })()`;
-
-// A hex whose centre hit-tests to the hex itself (no counter on top), 3 to 6 hexes from `from`.
-const openHex = (from: [number, number]): string => `(() => {
-  for (const hex of document.querySelectorAll(".hex")) {
-    const c = +hex.dataset.c, r = +hex.dataset.r;
-    const d = Math.max(Math.abs(c - ${from[0]}), Math.abs(r - ${from[1]}));
-    if (d < 3 || d > 6) continue;
-    const b = hex.getBoundingClientRect(), x = b.x + b.width / 2, y = b.y + b.height / 2;
-    if (document.elementFromPoint(x, y) === hex) return {c, r, x, y};
-  }
-  return null; })()`;
-
-async function clickOn(page: Page, selector: string): Promise<void> {
-  const point = await until(selector, () => page.evaluate<Point | null>(centre(selector)));
-  await page.click(point.x, point.y);
-}
-
-// A real click on the counter: the counter must be the element under the pointer.
-async function selectUnit(page: Page, id: string): Promise<void> {
-  const point = await until(`counter ${id}`, () => page.evaluate<Point | null>(centre(`[data-unit="${id}"] rect`)));
-  const hit = await page.evaluate<string | null>(`document.elementFromPoint(${point.x}, ${point.y})?.closest("[data-unit]")?.dataset.unit ?? null`);
-  assert.equal(hit, id, "the counter is the element under the pointer");
-  await page.click(point.x, point.y);
-  await until(`${id} selected`, () => page.evaluate<boolean>(
-    `document.querySelector('[data-unit="${id}"]')?.getAttribute("aria-pressed") === "true"`));
-}
-
-// A <select> choice, as the browser's own change event (headless Chrome draws no native list to click).
-async function choose(page: Page, id: string, value: string): Promise<void> {
-  const ok = await page.evaluate<boolean>(`(() => { const s = document.getElementById(${JSON.stringify(id)});
-    if (![...s.options].some(o => o.value === ${JSON.stringify(value)})) return false;
-    s.value = ${JSON.stringify(value)}; s.dispatchEvent(new Event("change", {bubbles: true})); return true; })()`);
-  assert.ok(ok, `#${id} offers ${value}`);
-}
-
-// The next notice that is not plain info and differs from `before`.
-async function nextNotice(page: Page, before: string, ms = 15000): Promise<Doc> {
-  return until("a desk notice", () => page.evaluate<Doc | null>(`(() => { const n = document.getElementById("notice");
-    return n.dataset.kind !== "info" && n.textContent !== ${JSON.stringify(before)} ? {kind: n.dataset.kind, text: n.textContent} : null; })()`), ms);
-}
-const noticeText = (page: Page): Promise<string> => page.evaluate<string>(`document.getElementById("notice").textContent`);
-
-async function header(page: Page): Promise<Doc> {
-  return page.evaluate<Doc>(`({time: document.getElementById("battle-time").textContent,
-    date: document.getElementById("battle-date").textContent, location: document.getElementById("battle-location").textContent,
-    title: document.getElementById("title").textContent, zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    text: document.body.innerText})`);
-}
-
-// The unit card's fields against the POC's own commander view of that unit.
-async function checkCard(page: Page, unit: Doc): Promise<string> {
-  const card = await until("the unit card", () => page.evaluate<Doc | null>(`(() => {
-    const out = {}; for (const n of document.querySelectorAll("#unit-card [data-field]")) out[n.dataset.field] = n.querySelector("dd").textContent;
-    return Object.keys(out).length ? {...out, title: document.getElementById("unit-title")?.textContent} : null; })()`));
-  assert.equal(card["title"], `${unit["id"]} · ${unit["name"]}`);
-  assert.equal(card["strength"], `${unit["strength"]} / ${unit["initial"]}`);
-  assert.equal(card["morale"], `${unit["morale"]}%`);
-  assert.equal(card["ammo"], String(unit["ammo"]));
-  assert.equal(card["energy"], `${100 - unit["fatigue"]}%`);
-  assert.equal(card["status"], unit["status"]);
-  return `${card["title"]}: strength ${card["strength"]}, morale ${card["morale"]}, ammunition ${card["ammo"]}, energy ${card["energy"]}, posture ${card["posture"]}, mission ${card["mission"]}`;
-}
-
-async function screenshot(page: Page, artifacts: string, name: string): Promise<void> {
-  const shot = await page.send("Page.captureScreenshot", {format: "png"});
-  writeFileSync(join(artifacts, name), Buffer.from(String(shot["data"]), "base64"));
-}
-
 async function littleRoundTop(page: Page, pocPort: number, artifacts: string): Promise<void> {
   const head = await header(page);
   assert.equal(head["zone"], BROWSER_ZONE);
@@ -160,6 +79,11 @@ async function littleRoundTop(page: Page, pocPort: number, artifacts: string): P
   assert.deepEqual(drawn["units"], before["units"].map((u: Doc) => u.id), "one counter per own unit");
   assert.deepEqual(drawn["contacts"], before["contacts"].map((c: Doc) => c.id), "enemy markers only from contacts");
   assert.deepEqual(drawn["kinds"], before["order_templates"].map((t: Doc) => t.id), "the POC's whole order catalog");
+
+  // Slice 3: roads, footprints and the legend with each mark's status; the grid toggle keeps them.
+  console.log(`features: ${await checkFeatures(page, pocPort)}`);
+  await screenshot(page, artifacts, "desk-lrt-features.png");
+  console.log(`grid: ${await checkGridToggle(page, artifacts, "desk-lrt-grid-off.png")}`);
 
   // 1. A real click on the friendly counter selects it and shows its unit card.
   await selectUnit(page, unit.id);
@@ -233,6 +157,9 @@ async function littleRoundTop(page: Page, pocPort: number, artifacts: string): P
   assert.match(refused["text"], /Battle changed/);
   assert.equal((await poc(pocPort, "/api/state"))["orders"].length, settled["orders"].length, "the stale order changed nothing");
   console.log(`refused: move · ${refused["text"]}`);
+
+  // 7. Slice 3: replay this battle in the commander view, back to an earlier interval, then live again.
+  console.log(await checkReplay(page, pocPort, artifacts));
 }
 
 async function hougoumont(page: Page, pocPort: number, artifacts: string): Promise<void> {
@@ -256,6 +183,10 @@ async function hougoumont(page: Page, pocPort: number, artifacts: string): Promi
   assert.equal(drawn["chosen"], HOUGOUMONT);
   assert.ok(drawn["kinds"].includes("close_gate"), "Hougoumont's catalog adds Close the gate");
   console.log(`scenario: ${started["text"]}`);
+  // Slice 3: the lanes, the chateau footprint, the compound wall and the open north gate.
+  console.log(`features: ${await checkFeatures(page, pocPort)}`);
+  console.log(`grid: ${await checkGridToggle(page, artifacts, "desk-hougoumont-grid-off.png")}`);
+  await screenshot(page, artifacts, "desk-hougoumont-features.png");
 
   const gateParty = state["units"][0];
   await selectUnit(page, gateParty.id);
@@ -307,12 +238,15 @@ async function body(binary: string, artifacts: string, profile: string, held: St
     console.log("SMOKE_FREEZE_BROWSER: stopping the browser group; its DevTools socket stays open");
     process.kill(-started.process.pid!, "SIGSTOP");
   }
+  await held.page.send("Emulation.setDeviceMetricsOverride", {width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false});
   await held.page.send("Page.navigate", {url: held.desk.url});
   await until("the desk to load", () => held.page!.evaluate<boolean>("document.documentElement.dataset.deskReady === 'true'"));
   await littleRoundTop(held.page, pocPort, artifacts);
   await hougoumont(held.page, pocPort, artifacts);
-  console.log("SMOKE PASSED: unit card, move and hold-fire orders accepted, refusals shown with the server's text, "
-    + "clock, and a switch to Hougoumont with its header, unit card and Close the gate order.");
+  console.log("SMOKE PASSED: map features with legend status and the grid toggle at Little Round Top and Hougoumont, "
+    + "unit card, move and hold-fire orders accepted, refusals shown with the server's text, clock, "
+    + "commander replay back to an earlier interval and return to live, and a switch to Hougoumont with its header, "
+    + "unit card and Close the gate order.");
   return 0;
 }
 
@@ -336,9 +270,12 @@ async function main(): Promise<number> {
     if (held.poc) await stop(held.poc);
     removeDir(profile);
   })();
-  for (const signal of ["SIGINT", "SIGTERM"] as const) {
-    process.once(signal, () => { void cleanup().finally(() => process.exit(1)); });
+  // As the POC harness after docs/research/72 §6.1: `on`, not `once`, for the whole run, so a second
+  // signal during cleanup (or a closed terminal's SIGHUP) cannot end the run before cleanup finishes.
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+    process.on(signal, () => { void cleanup().finally(() => process.exit(1)); });
   }
+  for (const stream of [process.stdout, process.stderr]) stream.on("error", () => { /* a closed terminal */ });
   try {
     // Review #2: one deadline over the whole run, so a browser that stops answering cannot hang it.
     return await withDeadline(body(binary, artifacts, profile, held), DEADLINE_MS, "smoke run");
