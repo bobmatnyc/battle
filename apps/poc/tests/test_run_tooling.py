@@ -30,11 +30,13 @@ RECIPE = ('run_dir=$(mktemp -d "${TMPDIR:-/tmp}/battle-headless.XXXXXX") && \\\n
 
 
 def make(*args):
-    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
-    env.pop("SCENARIO", None)
-    env.pop("MAKEFLAGS", None)
-    return subprocess.run(["make", "--no-print-directory", "-C", str(ROOT), *args], capture_output=True, text=True,
-                          timeout=120, env=env)
+    """Run ``make`` at the repository root; the target's mktemp run directory lands in a temporary TMPDIR."""
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "TMPDIR": tmp}
+        env.pop("SCENARIO", None)
+        env.pop("MAKEFLAGS", None)
+        return subprocess.run(["make", "--no-print-directory", "-C", str(ROOT), *args], capture_output=True,
+                              text=True, timeout=120, env=env)
 
 
 def load_runs():

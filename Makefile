@@ -32,10 +32,11 @@ test-poc:
 smoke-poc:
 	cd apps/poc && $(PYTHON) scripts/smoke_http.py
 
+# SCENARIO=<id> runs any headless catalog entry (docs/research/83); unset or empty: Little Round Top.
 headless-poc:
 	@run_dir=$$(mktemp -d "$${TMPDIR:-/tmp}/battle-headless.XXXXXX") && \
 	  echo "Headless artifacts: $$run_dir" && \
-	  cd apps/poc && $(PYTHON) -m battle --headless --db "$$run_dir/battle.sqlite"
+	  cd apps/poc && $(PYTHON) -m battle --headless --db "$$run_dir/battle.sqlite"$(if $(SCENARIO), --scenario '$(SCENARIO)')
 
 # Prepare the designated Evo target without transferring secrets or local saves.
 .PHONY: package-evo
