@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {orderSubmission, parse, readScenarioList, type CommanderOrder, type CommanderState} from "@battle/contracts";
 import {orderBody, orderOutcome, templateFor} from "../src/orders.ts";
-import {dispatchesMarkup, missionMarkup, scenarioOptions, templateHelp, templateOptions, unitCardMarkup} from "../src/panels.ts";
+import {dispatchesMarkup, missionMarkup, outcomeText, scenarioOptions, templateHelp, templateOptions, unitCardMarkup} from "../src/panels.ts";
 import {ordersMarkup} from "../src/render.ts";
 import {commander, raw} from "./fixtures.ts";
 
@@ -114,7 +114,20 @@ test("the order form offers the catalog with its intent and effect, and resupply
 test("the scenario choice lists the catalog and marks the battle being played", () => {
   const list = readScenarioList(raw("scenarios"));
   const html = scenarioOptions(list, "hougoumont-north-gate");
-  assert.equal((html.match(/<option/g) ?? []).length, 2);
+  assert.equal((html.match(/<option/g) ?? []).length, 3);
+  assert.match(html, /<option value="concord-north-bridge">Concord North Bridge · 1775-04-19<\/option>/);
   assert.match(html, /<option value="hougoumont-north-gate" selected>Hougoumont: the north gate · 1815-06-18<\/option>/);
   assert.match(missionMarkup(commander()), /<b>17:00<\/b>/, "the brief's bold marks become <b>, the rest is escaped");
+});
+
+test("a finished battle shows the brief's headline for the player's side, with the reason", () => {
+  const view = commander();
+  assert.equal(outcomeText(view), null, "no headline while the battle is active");
+  const done = (winner: string): CommanderState => ({...view, status: "complete", winner, reason: "Held to the deadline."});
+  const outcomes = view.scenario_brief!.outcomes;
+  assert.deepEqual(outcomeText(done(view.side)), {headline: outcomes.win, reason: "Held to the deadline."});
+  assert.equal(outcomeText(done(view.scenario_brief!.opponent.id))?.headline, outcomes.loss);
+  assert.equal(outcomeText(done("draw"))?.headline, outcomes.draw);
+  const {scenario_brief: _omitted, ...bare} = done(view.side);
+  assert.equal(outcomeText(bare as CommanderState)?.headline, "Battle complete.");
 });

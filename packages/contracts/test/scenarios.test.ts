@@ -20,11 +20,12 @@ function rejects(edit: (doc: Doc) => void, path: string): void {
 
 test("scenario list fixture validates and names the player-facing scenarios", () => {
   assert.deepEqual(parse(scenarioList, recorded), recorded);
-  assert.deepEqual(recorded["scenarios"].map((s: Doc) => s.id), ["little-round-top", "hougoumont-north-gate"]);
+  assert.deepEqual(recorded["scenarios"].map((s: Doc) => s.id),
+    ["little-round-top", "hougoumont-north-gate", "concord-north-bridge"]);  // docs/research/74
 });
 
 test("scenario list refuses a bad field with its path", () => {
-  rejects((d) => { d["default"] = "concord-north-bridge"; }, "$.default");
+  rejects((d) => { d["default"] = "pegasus-bridge"; }, "$.default");  // headless only, not in the list
   rejects((d) => { d["scenarios"] = []; }, "$.scenarios");
   rejects((d) => { d["scenarios"][1].id = ""; }, "$.scenarios[1].id");
   rejects((d) => { d["scenarios"][1].date = "18 June 1815"; }, "$.scenarios[1].date");
