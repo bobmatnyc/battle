@@ -8,7 +8,7 @@ import {reread, sendOrder, startBattle, type Loaded} from "./commands.ts";
 import {statusTableFor} from "./feature-sources.ts";
 import {featureLegend} from "./features.ts";
 import {orderBody, templateFor} from "./orders.ts";
-import {dispatchesMarkup, missionMarkup, scenarioOptions, templateHelp, templateOptions, unitCardMarkup} from "./panels.ts";
+import {dispatchesMarkup, missionMarkup, outcomeText, scenarioOptions, templateHelp, templateOptions, unitCardMarkup} from "./panels.ts";
 import {contactsMarkup, featureOptions, mapMarkup, ordersMarkup} from "./render.ts";
 import {openReplay, ordersOpen, replayAt, replayLabel, type Replay} from "./replay.ts";
 import {clickMap, emptySelection, ownUnit, type MapTarget, type Notice, type Selection} from "./selection.ts";
@@ -151,6 +151,11 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     clockButton.disabled = busy || view.status !== "active" || replay !== null;
     clockButton.textContent = view.clock.running ? "Pause clock" : "Start clock";
     notice.textContent = current?.text ?? (view.status === "active" ? "" : "Battle complete.");
+    // docs/research/74: the live battle's outcome headline, in the brief's words.
+    const outcome = outcomeText(view);
+    element<HTMLElement>(doc, "outcome").hidden = outcome === null;
+    element(doc, "outcome-headline").textContent = outcome?.headline ?? "";
+    element(doc, "outcome-reason").textContent = outcome?.reason ?? "";
     notice.dataset["kind"] = current?.kind ?? "info";
   }
 

@@ -70,6 +70,15 @@ export async function checkFeatures(page: Page, pocPort: number): Promise<string
     assert.deepEqual([gate?.["state"], gate?.["status"], gate?.["label"]], ["open", "sourced", "North gate · open"], "the gate in its known state");
     extra = `; compound wall 17 edges; gate ${gate!["label"]} (${LABELS[gate!["status"]]})`;
   }
+  if (id === "concord-north-bridge") {
+    // docs/research/74: the North Bridge from its briefed crossing cell, with the road carried across.
+    const bridge = marks.get("crossing:12,10");
+    assert.deepEqual([bridge?.["kind"], bridge?.["status"]], ["feature-bridge", "reconstructed"], "the North Bridge is drawn");
+    assert.ok(await page.evaluate<boolean>(`!!document.querySelector('[data-feature="crossing:12,10"] .road-span-fill')`), "the road span crosses it");
+    const water = await page.evaluate<number>(`document.querySelectorAll('.hex[fill="#b9d3e3"]').length`);
+    assert.equal(water, map["cells"].filter((c: Doc) => c["terrain"] === "water").length, "every water hex is filled as water");
+    extra = `; North Bridge ${LABELS[bridge!["status"]]} with the road span; ${water} water hexes`;
+  }
   const summary = (drawn["legend"] as Doc[]).map((l) => `${l["key"]} ${l["status"]}`).join(", ");
   return `${id}: ${drawn["marks"].length} marks drawn, legend ${summary}${extra}`;
 }

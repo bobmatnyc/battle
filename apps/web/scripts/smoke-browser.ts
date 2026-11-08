@@ -6,7 +6,8 @@
 // card, sends a move and a non-move order, sees refusals carry the server's text,
 // runs the clock, replays the battle in the commander view and returns to live,
 // then switches to Hougoumont and checks the header, features (compound and gate),
-// counters, unit card and a Hougoumont-only order.
+// counters, unit card and a Hougoumont-only order, then to Concord (docs/research/74): header,
+// water, roads and bridge, an order, and the clock run to the outcome headline.
 //
 // Exit 0: passed. Exit 1: failed (also when the overall deadline passes). Exit 3:
 // BLOCKED, no runnable browser (never a pass).
@@ -34,6 +35,7 @@ const POC_DIR = fileURLToPath(new URL("../../poc/", import.meta.url));
 const BROWSER_ZONE = "Pacific/Kiritimati";  // UTC+14: a browser-zone shift would move 16:30 to another day
 const BLOCKED = 3;
 const HOUGOUMONT = "hougoumont-north-gate";
+const CONCORD = "concord-north-bridge";
 
 function freePort(): Promise<number> {
   return new Promise((done) => {
@@ -201,6 +203,57 @@ async function hougoumont(page: Page, pocPort: number, artifacts: string): Promi
   console.log(`accepted: ${gateParty.id} close_gate; notice: ${gate["text"]}`);
 }
 
+// docs/research/74: Concord from the picker, offline and scripted, played to its outcome headline.
+async function concord(page: Page, pocPort: number, artifacts: string): Promise<void> {
+  const before = await noticeText(page);
+  await choose(page, "scenario-select", CONCORD);
+  await clickOn(page, "#new-battle");
+  const started = await nextNotice(page, before);
+  assert.equal(started["kind"], "accepted", started["text"]);
+  const state = await poc(pocPort, "/api/state");
+  assert.equal(state["scenario_brief"].id, CONCORD, "the POC started Concord");
+  const head = await header(page);
+  assert.deepEqual([head["title"], head["time"], head["date"], head["location"]],
+    ["Concord North Bridge", "09:25", "Wednesday, April 19, 1775", "North Bridge · Concord, Massachusetts"]);
+  assert.doesNotMatch(head["text"], /\bturn\b|revision/i, "no turn counter or revision label");
+  console.log(`scenario: ${started["text"]}`);
+  console.log(`features: ${await checkFeatures(page, pocPort)}`);
+  await screenshot(page, artifacts, "desk-concord-features.png");
+
+  // The Acton company, the command's own detachment, gets a move to an open hex 3 to 6 hexes away.
+  const acton = state["units"].find((u: Doc) => u.id === "P1");
+  await selectUnit(page, acton.id);
+  console.log(`unit card: ${await checkCard(page, acton)}`);
+  await choose(page, "order-kind", "move");
+  const target = await until("an open hex", () => page.evaluate<Doc | null>(openHex(acton.pos)));
+  await page.click(target["x"], target["y"]);
+  await clickOn(page, "#send-order");
+  const accepted = await nextNotice(page, started["text"]);
+  assert.equal(accepted["kind"], "accepted", accepted["text"]);
+  const order = (await poc(pocPort, "/api/state"))["orders"].find((o: Doc) => o.unit_id === "P1" && o.stance === "move");
+  assert.deepEqual(order?.destination, [target["c"], target["r"]], "the POC holds the move order");
+  console.log(`accepted: P1 move → ${target["c"]},${target["r"]} (${order.id}, ${order.status}); notice: ${accepted["text"]}`);
+
+  // The clock at 60x from the desk's own button, until the battle ends; the headline is the brief's.
+  await poc(pocPort, "/api/clock", {command: "speed", speed: 60, game_id: state["game_id"]});
+  await clickOn(page, "#clock-toggle");
+  const outcome = await until("the Concord outcome", () => page.evaluate<Doc | null>(`(() => {
+    const box = document.getElementById("outcome");
+    return box.hidden ? null : {headline: document.getElementById("outcome-headline").textContent,
+      reason: document.getElementById("outcome-reason").textContent}; })()`), 90000);
+  const done = await poc(pocPort, "/api/state?view=god");
+  const outcomes = done["scenario_brief"].outcomes;
+  const expected = done["winner"] === done["side"] ? outcomes.win : done["winner"] === "draw" ? outcomes.draw : outcomes.loss;
+  assert.equal(outcome["headline"], expected);
+  assert.equal(outcome["reason"], done["reason"]);
+  const british = done["decisions"].filter((d: Doc) => d.side === "british" && d.role !== "staff");
+  assert.ok(british.length > 0 && british.every((d: Doc) => d.source === "scripted" && d.policy === "scripted-concord-regulars-v1"),
+    "the desk opponent played the regulars' scripted policy");
+  await screenshot(page, artifacts, "desk-concord-outcome.png");
+  console.log(`outcome: ${done["winner"]} after ${done["turn"]} intervals · "${outcome["headline"]}" ${outcome["reason"]}; `
+    + `${british.length} British decisions, all scripted-concord-regulars-v1; mode ${done["mode"]}`);
+}
+
 // `closing` is set when cleanup begins; nothing is started after that, and every child is
 // recorded here before the run waits on it, so cleanup can stop it on every exit path.
 interface Started { closing: boolean; poc?: ChildProcess; desk?: DeskServer; browser?: ChildProcess; page?: Page }
@@ -243,10 +296,12 @@ async function body(binary: string, artifacts: string, profile: string, held: St
   await until("the desk to load", () => held.page!.evaluate<boolean>("document.documentElement.dataset.deskReady === 'true'"));
   await littleRoundTop(held.page, pocPort, artifacts);
   await hougoumont(held.page, pocPort, artifacts);
+  await concord(held.page, pocPort, artifacts);
   console.log("SMOKE PASSED: map features with legend status and the grid toggle at Little Round Top and Hougoumont, "
     + "unit card, move and hold-fire orders accepted, refusals shown with the server's text, clock, "
-    + "commander replay back to an earlier interval and return to live, and a switch to Hougoumont with its header, "
-    + "unit card and Close the gate order.");
+    + "commander replay back to an earlier interval and return to live, a switch to Hougoumont with its header, "
+    + "unit card and Close the gate order, and a switch to Concord with its header, water, roads and bridge, "
+    + "a move order and the clock run to the outcome headline.");
   return 0;
 }
 

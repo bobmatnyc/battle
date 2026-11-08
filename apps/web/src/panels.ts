@@ -83,6 +83,19 @@ export function missionMarkup(view: CommanderView): string {
   return `<strong>${esc(brief.mission.title)}</strong><p>${text}</p><p>${esc(brief.subhead)}</p>`;
 }
 
+/** Why: a finished battle must say who won in the scenario's own words, as the POC desk does
+ * (docs/research/74). What: null while the battle is active; else the brief's win, loss or draw
+ * headline for the viewing side (by `winner`) and the server's `reason`; "Battle complete." when
+ * the saved battle has no brief.
+ * Test: `a finished battle shows the brief's headline for the player's side, with the reason`. */
+export function outcomeText(view: CommanderView): {headline: string; reason: string} | null {
+  if (view.status === "active") return null;
+  const outcomes = view.scenario_brief?.outcomes;
+  const headline = !outcomes ? "Battle complete."
+    : view.winner === view.side ? outcomes.win : view.winner === "draw" ? outcomes.draw : outcomes.loss;
+  return {headline, reason: view.reason ?? ""};
+}
+
 /** Why: the player picks a scenario from the POC's own player-facing catalog.
  * What: one `<option>` per catalog entry (title and calendar date), `current` selected.
  * Test: `the scenario choice lists the catalog and marks the battle being played`. */
