@@ -16,6 +16,9 @@ before(async () => {
     let body = "";
     req.on("data", (chunk) => { body += chunk; });
     req.on("end", () => {
+      // #4: a POC that drops the socket mid-body, and one that never answers.
+      if (req.url === "/api/partial") { res.writeHead(200, {"Content-Type": "application/json"}); res.write("{\"ok\":"); req.socket.destroy(); return; }
+      if (req.url === "/api/silent") return;
       seen.push({method: req.method ?? "", url: req.url ?? "", headers: req.headers, body});
       res.writeHead(req.url === "/api/orders" ? 409 : 200, {"Content-Type": "application/json"});
       res.end(JSON.stringify(req.url === "/api/orders" ? {error: "Battle changed."} : {ok: true}));
@@ -23,11 +26,12 @@ before(async () => {
   });
   await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
   upstreamPort = (upstream.address() as AddressInfo).port;
-  desk = await createDeskServer({pocUrl: `http://127.0.0.1:${upstreamPort}`, port: 0});
+  desk = await createDeskServer({pocUrl: `http://127.0.0.1:${upstreamPort}`, port: 0, relayTimeoutMs: 500});
 });
 
 after(async () => {
   await desk.close();
+  upstream.closeAllConnections();
   await new Promise<void>((resolve) => upstream.close(() => resolve()));
 });
 
@@ -93,4 +97,17 @@ test("a foreign host or origin is refused before the POC sees it", async () => {
 test("only a loopback POC can be named", async () => {
   await assert.rejects(createDeskServer({pocUrl: "http://example.com:8874", port: 0}), /loopback/);
   await assert.rejects(createDeskServer({pocUrl: "https://127.0.0.1:8874", port: 0}), /http/);
+});
+
+test("a POC that drops the connection mid-reply gets a 502, not a hung request", {timeout: 5000}, async () => {
+  const reply = await call("/api/partial");
+  assert.equal(reply.status, 502);
+  assert.match(JSON.parse(reply.body).error, /not reachable|stopped answering/);
+});
+
+test("an unresponsive POC times out with a 502", {timeout: 5000}, async () => {
+  const started = Date.now();
+  const reply = await call("/api/silent");
+  assert.equal(reply.status, 502);
+  assert.ok(Date.now() - started < 3000, "answered near the 500 ms relay timeout");
 });

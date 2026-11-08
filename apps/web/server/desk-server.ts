@@ -23,10 +23,12 @@ const PAGES: Record<string, [string, string]> = {
 };
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
   + "connect-src 'self'; frame-ancestors 'none'";
+const RELAY_TIMEOUT_MS = 30000;
 const MAX_BODY = 16000;  // the POC's own request limit
 const MODULE_NAME = /^[a-z0-9-]+\.ts$/;
 
-export interface DeskServerOptions { pocUrl: string; port: number; host?: string }
+/** `relayTimeoutMs`: how long a silent POC is waited for before a 502 (default 30 s). */
+export interface DeskServerOptions { pocUrl: string; port: number; host?: string; relayTimeoutMs?: number }
 export interface DeskServer { readonly port: number; readonly url: string; close(): Promise<void> }
 
 function loopback(pocUrl: string): URL {
@@ -83,25 +85,39 @@ function readBody(req: IncomingMessage): Promise<Buffer> {
   });
 }
 
-async function relay(poc: URL, req: IncomingMessage, res: ServerResponse): Promise<void> {
+// #4: every relay ends in one answer: the POC's reply, or a 502 when the POC is
+// unreachable, drops the connection mid-reply, or is silent for `timeoutMs`.
+async function relay(poc: URL, req: IncomingMessage, res: ServerResponse, timeoutMs: number): Promise<void> {
   const payload = req.method === "POST" ? await readBody(req) : Buffer.alloc(0);
   const headers: Record<string, string> = {Host: poc.host};
   if (req.headers.origin) headers["Origin"] = poc.origin;
   if (req.headers["content-type"]) headers["Content-Type"] = req.headers["content-type"];
   if (req.method === "POST") headers["Content-Length"] = String(payload.length);
   await new Promise<void>((done) => {
+    let settled = false;
+    const finish = (answer: () => void): void => {
+      if (settled) return;
+      settled = true;
+      answer();
+      done();
+    };
+    const fail = (error: string): void => finish(() => {
+      if (res.headersSent) res.destroy(); else sendError(res, 502, error);
+    });
+    const dropped = `The local simulation at ${poc.origin} stopped answering mid-reply.`;
     const upstream = request({hostname: poc.hostname, port: poc.port, path: req.url, method: req.method, headers}, (reply) => {
       const chunks: Buffer[] = [];
       reply.on("data", (chunk: Buffer) => chunks.push(chunk));
-      reply.on("end", () => {
-        send(res, reply.statusCode ?? 502, String(reply.headers["content-type"] ?? "application/json"), Buffer.concat(chunks));
-        done();
-      });
+      reply.on("end", () => finish(() => send(res, reply.statusCode ?? 502,
+        String(reply.headers["content-type"] ?? "application/json"), Buffer.concat(chunks))));
+      reply.on("error", () => fail(dropped));
+      reply.on("close", () => { if (!reply.complete) fail(dropped); });
     });
-    upstream.on("error", () => {
-      sendError(res, 502, `The local simulation is not reachable at ${poc.origin}.`);
-      done();
+    upstream.setTimeout(timeoutMs, () => {
+      fail(`The local simulation at ${poc.origin} did not answer within ${timeoutMs} ms.`);
+      upstream.destroy();
     });
+    upstream.on("error", () => fail(`The local simulation is not reachable at ${poc.origin}.`));
     upstream.end(payload);
   });
 }
@@ -110,7 +126,9 @@ async function relay(poc: URL, req: IncomingMessage, res: ServerResponse): Promi
  * desk must be same-origin with the API without the POC changing.
  * What: an http server on 127.0.0.1 serving the desk and relaying /api/* to `pocUrl`;
  * a request whose Host or Origin is not this server's is refused with 403 and not relayed.
- * Test: `api requests reach the POC with its own host and origin`, `a foreign host or origin is refused before the POC sees it`. */
+ * A POC that drops or stalls a reply gets a 502 (a closed connection once headers are sent).
+ * Test: `api requests reach the POC with its own host and origin`, `a foreign host or origin is refused before the POC sees it`,
+ * `a POC that drops the connection mid-reply gets a 502, not a hung request`, `an unresponsive POC times out with a 502`. */
 export async function createDeskServer(options: DeskServerOptions): Promise<DeskServer> {
   const poc = loopback(options.pocUrl);
   let port = options.port;
@@ -122,7 +140,7 @@ export async function createDeskServer(options: DeskServerOptions): Promise<Desk
       return sendError(res, 403, "Local access only.");
     }
     const path = new URL(req.url ?? "/", "http://desk.invalid").pathname;
-    const work = path.startsWith("/api/") ? relay(poc, req, res)
+    const work = path.startsWith("/api/") ? relay(poc, req, res, options.relayTimeoutMs ?? RELAY_TIMEOUT_MS)
       : req.method === "GET" ? serveStatic(path, res) : Promise.resolve(sendError(res, 405, "Method not allowed."));
     work.catch((error: unknown) => {
       if (!res.headersSent) sendError(res, 400, error instanceof Error ? error.message : "Invalid request.");
