@@ -64,7 +64,9 @@ test("a relay reply marked outcome unknown is a refusal the desk can tell apart"
 test("the scenario catalog is read through its contract, and a new battle posts the chosen id at the cursor", async () => {
   const sent: Sent[] = [];
   const list = await createDeskApi(transport(200, raw("scenarios"), sent)).scenarios();
-  assert.deepEqual(list.scenarios.map((s) => s.id), ["little-round-top", "hougoumont-north-gate", "concord-north-bridge"]);
+  // docs/research/75: every recorded scenario passes the contract, in order (the contracts test pins the ids).
+  assert.deepEqual(list.scenarios.map((s) => s.id), (raw("scenarios") as {scenarios: {id: string}[]}).scenarios.map((s) => s.id));
+  assert.equal(list.scenarios[0]!.id, "little-round-top");
   await assert.rejects(createDeskApi(transport(200, {default: "x", scenarios: []})).scenarios(), ContractError);
   const state = await createDeskApi(transport(200, raw("state-commander"), sent)).newBattle("hougoumont-north-gate", {game_id: "g", revision: 4});
   assert.equal(state.side, "union");

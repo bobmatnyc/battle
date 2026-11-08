@@ -79,6 +79,29 @@ export async function checkFeatures(page: Page, pocPort: number): Promise<string
     assert.equal(water, map["cells"].filter((c: Doc) => c["terrain"] === "water").length, "every water hex is filled as water");
     extra = `; North Bridge ${LABELS[bridge!["status"]]} with the road span; ${water} water hexes`;
   }
+  if (id === "pegasus-bridge") {
+    // docs/research/75: both bridges; the canal bridge in the state the British know (wired with charges).
+    const known = (state["map_features"] as Doc[]).find((f) => f["id"] === "canal-bridge");
+    const canal = marks.get("canal-bridge");
+    const orne = marks.get("crossing:19,10");
+    assert.deepEqual([canal?.["kind"], canal?.["status"], canal?.["label"]],
+      ["feature-bridge", "reconstructed", `Caen Canal bridge · ${known?.["state"]}`], "the canal bridge as known");
+    assert.equal(known?.["state"], "charges", "the British know the bridge is wired");
+    assert.ok(await page.evaluate<boolean>(`!!document.querySelector('[data-feature="canal-bridge"] .bridge-charges')`), "the charges are marked");
+    assert.deepEqual([orne?.["kind"], orne?.["status"]], ["feature-bridge", "sourced"], "the Orne bridge is drawn");
+    const water = await page.evaluate<number>(`document.querySelectorAll('.hex[fill="#b9d3e3"]').length`);
+    const marsh = await page.evaluate<number>(`document.querySelectorAll('.hex[fill="#d7e3cf"]').length`);
+    assert.equal(water, map["cells"].filter((c: Doc) => c["terrain"] === "water").length, "every water hex is filled as water");
+    assert.equal(marsh, map["cells"].filter((c: Doc) => c["terrain"] === "marsh").length, "every marsh hex is filled as marsh");
+    extra = `; canal bridge "${canal!["label"]}" (${LABELS[canal!["status"]]}); Orne bridge (${LABELS[orne!["status"]]}); ${water} water, ${marsh} marsh hexes`;
+  }
+  if (id === "hill-223-patrol") {
+    const trench = marks.get("old-trench");
+    assert.deepEqual([trench?.["kind"], trench?.["status"]], ["feature-works", "sourced"], "the old trench is drawn");
+    const woods = await page.evaluate<number>(`document.querySelectorAll('.hex[fill="#b9c99a"]').length`);
+    assert.equal(woods, map["cells"].filter((c: Doc) => c["terrain"] === "woods").length, "every woods hex is filled as woods");
+    extra = `; old trench (${LABELS[trench!["status"]]}); ${woods} woods hexes`;
+  }
   const summary = (drawn["legend"] as Doc[]).map((l) => `${l["key"]} ${l["status"]}`).join(", ");
   return `${id}: ${drawn["marks"].length} marks drawn, legend ${summary}${extra}`;
 }

@@ -18,6 +18,18 @@
    "id": "concord-north-bridge",
    "location": "North Bridge \u00b7 Concord, Massachusetts",
    "title": "Concord North Bridge"
+  },
+  {
+   "date": "1944-06-06",
+   "id": "pegasus-bridge",
+   "location": "Caen Canal bridge \u00b7 B\u00e9nouville, Normandy",
+   "title": "Pegasus Bridge"
+  },
+  {
+   "date": "1918-10-08",
+   "id": "hill-223-patrol",
+   "location": "Hill southwest of Hill 223 \u00b7 Ch\u00e2tel-Ch\u00e9h\u00e9ry, Argonne",
+   "title": "Hill 223"
   }
  ]
 }

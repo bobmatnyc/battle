@@ -114,8 +114,10 @@ test("the order form offers the catalog with its intent and effect, and resupply
 test("the scenario choice lists the catalog and marks the battle being played", () => {
   const list = readScenarioList(raw("scenarios"));
   const html = scenarioOptions(list, "hougoumont-north-gate");
-  assert.equal((html.match(/<option/g) ?? []).length, 3);
+  assert.equal((html.match(/<option/g) ?? []).length, list.scenarios.length);  // docs/research/75: one per catalog entry
   assert.match(html, /<option value="concord-north-bridge">Concord North Bridge · 1775-04-19<\/option>/);
+  assert.match(html, /<option value="pegasus-bridge">Pegasus Bridge · 1944-06-06<\/option>/);
+  assert.match(html, /<option value="hill-223-patrol">Hill 223 · 1918-10-08<\/option>/);
   assert.match(html, /<option value="hougoumont-north-gate" selected>Hougoumont: the north gate · 1815-06-18<\/option>/);
   assert.match(missionMarkup(commander()), /<b>17:00<\/b>/, "the brief's bold marks become <b>, the rest is escaped");
 });
