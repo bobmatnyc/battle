@@ -116,6 +116,8 @@ Evidence is under `apps/poc/artifacts/roads-buildings-1-6f210a6/` (`MANIFEST.txt
 
 `make headless-poc`, `make smoke-poc`, the npm gates and `make smoke-web` were not rerun: the fix changes only the harness script. Their logs for `9a193a2` stand.
 
+**Evidence for main `4bb1046`** (git-ignored, in the main checkout): `apps/poc/artifacts/roads-buildings-1-main-4bb1046/` holds the gate run on main after `npm ci --offline`: `make-test-poc.log` (744 tests OK plus the JS checks, route and sight included), `make-headless-poc.log` (replay `identical`), `make-smoke-poc.log`, `npm-typecheck.log` (exit 0), `npm-test.log` (web 58/58, contracts 58/58), `make-smoke-web.log` (`SMOKE PASSED`), `harness.log` (`HARNESS PASSED`) with `screenshots/`, `route-sight.log`, and the fault runs `faults-deadline.log` and `faults-sigint.log` (both exit 1, no process or profile left). `MANIFEST.txt` lists the commands and exit codes. The SHAs named in this doc are those of the commits as first built; the pushed history carries the same trees for code.
+
 ## 7. Editions, replay digests and fixtures unchanged
 
 - No file under `apps/poc/battle`, `apps/poc/tests`, `packages` or `apps/web` changed. The pinned digest tests (`test_contact`, `test_gates`, `test_batch_store` and others) pass in `make test-poc`: `Ran 744 tests … OK`.
