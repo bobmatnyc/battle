@@ -2,6 +2,8 @@
 
 **Date:** 2026-11-08. **Task:** bt-T13. **Rulings:** D37 (Bob): option A of [69](69-model-run-cost-estimate.md) §5, Sonnet 5.5, 12 games, a $14 cap (planning $10.65, worst case $30.15), on a new OpenRouter key limited to $14. Architect key decision: battle project scope, secret `OPENROUTER_API_KEY_D37`, injected as `OPENROUTER_API_KEY` into the batch process only. Architect acceptance (14:45Z): items 1 to 7 below. Code head `a0fdc84`, base `b5a8c9f`. Draft PR #14's branch was rebased onto `65775a1` (code head `8bbb87c`), then, after the review round of section 3a, onto `b5a8c9f`. No model API was called, no key was read and nothing was spent.
 
+**B62 (bt-T21):** Bob's ruling B62 ("use the current key") replaces the key-limit rule of item 2 and the key named in §5; see §8.
+
 This doc closes what [69](69-model-run-cost-estimate.md) §9 left open: "the third control of section 5 (the OpenRouter key's credit limit equal to the cap) stays open, pending D37".
 
 ## 1. What changed
@@ -38,7 +40,7 @@ New: `apps/poc/tests/test_d37_guards.py` (11 tests). Changed: three `main()` tes
 | Item | Tests |
 |---|---|
 | 1 | `test_a_call_landing_exactly_on_the_cap_is_allowed_and_one_cent_over_is_refused` (13.99 + 0.01 allowed, 13.99 + 0.02 refused, spend at the cap refused); `test_the_exact_cap_call_is_sent_and_the_cent_over_call_is_never_sent` (a Pegasus game: the second call is sent at $0.01 reserve, never sent at $0.02) |
-| 2 | `test_key_limit_check_accepts_only_a_key_limited_to_the_cap` (null limit, limit above the cap, remaining below it, free tier, non-numeric and boolean amounts); `test_key_info_call_is_a_get_with_the_key_and_fails_closed` (GET, URL, bearer header; HTTP 500, 401, 403, URLError, timeout, bad JSON, no `data`); `test_main_refuses_to_start_when_the_key_check_fails_and_records_a_passing_check_without_the_key` (no directory on refusal; the passing check in the manifest, no key and no `label` in any batch file) |
+| 2 | `test_key_limit_check_accepts_only_a_key_limited_to_the_cap` (renamed by B62, §8; null limit, limit above the cap, remaining below it, free tier, non-numeric and boolean amounts); `test_key_info_call_is_a_get_with_the_key_and_fails_closed` (GET, URL, bearer header; HTTP 500, 401, 403, URLError, timeout, bad JSON, no `data`); `test_main_refuses_to_start_when_the_key_check_fails_and_records_a_passing_check_without_the_key` (no directory on refusal; the passing check in the manifest, no key and no `label` in any batch file) |
 | 3 | `test_a_key_only_in_env_local_is_refused` (a key only in a dotenv file that `Settings.load()` would read is refused, for the generic and the paid plan); `test_missing_empty_or_rejected_key_refuses_to_start` (missing, blank, 401, 403; `run_batch` without a key or a key check) |
 | 4 | `test_paid_plan_pins_sonnet_in_body_price_and_manifest_and_refuses_overrides` (every fixed flag refused; every request body's `model` is Sonnet 5.5 with 4,000 tokens and effort high, even with `OPENROUTER_MODEL` set; manifest model, prices, cap, plan of 12); `test_dry_run_prints_the_plan_and_a_fake_key_check_with_no_key_or_network` |
 | 5 | `test_a_provider_credit_refusal_stops_the_batch_and_keeps_the_partial_game` (402 with and without a source, 403 guardrail budget, in-body 402: three bodies sent and no fourth, `.stopped.sqlite` kept with two model decisions and no fallback, exit 5, reason and spend in runs, summary and manifest, game 2 not started); `test_other_refusals_fail_the_game_as_before` (403 moderation, 429 rate limit: exit 4) |
@@ -103,6 +105,8 @@ In round 1 a `make test-poc` run made while two digest runs loaded the machine f
 
 ## 5. The paid run (not run)
 
+B62 replaces the key and the key check below; §8 has the current command.
+
 Run from `apps/poc` in the main checkout, on a clean tree at the commit to be pinned, with the D37 key (`secret://battle/OPENROUTER_API_KEY_D37`) injected as `OPENROUTER_API_KEY` into this process only:
 
 ```
@@ -163,3 +167,60 @@ Notes:
 3. `battle/bootstrap.py` and `battle/inference.py` still call `Settings.load()` (reads `.env.local`); they are outside the batch path.
 
 **Disposition.** Nothing blocks after round 2 (Completion Standard fix bar). Recorded, not scheduled: the crash-record gap, `chat`'s missing `before_request`, the returned-model check, the flaky timing test, `run_batch`'s partial plan check.
+
+## 8. B62: the current key, with no credit limit (bt-T21)
+
+**Ruling.** B62 (Bob): "use the current key". No new key limited to $14 is made. The Architect cleared bt-T21 under it. Base `ae339fc`. No model API was called, no key was read and nothing was spent.
+
+**Rule change** (`apps/poc/battle/paid_batch.py`, `key_limit_check`):
+
+- A key whose `limit` and `limit_remaining` are both present and null is unlimited. It passes, and the `key_check` record in `manifest.json` carries `unlimited: true` (never the key, never `label`).
+- Any other key needs both amounts as numbers and `limit_remaining` >= the cap. The `limit` > cap refusal is gone: a limited key may have a limit above $14.
+- Still refused: `limit_reset` not null; `is_free_tier` true or not a boolean; a non-numeric amount; only one of `limit` and `limit_remaining` null; either field absent (absent is not null); any key-info call error (fail closed, exit 2 before any file is written).
+
+**What bounds the $14 now.** The key no longer backstops the cap. Three controls do:
+
+1. The reservation (`battle.spend.SpendGuard`): before every call, spend so far plus one worst-case call (the full request body, 1,024 overhead tokens and 4,000 output tokens, at $2 and $10 per million) must not pass $14. For a Pegasus call that reserve is $0.078 to $0.085.
+2. Cost reconciliation: each call's `usage.cost` is charged after it returns; a call with no readable cost fails the game (exit 4).
+3. The provider-limit stop: an OpenRouter credit or budget refusal (402, or a 403 or 429 naming a limit source) stops the batch with exit 5.
+
+**Known limits.**
+
+- The guard starts at $0 in each process and does not read the key's earlier `usage`. Two runs on the same key each get their own $14. The manifest's `key_check.usage` records the key's spend at start, so a reviewer can add it up.
+- A call that times out returns no usage. The batch stops (the decision falls back, exit 4), but OpenRouter may still bill that call. Its cost is not in the recorded spend (`spend_complete: false`). Its reserve was checked against the cap before the call, so the real total stays within $14 as long as the reserve bounds the bill.
+- The dry run's fake opener still answers as a key limited to the cap (`unlimited: false`); it does not model the current key.
+
+**The paid command.** From `apps/poc` in the main checkout, on a clean tree at the commit to be pinned, with the vault secret `OPENROUTER_API_KEY_BATTLE` injected as `OPENROUTER_API_KEY` into this process only:
+
+```
+tm secrets exec --env OPENROUTER_API_KEY=OPENROUTER_API_KEY_BATTLE -- python3 scripts/model_runs.py --paid-plan d37-option-a --dir artifacts/d37-option-a-<commit>
+```
+
+**Tests** (`apps/poc/tests/test_d37_guards.py`):
+
+| Test | Proves |
+|---|---|
+| `test_key_limit_check_accepts_an_unlimited_key_or_one_with_the_cap_remaining` (renamed from `…_accepts_only_a_key_limited_to_the_cap`) | both null passes with `unlimited: true`; limits of $14.01, $20 and $500 pass with the cap remaining; one null, absent fields, remaining below the cap, free tier, reset and non-numeric amounts refuse |
+| `test_main_refuses_to_start_when_the_key_check_fails_and_records_a_passing_check_without_the_key` (changed) | the $20 case left the refusal list; `limit_remaining` null and a monthly reset joined it |
+| `test_the_call_whose_real_sonnet_reserve_would_pass_the_cap_is_never_sent` | a Pegasus batch at the real Sonnet 5.5 plan settings and the adapter's real body size (18,092 and 21,260 bytes): with $14 minus the second call's reserve ($0.084568, worked by hand from the basis) spent first, the second call is sent and spend lands on $14.00; with $0.000001 more, it is never sent, exit 3, spend <= $14 |
+| `test_a_402_through_main_stops_the_paid_batch_with_exit_5_and_closes_the_manifest` | `main --paid-plan d37-option-a` over a fake chat opener that refuses the third call with 402: exit 5, `little-round-top-1.stopped.sqlite` kept, manifest `closed` with status `provider_limit`, exit 5, the reason, $0.02 spent, 11 games not started |
+| `test_a_key_with_no_limit_passes_through_main_and_the_manifest_says_unlimited` | `main` with a fake key-info opener answering both null: the batch runs (exit 0), `key_check` has `ok` and `unlimited` true and the key's usage, and no batch file holds the key or `label` |
+
+**Red first** (commit `278732e`, tests only, on `ae339fc` code): the check table and the null-limit `main` test fail (`KeyError: 'unlimited'`; `PaidRunRefused: key-limit check failed: the key has no credit limit`). The exact-cap and exit-5 tests pass there: they pin behaviour B62 keeps, and mutations m1 and m6 show they can fail.
+
+**Mutations** (`python3 -B`, one at a time, restored from `HEAD` after each): 6 of 6 red.
+
+| Mutation | Change | Red |
+|---|---|---|
+| m1 | the reserve's output term priced at 0 tokens instead of `max_tokens` | the real-rate exact-cap test: the second call is sent, "2 != 1" |
+| m2 | the free-tier refusal removed | the check table (free tier, unlimited but free tier) and the `main` refusal test |
+| m3 | one null field accepted as unlimited | the check table (both one-null cases, absent `limit_remaining`) and the `main` refusal test |
+| m4 | an absent field counted as null | the check table (absent fields, `{}`, non-dict data) |
+| m5 | `unlimited` always recorded false | the null-limit `main` test |
+| m6 | the `provider_limit` stop in `run_batch` removed | the exit-5 `main` test, "3 != 5" |
+
+**Gates** (on `2834a8a`): `make test-poc` exit 0 (`Ran 811 tests … OK`, then the UI smoke and the map, feature, route and sight checks); `make headless-poc` exit 0 (Little Round Top: union, 60 turns, 2,573 events, replay `identical`, 63 revisions); `make smoke-poc` exit 0; the dry run `python3 scripts/model_runs.py --paid-plan d37-option-a --dry-run --dir <tmp>` with no key in the environment exit 0, Sonnet 5.5, $14 cap, 12 games, the fake key check `ok`, nothing written. The diff touches no rules, engine or scenario file, so engine outcomes and digests are unchanged.
+
+## Review notes (B62)
+
+pending PM
