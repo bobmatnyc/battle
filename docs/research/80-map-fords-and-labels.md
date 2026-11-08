@@ -163,4 +163,19 @@ Evidence under the git-ignored `apps/poc/artifacts/label-edge-5f553f4/` in this 
 
 ### Review notes (bt-T23)
 
-pending PM
+code-critic at `958a9e4`: **APPROVE**, no CRITICAL or HIGH. The critic ran three checks, all passing: `apps/web` `npm test` (112 of 112), root `npm run typecheck`, and `check_map_features.mjs`. It confirmed:
+
+- Both desks use the same frame test, the same candidates and the same order. The new road candidates come last, so a label that fits today does not move.
+- `titlePlace` falls back to the centred place when no candidate fits. It never throws and never hides the title, which is the old behaviour.
+- The POC re-render on `moveend` cannot loop, because `update` never moves the camera. The listener is added once in `init` and is removed by `map.remove()`.
+- There is no diff under `apps/poc/battle` or `packages/contracts/src`.
+- No test-helper edit made after the red commit weakens a check. The 2× check in `map_screenshots.mjs` is now stricter.
+
+Credential scan over `origin/main...HEAD`: clean.
+
+Two LOW notes, not fixed (below the fix bar):
+
+- `apps/poc/static/app.js:83-87` places the objective title against the full scene, not the zoomed view. At 2× the title stays on screen because `mapFocus` keeps it in view, and `map_screenshots.mjs` checks that.
+- `apps/poc/static/map-view.js:110` re-renders the whole map layer after each pan or zoom ends. This happens once per gesture, not once per move event.
+
+Carried forward: overlay strips are not obstacles, so a label can sit inside the frame under the help strip. One example is FIELDWORKS at 2× on Hill 223.
