@@ -23,15 +23,14 @@ from .services.replay import ReplayService
 from .storage import Store
 
 # Player-facing scenarios; the first is the default. Test fixtures stay out.
-PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE)
-# Headless runs also offer Concord, whose river the command desk cannot draw
-# yet (docs/research/43, row 8; docs/research/48), and its v1 entry, so saved
-# v1 games still open (docs/research/50), and Pegasus Bridge, whose canal the
-# desk cannot draw either (docs/research/54), Hill 223, whose ravine it
-# cannot draw (docs/research/56 §9 q6, 61), and Gergovia, whose signal and
-# valley it cannot draw (docs/research/57 §9 q7, 62), and Cannae, whose army
-# scale and river it cannot draw (docs/research/63 §9 q12, 68).
-HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE, CONCORD_NORTH_BRIDGE_V1, PEGASUS_BRIDGE,
+# docs/research/74: Concord joins after the two; both desks draw its river, bridge and roads.
+PLAYER_SCENARIOS = (LITTLE_ROUND_TOP, HOUGOUMONT_NORTH_GATE, CONCORD_NORTH_BRIDGE)
+# Headless runs also offer Concord's v1 entry, so saved v1 games still open
+# (docs/research/50), and Pegasus Bridge (docs/research/54), Hill 223
+# (docs/research/56 §9 q6, 61), Gergovia (docs/research/57 §9 q7, 62) and
+# Cannae (docs/research/63 §9 q12, 68), which are not yet player scenarios.
+# The catalog order is unchanged by Concord's move: it stays third.
+HEADLESS_SCENARIOS = PLAYER_SCENARIOS + (CONCORD_NORTH_BRIDGE_V1, PEGASUS_BRIDGE,
                                          HILL_223_PATROL, GERGOVIA_RECALL, CANNAE_ENVELOPMENT)
 
 
@@ -41,7 +40,7 @@ def build_scenarios():
 
 
 def build_headless_scenarios():
-    """The headless catalog: the player scenarios plus Concord, validated."""
+    """The headless catalog: the player scenarios plus the headless-only entries, validated."""
     return ScenarioRegistry(HEADLESS_SCENARIOS)
 
 
@@ -106,7 +105,7 @@ def build_headless(
     ``provider`` is injected (tests use a fake). Overrides left as None keep the
     ``Settings`` value. The defaults reproduce the scripted baseline run.
     ``scenario_id`` picks the scenario from ``scenarios`` (default: the
-    headless catalog, the player scenarios plus Concord); an unknown id raises ``UnknownScenario`` before
+    headless catalog, the player scenarios plus the headless-only entries); an unknown id raises ``UnknownScenario`` before
     any credential is read or database opened. ``player_side`` None is the
     scenario's player side; a side the scenario lacks raises ValueError.
     ``keyframe_every`` None stores every revision's snapshot (``Store``); a

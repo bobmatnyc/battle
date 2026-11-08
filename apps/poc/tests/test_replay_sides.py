@@ -165,8 +165,10 @@ class ReplayViewTests(unittest.TestCase):
                         unseen_works += side == viewer
                         self.assertNotIn(f["id"], text)
                         self.assertIn(f["id"], [x["id"] for x in god["map_features"]])
-        # The checks above ran against something to hide.
-        self.assertGreater(unseen_works, 0)
+        # The checks above ran against something to hide. docs/research/74: Concord's
+        # companies carry no entrenching tools (tools_per_unit 0), so only units hide there.
+        if entry.tools_per_unit:
+            self.assertGreater(unseen_works, 0)
         self.assertGreater(unseen_units, 0)
         app.close()
 

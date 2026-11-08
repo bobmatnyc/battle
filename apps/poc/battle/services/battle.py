@@ -5,6 +5,7 @@ compare-and-swap save; this service never writes events or units independently.
 """
 
 import threading
+from ..command_policy import scripted_policy
 from ..contracts import (
     BattleRepository,
     ClockFactory,
@@ -51,14 +52,37 @@ class BattleService:
         if state["status"] != "active":
             raise ValueError("Battle complete. Start a new battle.")
         # The computer commands the stored opponent of the player's side.
-        decision = (
-            self.commander.decide(
-                state, self.simulation.computer_side(state), mode=self.mode
-            )
-            if state["turn"] % 3 == 0
-            else None
-        )
+        decision = None
+        if state["turn"] % 3 == 0:
+            side = self.simulation.computer_side(state)
+            mode, policy = self._opponent_control(state, side)
+            if policy is None:
+                decision = self.commander.decide(state, side, mode=mode)
+            else:
+                decision = self.commander.decide(state, side, mode=mode, policy=policy)
         return self._commit(state, {"type": "advance", "decision": decision})
+
+    def _opponent_control(self, state, side):
+        """Why: an entry's scripted control is its playable opponent; the desk's
+        plain fallback control does not play Concord's guard (docs/research/74).
+        What: ``(mode, policy)`` for the computer side's decision. An entry with
+        ``desk_scripted_opponent`` gets ``("scripted", its scripted policy)``,
+        the call the headless runner makes, in either commander mode, so no
+        provider is asked. Any other entry, or a label this catalog does not
+        know, gets ``(self.mode, None)``: the call made before this change.
+        Default ruling bt-D08 (pending the owner): only newly player-facing
+        entries opt in; Little Round Top and Hougoumont do not.
+        Test: `test_concord_desk_opponent_plays_the_regulars_policy_as_headless_does`,
+        `test_concord_desk_opponent_stays_scripted_in_openrouter_mode_without_a_provider_call`,
+        `test_little_round_top_and_hougoumont_keep_the_plain_desk_opponent`.
+        """
+        try:
+            entry = self.scenarios.for_state(state)
+        except UnknownScenario:
+            return self.mode, None
+        if not entry.desk_scripted_opponent:
+            return self.mode, None
+        return "scripted", scripted_policy(entry, side)
 
     def _commit(self, state, action):
         updated = self.simulation.apply(state, action)

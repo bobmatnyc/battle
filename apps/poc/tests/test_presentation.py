@@ -82,7 +82,8 @@ class ScenarioBriefTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             listing = Application(Path(directory) / 'battle.sqlite', offline=True).read('/api/scenarios', {})
         self.assertEqual(listing['default'], 'little-round-top')
-        self.assertEqual([s['id'] for s in listing['scenarios']], ['little-round-top', 'hougoumont-north-gate'])
+        self.assertEqual([s['id'] for s in listing['scenarios']],
+                         ['little-round-top', 'hougoumont-north-gate', 'concord-north-bridge'])  # docs/research/74
         self.assertEqual(listing['scenarios'][1]['title'], 'Hougoumont: the north gate')
 
 

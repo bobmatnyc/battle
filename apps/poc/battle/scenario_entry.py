@@ -293,6 +293,10 @@ class ScenarioEntry:
     # Side id -> scripted control id (command_policy.SCRIPTED_POLICIES) for an
     # entry with its own controls (Concord); None: the gate or fallback rule.
     scripted: Mapping[str, str] | None = None
+    # docs/research/74, default ruling bt-D08: True makes the command desk's computer side
+    # play this entry's scripted control (``command_policy.scripted_policy``), as headless
+    # runs do; False keeps the desk's plain fallback control. Never stored in a snapshot.
+    desk_scripted_opponent: bool = False
     desk: DeskBrief | None = None
     # Field name -> "sourced: ...", "reconstruction: ..." or "authored: ...".
     # Documentation only: never stored in a snapshot or shown in a prompt.

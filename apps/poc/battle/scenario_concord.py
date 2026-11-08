@@ -16,7 +16,8 @@ from dataclasses import dataclass, replace
 from .grid import COLS, METRES_PER_HEX, ROWS, key
 from .scenario_command import COLONIAL_COMMUNICATIONS, WEAPONS_1775, CommandEntry
 from .scenario_entry import (
-    ORDER_CATALOG, RULES_VERSION, FireEntry, MapEntry, ScenarioEntry, SideEntry, UnitEntry, VictoryEntry,
+    ORDER_CATALOG, RULES_VERSION, DeskBrief, FireEntry, MapEntry, ScenarioEntry, SideBrief, SideEntry, UnitEntry,
+    VictoryEntry,
 )
 from .presentation import COLONIAL_VOICE_PROFILE
 
@@ -141,7 +142,36 @@ PROVENANCE = {
     "communications": "authored: 1775 voice reach of 2 hexes, else runner (docs/research/47)",
     "voice_profile": "authored: 1775 prose voice; no historical order is quoted as text",
     "scripted": "reconstruction: scripted historical-order policies (battle/concord_policy.py, doc 43 §5 S1)",
+    # docs/research/74: the command-desk text (``PROVINCIAL_BRIEF``, ``DESK``). Display only.
+    "desk.campaign": "sourced: Concord, 19 April 1775 (S47)",
+    "desk.place": "sourced: the North Bridge over the Concord River (S47, S49)",
+    "desk.conditions": "authored: no weather source read; the entry's fixed April condition",
+    "brief.provincial.headings": "authored: kicker, tagline and mission title are desk headings, not quotations",
+    "brief.provincial.subhead": "sourced: the provincial column against the British light infantry guarding the "
+                                "bridge (S47, S48); that the computer commands the British is authored (doc 43 §1)",
+    "brief.provincial.mission_text": "sourced: Barrett's order not to fire unless first fired upon (S47, read through "
+                                     "a summarising fetch, so the wording may be paraphrased); reconstruction: the "
+                                     "command's word to fire once fired upon stands for Buttrick's order (S47, "
+                                     "docs/research/50); authored: the ring, the 60 seconds and 09:35 restate the "
+                                     "entry's victory (doc 43 §2)",
+    "brief.provincial.win": "sourced: the British withdrew and the militia held the bridge (S47); the wording is authored",
+    "brief.provincial.loss": "authored: the outcome the record does not show; no source",
 }
+# docs/research/74: the provincial player's desk text, in the entry's 1775 register. The
+# British side has no brief: the desk shows a side's brief only to that side's player.
+PROVINCIAL_BRIEF = SideBrief(
+    kicker="THE NORTH BRIDGE", tagline="Advance to the bridge.",
+    subhead="You command the provincial companies. The computer commands the British light companies "
+            "guarding the bridge.",
+    mission_title="Clear the bridge",
+    mission_text=("March the column down from the ridge to the North Bridge. Colonel Barrett's order stands: "
+                  "do not fire unless first fired upon. Your companies hold their fire until the regulars fire on "
+                  "them; then the command may give the word to fire. Hold the bridge and the ground around it "
+                  "(the dashed ring) for 60 seconds with no effective British company there, before **09:35**."),
+    win="The bridge is carried.", loss="The regulars hold the bridge.")
+DESK = DeskBrief(campaign="CONCORD · 19 APRIL 1775", place="North Bridge", objective_label="BRIDGE OBJECTIVE",
+                 objective_key="BRIDGE", conditions="SPRING · APRIL · FIXED POC CONDITION",
+                 draw="The battle ends in a draw.")
 # docs/research/50: the assumptions of the command fire release (``release_by``
 # ``command``), each with its source. v2 entries carry them; ``before`` drops them.
 # The release is scenario-delegated, conditional commander intent acting on
@@ -196,7 +226,8 @@ def concord_entry(variant=None, british=BRITISH_THREE, bridge_cost=BRIDGE_MOVE_C
             "provincial": SideEntry(
                 name="Provincials", role="attacker", command_unit="P1", headquarters=(3, 10),
                 mission=PROVINCIAL_MISSION,
-                charge="advance to the bridge, hold fire unless fired upon, and clear the crossing"),
+                charge="advance to the bridge, hold fire unless fired upon, and clear the crossing",
+                brief=PROVINCIAL_BRIEF),
             "british": SideEntry(
                 name="British", role="defender", command_unit="B2", headquarters=(21, 10),
                 mission=BRITISH_MISSION,
@@ -221,6 +252,7 @@ def concord_entry(variant=None, british=BRITISH_THREE, bridge_cost=BRIDGE_MOVE_C
         command=CommandEntry(succession={"provincial": ("P2", "P3", "P4"), "british": succession}),
         weapons=WEAPONS_1775,
         scripted={"provincial": "scripted-concord-militia-v1", "british": "scripted-concord-regulars-v1"},
+        desk=DESK,
         provenance={**PROVENANCE, **RELEASE_PROVENANCE},
     )
 
@@ -240,7 +272,9 @@ def _open_fire(units):
                  for u in units)
 
 
-CONCORD_NORTH_BRIDGE = concord_entry(british=_open_fire(BRITISH_THREE))
+# docs/research/74 (default ruling bt-D08): on the command desk the British play the
+# regulars' scripted control, as in headless runs. Variants and v1 are not on the desk.
+CONCORD_NORTH_BRIDGE = replace(concord_entry(british=_open_fire(BRITISH_THREE)), desk_scripted_opponent=True)
 # Before docs/research/50: the v1 entry, each company releasing itself. Kept
 # buildable and pinned to its old digests; in no catalog.
 CONCORD_NORTH_BRIDGE_BEFORE = before(CONCORD_NORTH_BRIDGE)

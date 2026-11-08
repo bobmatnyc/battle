@@ -7,7 +7,7 @@ from ..contracts import DecisionProvider, ProviderFailure, ScenarioCatalog, Simu
 from ..command_policy import (
     DEFAULT_SCENARIO, NAMED_POLICIES, scripted_actions, system_prompt,
 )
-from ..presentation import scripted_text
+from ..presentation import VOICE_ADDRESS, scripted_text
 
 # Reasons a ProviderFailure may carry into telemetry: an HTTP status, or one of
 # the exception names the provider adapter reports. Anything else is replaced
@@ -285,8 +285,10 @@ class CommanderService:
         What: in ``openrouter`` mode asks the provider with the battle's own
         scenario prompt (an unmapped label raises, as in ``decide``); a
         provider failure, or scripted mode, gives the scripted summary, whose
-        charge comes from ``display_scenario`` and so never fails on the label.
-        Test: `test_scripted_paths_and_map_survive_an_unmapped_label`.
+        charge comes from ``display_scenario`` and so never fails on the label,
+        addressed by the voice's ``VOICE_ADDRESS`` title (else General).
+        Test: `test_scripted_paths_and_map_survive_an_unmapped_label`,
+        `test_1775_staff_answer_addresses_the_colonel`.
         """
         side = self.simulation.player_side(state)
         observation = self.simulation.observation(state, side)
@@ -310,10 +312,13 @@ class CommanderService:
                 }
             except Exception as exc:
                 error = failure_kind(exc)
-        spec = self.display_scenario(state).sides.get(side)
+        shown = self.display_scenario(state)
+        spec = shown.sides.get(side)
         charge = f"Our charge is to {spec.charge}. " if spec else ""
+        # docs/research/74: a voice with its own address (1775: Colonel); 1863 and 1815 keep General.
+        title = VOICE_ADDRESS.get(shown.voice_profile, "General")
         answer = (
-            f"General, our command comprises {len(observation['units'])} detachments, "
+            f"{title}, our command comprises {len(observation['units'])} detachments, "
             f"with {len(observation['contacts'])} enemy sightings reported to headquarters. "
             f"{charge}Send your instructions by runner; "
             "the latest reports may already be out of date."
