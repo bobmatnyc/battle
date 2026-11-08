@@ -94,4 +94,16 @@ Evidence is git-ignored under `apps/poc/artifacts/run-tooling-bt22/` in the task
 
 ## Review notes
 
-pending PM
+code-critic at `b87f1a4`: **APPROVE**, no CRITICAL or HIGH. The critic ran `test_run_tooling.py` (6 tests, OK) and checked the recipe with `make -n`. It confirmed:
+
+- With no `SCENARIO`, or an empty one, the recipe is unchanged.
+- `share_runs` uses the same threshold as `_sustained` in `victory_encircle.py:159`: enclosed plus lost men at or above the share. It also uses the same "held" rule: a run on consecutive turns that a below-share row or a missing turn resets. The printed count and the D38 Q1 rule therefore cannot disagree.
+- `breakthroughs` returns null for an old-edition record.
+- There is no diff under `apps/poc/battle`.
+
+Credential scan over `origin/main...HEAD`: clean.
+
+Two LOW notes, not fixed (below the fix bar):
+
+- `Makefile:39` quotes `'$(SCENARIO)'`, so a value that contains a single quote breaks out of the quotes and runs as shell. This is a local development target run by the same user who controls the shell. Passing the value through an exported environment variable would close it.
+- The share test in `tests/test_run_tooling.py:84-90` checks numbers derived by hand and does not call `_sustained`, so the two could drift apart. Its rows (99 against exactly 100, a gap at turn 8, a row below the share) still catch a strict `>` threshold or a "held" rule that ignores gaps.
