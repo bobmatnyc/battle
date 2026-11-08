@@ -14,6 +14,7 @@ from battle.engine import view
 from battle.presentation import present_view, scenario_brief
 from battle.adapters.rules import RulesSimulation
 from battle.services.queries import BattleQueries
+from battle.comms import PROFILES
 catalog = build_scenarios()
 queries = BattleQueries(None, RulesSimulation(), None, assess=assess, present=present_view, scenarios=catalog)
 opening = catalog.create("little-round-top")
@@ -29,7 +30,7 @@ def shown(scenario_id):
     return {"view": shown_view, "map": catalog.map(scenario_id)}
 print(json.dumps({**shown("little-round-top"), "hougoumont": shown("hougoumont-north-gate"),
                   "concord": shown("concord-north-bridge"), "pegasus": shown("pegasus-bridge"),
-                  "hill": shown("hill-223-patrol"), "replays": replays,
+                  "hill": shown("hill-223-patrol"), "replays": replays, "profiles": PROFILES,
                   # docs/research/75: the mock server lists the player catalog itself, in order.
                   "catalog": [{"id": i, "title": catalog.resolve(i).title} for i in catalog.ids()]}))`;
 const generated=spawnSync('python3',['-c',fixtureScript],{cwd:root,encoding:'utf8'});
@@ -66,7 +67,7 @@ const context=vm.createContext({document:{getElementById:element},window:{matchM
     // Concord's, Pegasus's and Hill 223's maps keep their cells, so water, woods and bridges are drawn (docs/research/74, 75).
     return {ok:true,json:async()=>path==='/api/map'?(cells?cells[0]:{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}):path==='/api/scenarios'?catalog:cells?cells[1]:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:liveInitial()};}});
 vm.runInContext(readFileSync(new URL('../static/cartography.js',import.meta.url),'utf8'),context);
-for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js','feature-sources.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
+for(const file of ['api-client.js','order-wording.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js','feature-sources.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
 vm.runInContext(readFileSync(new URL('../static/app.js',import.meta.url),'utf8'),context);
 await new Promise(resolve=>setImmediate(resolve));
 assert.equal(element('clock').textContent,'16:30');
@@ -205,6 +206,8 @@ await element('god-toggle').onclick();
 vm.runInContext("selectUnit('U3')",context);
 await element('unit-analysis').onclick();
 assert.equal(element('analysis-dialog').open,true);
+// bt-T11: a standing order may go to the command's own detachment, so voice is named with the courier.
+assert.equal(element('standing-status').textContent,'Changing a selection is a draft. Dispatch sends it by voice or foot courier.');
 assert.match(element('analysis-summary').innerHTML,/120/);
 assert.equal(element('standing-unit').value,'U3');
 assert.match(element('standing-recommendation').textContent,/Observe and screen/);
@@ -220,6 +223,39 @@ await element('standing-form').onsubmit({preventDefault(){}});
 assert.equal(requests.filter(r=>r.path==='/api/standing-orders').length,beforeStanding+1);
 await element('analysis-close').onclick();assert.equal(element('analysis-dialog').open,false);
 console.log('Standing orders UI passed: prebattle assessment, per-unit recommendation draft, explicit dispatch and observer guard.');
+
+// bt-T11: the send button, its tooltip, the map tip and the mission help line name the viewing side's own
+// means, from command.profile only; an order to the command's own detachment stays a local order.
+function wording(send,title,help){
+  const own=vm.runInContext('state.command.unit_id',context);
+  const other=vm.runInContext('state.units.find(u=>u.id!==state.command.unit_id).id',context);
+  const observing=vm.runInContext('godMode',context);  // The map tip names the means in the commander view only.
+  vm.runInContext(`godMode=false;selectUnit(${JSON.stringify(other)});destination=[0,0];renderControls();renderObserver()`,context);
+  assert.equal(element('send-order').textContent,send,other);
+  assert.equal(element('send-order').title,title,other);
+  assert.equal(element('order-means').textContent,help);
+  assert.ok(element('map-tip').textContent.endsWith(` · ${send.replace('Dispatch','dispatch').replace(' ↗','')}.`),element('map-tip').textContent);
+  vm.runInContext(`selectUnit(${JSON.stringify(own)});destination=[0,0];renderControls()`,context);
+  assert.equal(element('send-order').textContent,'Give local order ↗',own);
+  assert.match(element('map-tip').textContent,/give a local order\.$/);
+  vm.runInContext(`godMode=${observing};selected=null;destination=null;renderMap();renderControls()`,context);
+}
+wording('Dispatch by foot courier ↗','1863 · voice / foot courier: orders go by foot courier.','Movement orders travel by foot courier.');
+// Every profile the engine defines, read from comms.PROFILES: the 1944, 1918 and Roman profiles never say runner alone.
+const profiles=JSON.parse(generated.stdout).profiles;
+const wordingOf=(fn,id)=>vm.runInContext(`BattleOrderWording.${fn}(${JSON.stringify(profiles[id])})`,context);
+assert.deepEqual(Object.fromEntries(Object.keys(profiles).map(id=>[id,wordingOf('send',id)])),{
+  'civil-war-courier-v1':'Dispatch by foot courier ↗','napoleonic-courier-v1':'Dispatch by foot runner ↗',
+  'colonial-1775-voice-v1':'Dispatch by voice or runner ↗','wwii-1944-radio-v1':'Dispatch by radio, voice or runner ↗',
+  'wwi-1918-voice-runner-v1':'Dispatch by voice or runner ↗','roman-republic-signal-v1':'Dispatch by voice or runner ↗',
+  'roman-216-v1':'Dispatch by voice or mounted messenger ↗','carthage-216-v1':'Dispatch by voice or mounted messenger ↗'});
+for(const id of ['wwii-1944-radio-v1','wwi-1918-voice-runner-v1','roman-republic-signal-v1','roman-216-v1'])
+  for(const fn of ['send','tooltip','help','tip','standing'])
+    assert.doesNotMatch(wordingOf(fn,id),/by runner\b/,`${id} ${fn}: ${wordingOf(fn,id)}`);
+assert.equal(wordingOf('standing','roman-republic-signal-v1'),'Changing a selection is a draft. Dispatch sends it by voice or runner.');
+// A view without a command profile is a legacy headquarters, whose orders went by runner.
+assert.equal(vm.runInContext('BattleOrderWording.send(undefined)',context),'Dispatch by runner ↗');
+console.log("Order wording passed: send button, tooltip, map tip, help line and standing-order note from the side's own command profile, for every profile.");
 
 // Scenario text comes from the game's brief. Little Round Top first: the copy the desk always showed.
 await element('god-toggle').onclick();  // God Mode off again.
@@ -344,6 +380,7 @@ for(const [id,el] of elements){
     if(id!=='scenario-select'&&!id.startsWith('god-'))assert.doesNotMatch(String(text).replace(/class="[^"]*"/g,''),/Union|Confederate|Little Round Top|summit/i,id);
   }
 }
+wording('Dispatch by foot runner ↗','1815 · voice / foot runner: orders go by foot runner.','Movement orders travel by foot runner.');  // bt-T11
 console.log('Hougoumont UI passed: selection by POST /api/new, terrain refresh, mission, side names, objective, outcomes, voice and no opponent mission in the page.');
 
 // docs/research/74: Concord, the third player scenario, through the same picker and Reset.
@@ -389,6 +426,8 @@ assert.match(element('unit-report-age').textContent,/120s old/);
 assert.match(element('contact-list').innerHTML,/120s ago.*120s old/);
 vm.runInContext("state.last_commander_source='scripted';renderControls()",context);
 assert.match(element('ai-status').textContent,/plans every 180s/);  // Three intervals.
+wording('Dispatch by voice or runner ↗','1775 · voice / runner: orders go by voice or runner, as distance allows.',
+  'Movement orders travel by voice or runner.');  // bt-T11
 vm.runInContext(`state=liveState=${JSON.stringify(concordView)};render()`,context);
 vm.runInContext("Object.assign(state,{status:'complete',winner:'provincial',reason:'The Provincials held the bridge.'});render()",context);
 assert.match(element('outcome').innerHTML,/The bridge is carried\..*The Provincials held the bridge/);
@@ -448,6 +487,8 @@ assert.match(element('map').innerHTML,/data-feature="crossing:19,10"[^>]*data-st
 for(const road of ['benouville-road','bridges-road','ranville-road'])assert.match(element('map').innerHTML,new RegExp(`data-feature="${road}"`));
 assert.equal(vm.runInContext('state.voice_profile',context),'wwii-1944-en-v1');
 await orderFromDesk('D24',[9,10]);  // 24 Platoon, with the sappers, onto the bridge.
+wording('Dispatch by radio, voice or runner ↗','1944 · radio / voice / runner: orders go by radio, voice or runner, as distance allows.',
+  'Movement orders travel by radio, voice or runner.');  // bt-T11
 headlines(pegasusView,'british','german',pegasus.view.scenario_brief.outcomes);
 console.log('Pegasus UI passed: picker and Reset, 6 June 1944 local header, brief, canal, marsh, roads, the canal bridge with its charges and the Orne bridge drawn, an order sent, outcome headlines.');
 
@@ -462,6 +503,8 @@ assert.equal(element('objective-key').textContent,'SHACK');
 assert.match(element('map').innerHTML,/class="place-label">Command post at the shack</);
 assert.match(element('map').innerHTML,/data-feature="old-trench"[^>]*data-status="sourced"/);
 assert.equal(vm.runInContext('state.voice_profile',context),'wwi-1918-en-v1');
-await orderFromDesk('A3',[16,6]);  // The right of the company line, by runner.
+await orderFromDesk('A3',[16,6]);  // The right of the company line.
+wording('Dispatch by voice or runner ↗','1918 · voice / runner: orders go by voice or runner, as distance allows.',
+  'Movement orders travel by voice or runner.');  // bt-T11
 headlines(hillView,'american','german',hill.view.scenario_brief.outcomes);
 console.log('Hill 223 UI passed: picker and Reset, 8 October 1918 local header, brief, the shack objective and the old trench drawn, an order sent, outcome headlines.');
