@@ -22,6 +22,9 @@ const ROOTS: Record<string, string> = {
 const PAGES: Record<string, [string, string]> = {
   "/": [resolve(WEB_ROOT, "index.html"), "text/html; charset=utf-8"],
   "/style.css": [resolve(WEB_ROOT, "style.css"), "text/css; charset=utf-8"],
+  // docs/research/73: the POC's presentation-only status table, served unchanged as a classic
+  // script; the desk keeps no copy of it. No other POC file is served.
+  "/poc/feature-sources.js": [resolve(WEB_ROOT, "../poc/static/feature-sources.js"), "text/javascript; charset=utf-8"],
 };
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
   + "connect-src 'self'; frame-ancestors 'none'";
@@ -35,7 +38,15 @@ const MODULE_NAME = /^[a-z0-9-]+\.ts$/;
 export const ROUTES: Readonly<Record<string, "GET" | "POST">> = Object.freeze({
   "/api/state": "GET", "/api/map": "GET", "/api/scenarios": "GET",
   "/api/orders": "POST", "/api/clock": "POST", "/api/new": "POST",
+  "/api/history": "GET", "/api/replay": "GET",
 });
+
+/** The query keys relayed per route, each required once; every other route's query is dropped.
+ * Replay takes no `side` or `view`, so the POC replays the player's own commander view only. */
+export const QUERY_KEYS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  "/api/history": ["game_id"], "/api/replay": ["game_id", "revision"],
+});
+const QUERY_VALUE: Readonly<Record<string, RegExp>> = {game_id: /^[A-Za-z0-9_-]{1,64}$/, revision: /^\d{1,9}$/};
 
 /** `relayTimeoutMs`: how long a silent POC is waited for before a 504 (default 120 s).
  * `sourceRoots`: URL prefix to source directory; tests point it at a temporary directory. */
@@ -91,9 +102,11 @@ async function serveStatic(path: string, res: ServerResponse, roots: Readonly<Re
 
 /** Why: the desk must not become a path to God Mode, an export or a POC route it does not use.
  * What: null when `method` `path` is a desk route and `query` asks for no God view; else the
- * refusal status and text. Query keys and values are compared case-insensitively.
+ * refusal status and text. Query keys and values are compared case-insensitively. On the
+ * replay routes a `side` or `view` key is a 403, and the query must be exactly QUERY_KEYS.
  * Test: `only the routes the desk uses are relayed; others never reach the POC`,
- * `a God view or an export is refused with 403 and never relayed`. */
+ * `a God view or an export is refused with 403 and never relayed`,
+ * `replay and history relay only game_id and revision, so only the player's commander view is replayed`. */
 export function relayRefusal(method: string, path: string, query: URLSearchParams): [number, string] | null {
   const god = [...query].some(([key, value]) =>
     value.toLowerCase() === "god" || (key.toLowerCase() === "view" && value.toLowerCase() !== "commander"));
@@ -102,7 +115,25 @@ export function relayRefusal(method: string, path: string, query: URLSearchParam
   const allowed = ROUTES[path];
   if (!allowed) return [404, "The desk does not use this route."];
   if (allowed !== method) return [405, "Method not allowed."];
+  const keys = QUERY_KEYS[path];
+  if (!keys) return null;
+  for (const key of new Set(query.keys())) {
+    if (["side", "view"].includes(key.toLowerCase())) {
+      return [403, "The desk replays the player's commander view only; another side's view is refused."];
+    }
+    if (!keys.includes(key)) return [400, `The desk relays only ${keys.join(" and ")} on ${path}.`];
+  }
+  for (const key of keys) {
+    const values = query.getAll(key);
+    if (values.length !== 1 || !QUERY_VALUE[key]!.test(values[0]!)) return [400, `${path} needs one valid ${key}.`];
+  }
   return null;
+}
+
+/** The request the POC receives: the path, plus only the route's own query keys (QUERY_KEYS). */
+export function relayTarget(path: string, query: URLSearchParams): string {
+  const keys = QUERY_KEYS[path];
+  return keys ? `${path}?${new URLSearchParams(keys.map((key) => [key, query.get(key) ?? ""]))}` : path;
 }
 
 function readBody(req: IncomingMessage): Promise<Buffer> {
@@ -123,7 +154,7 @@ function readBody(req: IncomingMessage): Promise<Buffer> {
 // drops the connection mid-reply, or a 504 when it is silent for `timeoutMs`. When the
 // request may have reached the POC the body says `outcome: "unknown"`, so the desk
 // re-reads state rather than report a plain failure (docs/research/71, review #6).
-// Only the path is relayed; the query is dropped, as the desk's routes take none.
+// `path` is relayTarget's: the path, plus game_id and revision on the replay routes only.
 async function relay(poc: URL, path: string, req: IncomingMessage, res: ServerResponse, timeoutMs: number): Promise<void> {
   const payload = req.method === "POST" ? await readBody(req) : Buffer.alloc(0);
   const headers: Record<string, string> = {Host: poc.host};
@@ -187,7 +218,7 @@ export async function createDeskServer(options: DeskServerOptions): Promise<Desk
     const api = path.startsWith("/api/");
     const refusal = api ? relayRefusal(req.method ?? "", path, url.searchParams) : null;
     if (refusal) return sendError(res, refusal[0], refusal[1]);
-    const work = api ? relay(poc, path, req, res, options.relayTimeoutMs ?? RELAY_TIMEOUT_MS)
+    const work = api ? relay(poc, relayTarget(path, url.searchParams), req, res, options.relayTimeoutMs ?? RELAY_TIMEOUT_MS)
       : req.method === "GET" ? serveStatic(path, res, options.sourceRoots ?? ROOTS)
         : Promise.resolve(sendError(res, 405, "Method not allowed."));
     work.catch((error: unknown) => {
