@@ -117,8 +117,8 @@ def key_limit_check(info, cap_usd):
     which can show part of the key). ``limit`` and ``limit_remaining`` both
     present and null is an unlimited key (``unlimited`` true). Otherwise both
     must be numbers and ``limit_remaining`` >= ``cap_usd``; the limit itself
-    may exceed the cap. Every key also needs ``limit_reset`` None and
-    ``is_free_tier`` not true (a boolean when given). A missing field, one
+    may exceed the cap. Every key also needs ``limit_reset`` present and None
+    and ``is_free_tier`` present and false. A missing field, one
     null of the two, or a non-numeric amount fails. Amounts compare as exact
     decimals.
     Test: `test_key_limit_check_accepts_an_unlimited_key_or_one_with_the_cap_remaining`,
@@ -141,12 +141,17 @@ def key_limit_check(info, cap_usd):
             reasons.append("limit_remaining is missing or not a number")
         elif _usd(remaining) < _usd(cap_usd):
             reasons.append(f"the key's limit_remaining ${remaining} is below the ${cap_usd} cap")
-    if reset is not None:  # D37 review C: a limit that resets re-arms the key mid-batch.
+    # bt-T21 review: a reply missing either field is malformed, never a passing key.
+    if "limit_reset" not in info:
+        reasons.append("limit_reset is missing")
+    elif reset is not None:  # D37 review C: a limit that resets re-arms the key mid-batch.
         reasons.append(f"the key's limit resets ({reset if reset in ('daily', 'weekly', 'monthly') else 'unrecognised'}); "
                        "use a key whose limit never resets")
-    if free is True:
+    if "is_free_tier" not in info:
+        reasons.append("is_free_tier is missing")
+    elif free is True:
         reasons.append("the key is on the free tier")
-    elif "is_free_tier" in info and not isinstance(free, bool):
+    elif not isinstance(free, bool):
         reasons.append("is_free_tier is not a boolean")
     return {
         "ok": not reasons, "reasons": reasons, "unlimited": unlimited, "cap_usd": cap_usd,

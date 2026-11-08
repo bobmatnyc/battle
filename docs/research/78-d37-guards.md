@@ -176,7 +176,7 @@ Notes:
 
 - A key whose `limit` and `limit_remaining` are both present and null is unlimited. It passes, and the `key_check` record in `manifest.json` carries `unlimited: true` (never the key, never `label`).
 - Any other key needs both amounts as numbers and `limit_remaining` >= the cap. The `limit` > cap refusal is gone: a limited key may have a limit above $14.
-- Still refused: `limit_reset` not null; `is_free_tier` true or not a boolean; a non-numeric amount; only one of `limit` and `limit_remaining` null; either field absent (absent is not null); any key-info call error (fail closed, exit 2 before any file is written).
+- Still refused: `limit_reset` not null; `is_free_tier` true or not a boolean; a non-numeric amount; only one of `limit` and `limit_remaining` null; either field absent (absent is not null); a reply missing `is_free_tier` or `limit_reset`, unlimited or not (review round 1); any key-info call error (fail closed, exit 2 before any file is written).
 
 **What bounds the $14 now.** The key no longer backstops the cap. Three controls do:
 
