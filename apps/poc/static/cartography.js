@@ -1,6 +1,6 @@
 /* Original vector cartography from the public scenario terrain; no imagery or tiles. */
 const BattleMap = (() => {
-  const palette = {open:'#e8f0df', woods:'#b9ddbc', rocky:'#dce2dc'};
+  const palette = {open:'#e8f0df', woods:'#b9ddbc', rocky:'#dce2dc', water:'#b9d3e3', marsh:'#d7e3cf'};  // water, marsh: docs/research/72
   const xy = p => [(p[0]+.5*(p[1]&1))*Math.sqrt(3)*25.5+24,p[1]*38.25+26];
   const vertices = p => {const [x,y]=xy(p);return Array.from({length:6},(_,i)=>{const a=(60*i-30)*Math.PI/180;return [x+25.5*Math.cos(a),y+25.5*Math.sin(a)];});};
   let cachedCells, cachedDetail, cachedAnnotations, cachedSVG, contourCells, contourCache;

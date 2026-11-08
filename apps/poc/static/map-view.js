@@ -52,7 +52,7 @@ const BattleMapView = (() => {
         center:coordinate([540,420]),zoom:15,minZoom:13,maxZoom:19,
         style:{version:8,sources:{scenario:{type:'geojson',data:BattleMap.geojson(cells,coordinate),maxzoom:20,tolerance:0,buffer:64}},layers:[
           {id:'background',type:'background',paint:{'background-color':'#e8f0df'}},
-          {id:'terrain',type:'fill',source:'scenario',filter:['==',['get','kind'],'surface'],paint:{'fill-color':['match',['get','terrain'],'woods','#b9ddbc','rocky','#dce2dc','#e8f0df'],'fill-antialias':false}},
+          {id:'terrain',type:'fill',source:'scenario',filter:['==',['get','kind'],'surface'],paint:{'fill-color':['match',['get','terrain'],'woods','#b9ddbc','rocky','#dce2dc','water','#b9d3e3','marsh','#d7e3cf','#e8f0df'],'fill-antialias':false}},
           {id:'relief',type:'fill',source:'scenario',filter:['==',['get','kind'],'surface'],paint:{'fill-color':'#6b8264','fill-opacity':0,'fill-antialias':false}},
           {id:'contours',type:'line',source:'scenario',filter:['==',['get','kind'],'contour'],paint:{'line-color':'#8ca58a','line-width':['case',['get','major'],1.6,1],'line-opacity':.38}}
         ]}});

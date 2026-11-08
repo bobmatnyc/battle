@@ -53,7 +53,7 @@ const context=vm.createContext({document:{getElementById:element},window:{matchM
     if(path.startsWith('/api/replay'))return {ok:true,json:async()=>replayed(path)};
     return {ok:true,json:async()=>path==='/api/map'?{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}:path==='/api/scenarios'?catalog:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:liveInitial()};}});
 vm.runInContext(readFileSync(new URL('../static/cartography.js',import.meta.url),'utf8'),context);
-for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
+for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js','feature-sources.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
 vm.runInContext(readFileSync(new URL('../static/app.js',import.meta.url),'utf8'),context);
 await new Promise(resolve=>setImmediate(resolve));
 assert.equal(element('clock').textContent,'16:30');
@@ -153,13 +153,16 @@ assert.match(element('unit-order-kind').innerHTML,/Reconnoiter/);
 console.log('Order template UI passed: common catalog, destination requirements, correct payloads, no movement shortcut override.');
 
 assert.match(element('map').innerHTML,/North farm lane/);assert.match(element('map').innerHTML,/Farmstead/);assert.match(element('map').innerHTML,/FIELDWORKS/);
-console.log('Map feature UI passed: roads, buildings and fortifications rendered with the shared SVG overlay.');
+// docs/research/72: footprints at the map's scale, and every mark's status in the legend.
+assert.match(element('map').innerHTML,/<rect class="footprint"/);
+assert.match(element('feature-legend').innerHTML,/data-feature="farmstead".*legend-status-illustrative/);
+console.log('Map feature UI passed: roads, footprints and fortifications rendered with the shared SVG overlay; legend lists each status.');
 // Grid off and on: the toggle sets only the no-grid class; the feature layer is drawn unchanged.
 function featuresSurviveGridToggle(){
   const map=element('map'),classes=map.classList,toggles=[];
   map.classList={...classes,toggle(name,on){toggles.push([name,on]);}};
-  const layer=vm.runInContext('BattleFeatures.render(state.map_features,center,esc)',context);
-  assert.match(layer,/<path d="M/);
+  const layer=vm.runInContext('renderFeatures()',context);  // The page's own call, with its scale and sources.
+  assert.match(layer,/<path class="road-casing" d="M/);
   for(const gridOff of [true,false]){
     element('hex-toggle').onclick();
     assert.deepEqual(toggles.at(-1),['no-grid',gridOff]);
@@ -304,6 +307,10 @@ assert.match(element('map').innerHTML,/class="place-label">Hougoumont farm</);
 assert.match(element('map').innerHTML,/COMPOUND OBJECTIVE/);
 assert.doesNotMatch(element('map').innerHTML,/r="53"/);  // A compound is not a ring of hexes.
 assert.match(element('map').innerHTML,/Hougoumont chateau and farm/);  // The building feature is drawn.
+// docs/research/72: the compound's walls and the north gate, open as briefed, and the gate's sourced status.
+assert.match(element('map').innerHTML,/data-feature="hougoumont#walls".*class="compound-wall"/);
+assert.match(element('map').innerHTML,/data-feature="hougoumont#north-gate" data-status="sourced" data-state="open"/);
+assert.match(element('feature-legend').innerHTML,/data-feature="hougoumont#north-gate".*Closing the Gates at Hougoumont/);
 featuresSurviveGridToggle();
 assert.equal(vm.runInContext('state.voice_profile',context),'napoleonic-en-v1');
 assert.match(element('toast').textContent,/Battle reset to 11:20/);

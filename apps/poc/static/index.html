@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>battle</title><link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css"><link rel="stylesheet" href="/style.css?v=19"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>battle</title><link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css"><link rel="stylesheet" href="/style.css?v=20"></head>
 <body>
 <header class="masthead"><a class="brand" href="/">battle<span>COMMAND EXPERIMENT / 001</span></a><div class="campaign"><span id="campaign-line"></span><strong id="campaign-title"></strong></div><div class="header-right"><span class="live-dot"></span><span>LOCAL POC</span><label class="sr-only" for="scenario-select">Scenario for the next battle</label><select id="scenario-select" class="scenario-select" title="Scenario started by Reset"></select><button id="new-game" class="quiet" title="Start the selected scenario at its opening time with the clock paused; keep this battle archived">Reset ↺</button></div></header>
 <main>
@@ -9,8 +9,9 @@
 <p id="rules-notice" class="rules-notice hidden">This saved battle uses earlier rules. Use Reset for split/combine, standing orders and the latest battle rules.</p><div class="map-toolbar"><div class="segmented"><button id="hex-toggle" class="active" aria-pressed="true">Hex grid</button><button id="terrain-toggle" aria-pressed="false">Elevation</button><button id="history-toggle">Replay</button><button id="analysis-open">Troop analysis</button><button id="god-toggle" class="mode-switch" role="switch" aria-checked="false" aria-label="God Mode"><span>God Mode</span><span class="switch-track" aria-hidden="true"><span></span></span><span id="god-toggle-state" aria-hidden="true">Off</span></button></div><div class="conditions"><span>☀</span> <span id="conditions"></span></div></div>
 <div id="command-location" class="command-location"></div><div id="god-notice" class="god-notice hidden"><strong>GOD MODE · OMNISCIENT OBSERVER</strong><span>All sides, exact state and recorded interactions. Orders and staff chat are disabled in this view. Agents retain fog of war.</span></div>
 <div id="replay-bar" class="replay-bar hidden"><span id="replay-label">Recorded view</span><input id="replay-slider" type="range" min="0" max="0" value="0" aria-label="Battle timeline"><label class="sr-only" for="replay-view">Replay view</label><select id="replay-view" class="replay-view" title="Whose knowledge the replay shows"></select><button id="live-view">Return to live</button></div>
-<div class="map-wrap" id="map-wrap"><div id="vector-map" aria-label="Interactive vector terrain map"></div><svg id="map" viewBox="0 0 1080 840" role="img" aria-label="Stylized terrain map with interactive hex grid"></svg><div id="map-camera" class="map-camera hidden"><button id="map-in" aria-label="Zoom in map">+</button><button id="map-out" aria-label="Zoom out map">−</button><button id="map-fit" aria-label="Fit battlefield">Fit</button><output id="map-zoom">1.0× view</output></div><div class="north">N<br><span>↑</span></div><div class="map-key"><span><i class="blue-key"></i> YOUR COMMAND</span><span><i class="red-key"></i> <span id="enemy-key">REPORTED ENEMY</span></span><span>⚑ <span id="objective-key">OBJECTIVE</span></span></div><div id="live-map-scale" class="live-map-scale hidden"><span id="live-scale-line"></span><small id="live-scale-label">100 m</small></div><div class="map-scale"><i class="land-swatch open"></i>Open <i class="land-swatch woods"></i>Woods <i class="land-swatch rocky"></i>Rock</div><div class="map-tip" id="map-tip">Select a blue unit, then choose a destination hex.</div></div>
+<div class="map-wrap" id="map-wrap"><div id="vector-map" aria-label="Interactive vector terrain map"></div><svg id="map" viewBox="0 0 1080 840" role="img" aria-label="Stylized terrain map with interactive hex grid"></svg><div id="map-camera" class="map-camera hidden"><button id="map-in" aria-label="Zoom in map">+</button><button id="map-out" aria-label="Zoom out map">−</button><button id="map-fit" aria-label="Fit battlefield">Fit</button><output id="map-zoom">1.0× view</output></div><div class="north">N<br><span>↑</span></div><div class="map-key"><span><i class="blue-key"></i> YOUR COMMAND</span><span><i class="red-key"></i> <span id="enemy-key">REPORTED ENEMY</span></span><span>⚑ <span id="objective-key">OBJECTIVE</span></span></div><div id="live-map-scale" class="live-map-scale hidden"><span id="live-scale-line"></span><small id="live-scale-label">100 m</small></div><div class="map-scale"><i class="land-swatch open"></i>Open <i class="land-swatch woods"></i>Woods <i class="land-swatch rocky"></i>Rock <i class="land-swatch water"></i>Water</div><div class="map-tip" id="map-tip">Select a blue unit, then choose a destination hex.</div></div>
 <div class="map-caption"><span><span id="map-renderer">SVG map</span> · authored scenario terrain & features</span><a id="map-reference" class="hidden" target="_blank" rel="noreferrer">Historical reference ↗</a></div>
+<details id="feature-legend-panel" class="feature-legend" open><summary>Map features <span>SOURCED · RECONSTRUCTED · ILLUSTRATIVE</span></summary><div id="feature-legend"></div></details>
 <p class="counter-legend"><b>Unit counters:</b> troop strength · type (INF infantry, SC scout) · S skill · E energy · M morale. Ratings 0–100; energy = 100 − fatigue. Dashed counters are enemy estimates; ? means unknown. Zoom in for detail.</p>
 <section id="enemy-intelligence" class="contact-intelligence" aria-label="Enemy intelligence"><div class="intelligence-heading"><h3>Enemy intelligence</h3><span>ESTIMATES AT LAST SIGHTING</span></div><div id="contact-list" class="contact-list"></div></section>
 <section id="god-inspector" class="god-inspector hidden"><div class="intelligence-heading"><h3>Battle interactions</h3><span id="god-count"></span></div><label>Inspect <select id="god-filter"><option value="all">All events</option><option value="combat">Combat &amp; movement</option><option value="communications">Orders &amp; communications</option><option value="decisions">Commander decisions</option></select></label><div id="god-events" class="god-events"></div><button id="god-older">Show older events</button><details><summary>Orders &amp; reports in transit</summary><pre id="god-traffic"></pre></details><details><summary>Recorded strategic decisions</summary><pre id="god-decisions"></pre></details><details><summary>Exact unit state</summary><pre id="god-units"></pre></details></section>
@@ -49,13 +50,14 @@
 <p id="analysis-limitations"></p></dialog>
 <div id="toast" role="status" aria-live="polite" class="toast hidden"></div>
 <script src="/vendor/maplibre/maplibre-gl-csp.js" defer></script>
-<script src="/cartography.js?v=18" defer></script>
-<script src="/map-view.js?v=18" defer></script>
+<script src="/cartography.js?v=19" defer></script>
+<script src="/map-view.js?v=19" defer></script>
 <script src="/api-client.js?v=18" defer></script>
 <script src="/troop-analysis.js?v=18" defer></script>
 <script src="/scenario-picker.js?v=18" defer></script>
 <script src="/timeline.js?v=18" defer></script>
 <script src="/unit-icons.js?v=18" defer></script>
-<script src="/map-features.js?v=18" defer></script>
-<script src="/app.js?v=18" defer></script>
+<script src="/feature-sources.js?v=19" defer></script>
+<script src="/map-features.js?v=19" defer></script>
+<script src="/app.js?v=19" defer></script>
 </body></html>
