@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {contactsMarkup, mapMarkup, ordersMarkup} from "../src/render.ts";
 import {statusTableFor} from "../src/feature-sources.ts";
+import {hexCenter} from "../src/geometry.ts";
 import {commander, map, pocFeatureSources} from "./fixtures.ts";
 
 const count = (text: string, pattern: RegExp): number => (text.match(pattern) ?? []).length;
@@ -78,4 +79,32 @@ test("water and marsh cells have their own fill", () => {
   const svg = mapMarkup(commander(), terrain, {unitId: null, destination: null});
   assert.match(svg, /data-c="0" data-r="0"[^>]*fill="#b9d3e3"/);
   assert.match(svg, /data-c="1" data-r="0"[^>]*fill="#d7e3cf"/);
+});
+
+// bt-T11: the POC desk's dashed ring round a hold-objective objective and its neighbours.
+const RING = /<circle class="objective-ring" pointer-events="none" cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"\/>/g;
+
+test("a hold-objective brief rings the objective", () => {
+  const view = commander();
+  const terrain = map();
+  assert.equal(view.scenario_brief?.objective.ring, true, "the recorded Little Round Top brief sets the ring");
+  const rings = [...mapMarkup(view, terrain, {unitId: null, destination: null}).matchAll(RING)];
+  assert.equal(rings.length, 1);
+  const [cx, cy, radius] = rings[0]!.slice(1).map(Number) as [number, number, number];
+  const [ox, oy] = hexCenter(view.objective, terrain.radius);
+  assert.deepEqual([cx, cy], [Number(ox.toFixed(1)), Number(oy.toFixed(1))], "centred on the objective hex");
+  assert.ok(Math.abs(radius - terrain.radius * 53 / 25.5) < 0.1, `the POC proportion, r=${radius}`);
+  assert.ok(radius > Math.sqrt(3) * terrain.radius, "the six neighbouring hex centres lie inside the ring");
+});
+
+test("no ring without the brief's ring flag or without a brief", () => {
+  const view = commander();
+  const brief = view.scenario_brief!;
+  const unringed = {...view, scenario_brief: {...brief, objective: {...brief.objective, ring: false}}};
+  const {scenario_brief: _omitted, ...bare} = view;
+  for (const shown of [unringed, bare]) {
+    const svg = mapMarkup(shown, map(), {unitId: null, destination: null});
+    assert.doesNotMatch(svg, /objective-ring/);
+    assert.match(svg, /<g class="objective" pointer-events="none"><circle/, "the objective mark stays");
+  }
 });

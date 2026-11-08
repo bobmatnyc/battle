@@ -40,6 +40,7 @@ body { margin: 0; font: 14px/1.4 system-ui, sans-serif; color: #222; background:
 .legend-status-reported { color: #2f5877; border-color: #4f7a9a; }
 .legend-status-unlisted { color: #8a1f12; border-color: #8a1f12; }
 .objective circle { fill: none; stroke: #8f7134; stroke-width: 2; stroke-dasharray: 5 4; }
+.objective .objective-ring { fill: none; stroke: #b19752; stroke-width: 2; stroke-dasharray: 5 5; }
 .objective text { font-size: 11px; fill: #634e27; }
 .route { stroke: #23445b; stroke-width: 3; stroke-dasharray: 7 5; fill: none; }
 .counter rect { stroke-width: 1.5; }
