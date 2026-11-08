@@ -293,7 +293,8 @@ PROVENANCE = {
 # victory_encircle.D38, spelt here: importing that module first would close an import cycle through victory.
 D38 = "cannae-d38"
 D38_PROVENANCE = ("authored: D38 (Bob 2026-11-08 17:41Z), the cannae-d38 edition of docs/research/82 on doc 79 §7: "
-                  "a routed defender is no wall (Q2); a Roman unit at the row-0 edge has broken through (Q3)")
+                  "a routed defender is no wall (Q2); a Roman unit at the row-0 edge has broken through (Q3); "
+                  "the share held for 20 consecutive intervals wins at once (Q1)")
 
 
 def cannae_entry(variant=None, *, design=True, wheels=AFRICANS, horse=1, dust=False, wide=False, reserve=False,

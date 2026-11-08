@@ -28,6 +28,7 @@ BREAK_ONLY_BELOW_SHARE = True
 D38 = "cannae-d38"
 EDITIONS = (D38,)
 REAR_EDGE_ROW = 0  # D38 Q3: the Carthaginian rear map edge (scenario_cannae.PRESS_ROW).
+SUSTAIN_INTERVALS = 20  # D38 Q1: the share held this many consecutive intervals wins at once.
 
 
 def encircle_only_problems(entry):
@@ -148,6 +149,16 @@ def _wall(u, d38):
     return _live(u) and not (d38 and u["status"] in INEFFECTIVE)
 
 
+def _sustained(record, needed):
+    """D38 Q1 (docs/research/82): the last ``SUSTAIN_INTERVALS`` record rows are
+    consecutive intervals whose enclosed plus lost men reach ``needed``.
+    Test: `test_q1_the_share_held_for_20_consecutive_intervals_wins_at_once`,
+    `test_q1_a_break_in_the_share_starts_the_count_again`."""
+    rows = record[-SUSTAIN_INTERVALS:]
+    return (len(rows) == SUSTAIN_INTERVALS and rows[-1][0] - rows[0][0] == SUSTAIN_INTERVALS - 1
+            and all(r[2] + r[3] >= needed for r in rows))
+
+
 def _measure(cells, pocket, enemies, v, flow=True):
     """Why: D38 Q3 (docs/research/82; doc 79 §7 Q3 (c)) reads a Roman unit at
     the Carthaginian rear edge as broken through, not enclosed.
@@ -181,7 +192,11 @@ class Encircle:
     ``recon.CONTACT_MAX_AGE``) show one; and ``exited``, each attacker unit's
     first interval and strength on an exit hex. The score reads the truth;
     ``s['victory']`` is in neither side's view. A reading of route geometry,
-    not a historical result.
+    not a historical result. Under ``cannae-d38`` (docs/research/82): a
+    routed defender is no wall (``_wall``, Q2); the rear edge is a way out
+    and a pocket unit on it has broken through, recorded in ``broke_through``
+    (``_measure``, Q3); and the defender also wins at once when the share
+    has been held ``SUSTAIN_INTERVALS`` consecutive intervals (``_sustained``, Q1).
     Test: `test_the_centre_breaking_wins_for_the_attacker_at_once`,
     `test_the_centre_break_wins_only_while_enclosed_and_lost_are_below_the_share`,
     `test_an_enclosed_pocket_wins_for_the_defender_at_the_deadline`,
@@ -271,6 +286,10 @@ class Encircle:
         if len(broken) >= v["centre_break"] and below:
             return attacker, (f"The {names[defender]} centre broke: {len(broken)} of its "
                               f"{len(v['centre_units'])} centre units routed or lost.")
+        if d38 and _sustained(v["record"], v["enclosed_needed"]):  # D38 Q1: not only at the deadline.
+            return defender, (f"The {names[attacker]} army was enclosed for {SUSTAIN_INTERVALS} consecutive "
+                              f"intervals: {men} men enclosed and {lost} lost, against the "
+                              f"{v['enclosed_needed']} required.")
         if s["turn"] < s["max_turns"]:
             return None, None
         if men + lost >= v["enclosed_needed"]:

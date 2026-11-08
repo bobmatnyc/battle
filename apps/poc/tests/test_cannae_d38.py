@@ -132,5 +132,42 @@ class Q3RearEdgeTests(unittest.TestCase):
         self.assertEqual(new["broke_through"], {})  # A way out, not yet a breakthrough.
 
 
+class Q1SustainedTests(unittest.TestCase):
+    """D38 Q1: the share counts once held for 20 consecutive intervals, not only at the deadline."""
+
+    def at_share(self, entry):
+        """``entry``'s start with eight pocket units lost: 8 x 3,550 = 28,400 men, the share."""
+        s = build_state(entry)
+        heavy = [u for u in s["units"] if u["id"] in entry.victory.pocket_units]
+        for u in heavy[:8]:
+            u.update(status="lost", strength=0)
+        return s, heavy[0]
+
+    def play(self, s, turns, below=()):
+        """Score intervals ``turns``; on those in ``below`` one lost unit stands again, under the share."""
+        results = []
+        for turn in turns:
+            s["turn"] = turn
+            restored = turn in below
+            self.lost.update(strength=self.lost["initial"] if restored else 0)
+            results.append(victory.score(s))
+        return results
+
+    def test_q1_the_share_held_for_20_consecutive_intervals_wins_at_once(self):
+        s, self.lost = self.at_share(ENTRY)
+        results = self.play(s, range(1, 21))
+        self.assertEqual(results[:19], [(None, None)] * 19)
+        self.assertEqual(results[19], ("carthaginian", "The Roman army was enclosed for 20 consecutive intervals: "
+                                                       "0 men enclosed and 28400 lost, against the 28400 required."))
+        s, self.lost = self.at_share(OLD)  # The old edition scores the share only at the deadline.
+        self.assertEqual(set(self.play(s, range(1, 41))), {(None, None)})
+
+    def test_q1_a_break_in_the_share_starts_the_count_again(self):
+        s, self.lost = self.at_share(ENTRY)
+        results = self.play(s, range(1, 40), below={20})  # 19 held, one below, then 19 held again.
+        self.assertEqual(set(results[:39]), {(None, None)})
+        self.assertEqual(self.play(s, [40])[0][0], "carthaginian")  # The 20th after the break.
+
+
 if __name__ == "__main__":
     unittest.main()
