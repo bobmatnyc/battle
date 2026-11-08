@@ -1,0 +1,13 @@
+{
+ "game_id": "f1c7f1c7f1c7f1c7",
+ "instruction": {
+  "count": 20,
+  "destination": [
+   14,
+   15
+  ],
+  "kind": "split",
+  "unit_id": "U2"
+ },
+ "revision": 1
+}

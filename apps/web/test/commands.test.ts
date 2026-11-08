@@ -3,10 +3,12 @@
 // view's game.
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import type {CommanderState, MapDocument, OrderSubmission} from "@battle/contracts";
+import {
+  readCommanderState, type CommanderState, type FormationSubmission, type MapDocument, type OrderSubmission, type StandingOrderSubmission,
+} from "@battle/contracts";
 import {DeskRefusal, type DeskApi} from "../src/api.ts";
-import {reread, sendOrder, startBattle, type Loaded} from "../src/commands.ts";
-import {commander, map} from "./fixtures.ts";
+import {reread, sendFormation, sendOrder, sendStanding, startBattle, type Loaded} from "../src/commands.ts";
+import {commander, map, raw} from "./fixtures.ts";
 
 const unknown = (): DeskRefusal => new DeskRefusal(504, "The local simulation did not answer within 120000 ms.", true);
 const refused = (): DeskRefusal => new DeskRefusal(502, "The local simulation is not reachable at http://127.0.0.1:8874.");
@@ -27,6 +29,8 @@ function fakeApi(overrides: Partial<DeskApi>): DeskApi & {calls: string[]} {
     newBattle: track("newBattle", overrides.newBattle ?? never("newBattle")),
     history: track("history", overrides.history ?? never("history")),
     replay: track("replay", overrides.replay ?? never("replay")),
+    standingOrder: track("standingOrder", overrides.standingOrder ?? never("standingOrder")),
+    formation: track("formation", overrides.formation ?? never("formation")),
   };
 }
 
@@ -142,4 +146,55 @@ test("a re-read of the same game does not fetch the map again, and a new game's 
   assert.deepEqual(same.calls, ["state"]);
   const broken = fakeApi({state: async () => otherGame(start.view), map: fail(refused())});
   await assert.rejects(reread(broken, start), /not reachable/);
+});
+
+// docs/research/81 §12: standing orders and formations follow the orders' unknown-outcome path.
+const commanded = (): CommanderState => readCommanderState(raw("state-commander-commands"));
+const standingBody = (view: CommanderState): StandingOrderSubmission =>
+  ({instruction: {unit_id: "U1", profile_id: "cautious"}, game_id: view.game_id, revision: view.revision});
+const splitBody = (view: CommanderState): FormationSubmission =>
+  ({instruction: {kind: "split", unit_id: "U2", count: 20, destination: [14, 15]}, game_id: view.game_id, revision: view.revision});
+const combineBody = (view: CommanderState): FormationSubmission =>
+  ({instruction: {kind: "combine", unit_id: "U2", partner_id: "UD1"}, game_id: view.game_id, revision: view.revision});
+
+test("an accepted standing order, split or combine names what the POC now holds", async () => {
+  const start = loaded();
+  const after = {...commanded(), game_id: start.view.game_id};
+  const standing = await sendStanding(fakeApi({standingOrder: async () => after}), start, standingBody(start.view));
+  assert.equal(standing.notice.kind, "accepted");
+  assert.match(standing.notice.text, /^Standing order sent: U1 Preserve the force \(SO1\)/);
+  const split = await sendFormation(fakeApi({formation: async () => after}), start, splitBody(start.view));
+  assert.equal(split.notice.kind, "accepted");
+  assert.match(split.notice.text, /^Split sent: U2 detaches 20 troops to hex 14,15 \(F1\)/);
+  const combine = await sendFormation(fakeApi({formation: async () => after}), start, combineBody(start.view));
+  assert.match(combine.notice.text, /^Combine sent: UD1 joins U2 \(F2\)/);
+  assert.equal(combine.loaded.view, after);
+});
+
+test("a standing order or formation whose outcome is unknown is re-read, and the re-read decides the notice", async () => {
+  const start = loaded();
+  const after = {...commanded(), game_id: start.view.game_id};
+  const took = await sendStanding(fakeApi({standingOrder: fail(unknown()), state: async () => after}), start, standingBody(start.view));
+  assert.equal(took.notice.kind, "unknown");
+  assert.match(took.notice.text, /did take the standing order: SO1, U1 Preserve the force, delivered/);
+  const none = await sendStanding(fakeApi({standingOrder: fail(unknown()), state: async () => start.view}), start, standingBody(start.view));
+  assert.equal(none.notice.kind, "unknown");
+  assert.match(none.notice.text, /no new standing order for U1/);
+  const split = await sendFormation(fakeApi({formation: fail(unknown()), state: async () => after}), start, splitBody(start.view));
+  assert.match(split.notice.text, /did take the split: F1, U2, completed/);
+  const lost = await sendFormation(fakeApi({formation: fail(unknown()), state: fail(refused())}), start, combineBody(start.view));
+  assert.equal(lost.notice.kind, "unknown");
+  assert.match(lost.notice.text, /outcome of the U2 combine is unknown, and re-reading the battle failed/);
+  assert.equal(lost.loaded, start);
+});
+
+test("a plain refusal of a standing order or formation keeps the engine's text and is not re-read", async () => {
+  const start = loaded();
+  const text = "Move the formations into adjacent hexes before combining.";
+  const api = fakeApi({formation: fail(new DeskRefusal(400, text))});
+  await assert.rejects(sendFormation(api, start, combineBody(start.view)), (error: unknown) => error instanceof Error && error.message === text);
+  assert.deepEqual(api.calls, ["formation"]);
+  const standing = fakeApi({standingOrder: fail(new DeskRefusal(400, "Unknown standing-order template."))});
+  await assert.rejects(sendStanding(standing, start, standingBody(start.view)), /Unknown standing-order template/);
+  assert.deepEqual(standing.calls, ["standingOrder"]);
 });

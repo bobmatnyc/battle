@@ -129,6 +129,66 @@ Evidence under the git-ignored `apps/poc/artifacts/slice4a-64048b6/` in this wor
 
 **Mutations** (`mutations/`), each red, then restored: `Playback.stop` not bumping the generation, `npm test` 1 of 89 fails (`pausing, a step or a scrub stops playback, and a reply that arrives after it is not shown`); the desk's step handler not stopping playback, `make smoke-web` fails, "timed out waiting for the step to stop playback".
 
+## 12. Slice 4b as built
+
+**Task:** bt-T20. Branch `bt-t20-slice4b` from `ae339fc`. Commits: `91d5c61` (tests and recorded fixtures, red), `6670ac8` (contracts), `f4a57cf` (relay and desk, D and E), `47f6e03` (smoke-web steps), then this section. No engine, rules, routing or scenario file changed: `git diff --stat ae339fc HEAD -- apps/poc/battle` is empty. Doc 81's claims held: the engine already takes both commands (`standing.issue`, `formations.request`) on every playable scenario (all are `poc-13`), so neither item stopped. §10's open point is answered: neither command touches a rules edition.
+
+### Contracts added (`packages/contracts/src`)
+
+- `requests.ts` (new): `standingOrderSubmission` is exactly `{instruction: {unit_id, profile_id}, game_id, revision}`. `formationSubmission` is `{instruction, game_id, revision}`, where the instruction's `kind` picks the key set as `formations.validate` does: a split is exactly `{kind, unit_id, count, destination}`, a combine exactly `{kind, unit_id, partner_id}` with a partner other than the unit. Readers `readStandingOrderSubmission` and `readFormationSubmission`.
+- `views.ts`: `standingTemplate` types `standing_templates` (id, label, intent, version, message_key and the five thresholds; extra keys kept) in both views. `StandingOrder` now requires `unit_id`, `profile_id`, `version`, `sent_turn`, `arrival_turn` and `template_version`. `FormationOp` requires `unit_id`, `order_ids` and `sent_turn`, takes `kind` as `split` or `combine`, and types the optional `partner_id`, `count`, `destination`, `reason`, `observed_turn` and `received_turn`. Both lose their "UNCONFIRMED" note.
+- `check.ts`: `nonEmpty` moved here from `api.ts` so both request modules use it.
+- Fixtures: `record.py` `record_commands` plays a second Little Round Top game with the pinned id. U1 is sent Preserve the force; headquarters U2 detaches 20 troops to 14,15; once the split is reported, UD1 is combined back into U2; the clock runs until the combine and the standing order are reported. It writes the three accepted request bodies and the commander state after them (`state-commander-commands.json`, revision 9). Two runs give identical files, and re-recording rewrote no other fixture.
+
+### Routes added (`apps/web/server/desk-server.ts`)
+
+`ROUTES` lists ten routes: the eight before plus `POST /api/standing-orders` and `POST /api/formations`. `BODY_CONTRACTS` maps each new route to its contract. `checkedBody` parses the body, checks it, and relays the checked copy re-serialized, so no key outside the contract reaches the POC. A body that is not JSON, or fails its contract, gets a 400 naming the bad field (`The desk refused a malformed request: $.instruction.kind: …`). It is never relayed and carries no `outcome: "unknown"`. Both routes forward to the POC's existing endpoints only. The other routes are unchanged; `/api/orders` is still relayed as sent and checked only in the browser.
+
+### D. Standing orders
+
+- `apps/web/src/standing.ts`: the template picker is built from the view's typed `standing_templates`, so Hougoumont also offers Close the gate on a breach. `standingBody` builds the request for an own unit that can take orders and a template the view offers. `standingCurrent` gives the unit's reported template and version, then any instruction still awaiting acknowledgement. `standingListMarkup` lists the side's standing orders newest first: unit, template, battlefield send time and status.
+- **Cancel.** The engine has no cancel. `standing.py` cannot recall an instruction, but a newer version supersedes an older one on arrival (`standing.deliver`). Cancel therefore sends the battle's first template, Balanced. Every unit starts with it (`scenario_entry`), and `standing.profile` falls back to it. `cancelBody` offers this only while the unit's last instruction in force or on its way, else its reported template, is another template. The help line says that a sent instruction cannot be recalled.
+- `commands.ts` `sendStanding`: the same unknown-outcome path as orders. On a 504 or a dropped reply the desk re-reads, and the notice says whether the battle now holds the instruction. A plain refusal shows the engine's text.
+
+### E. Split and combine
+
+- `apps/web/src/formations.ts`: `splitRefusal` and `combineRefusal` repeat `formations.validate`'s checks, in its order, on what the commander view shows, and return the engine's own text. For a split: the unit takes orders and holds no captives, both parts keep at least 12, the hex is adjacent, and no reported friendly formation stands on it. For a combine: two different own units that take orders and hold no captives, with matching type, weapons, skill and reconnaissance role and skill, adjacent, at most 80 together, and the partner is not headquarters. `combinePartners` lists the units that pass, so a merged, routed or lost unit is never offered. A merged unit also leaves the commander view.
+- The desk disables Send split and Send combine while its check refuses, and `formationHelp` gives the reason in the engine's words. The checks the view cannot make go to the engine, and the desk shows its text: walls and gates, impassable water on known terrain, sappers, `rout_strength`, facing, surrender and exploit keys (not in `engine.summary`), the rules edition, and an unreported unit. A test reads `apps/poc/battle/formations.py` and `engine.py` and fails if the desk's limits (12, 80, `PROFILE`) or any refusal text drift from the engine.
+- The split count defaults to half the strength, as on the POC desk. The destination is the selected hex on the map. `operationsMarkup` lists operations newest first: id, kind, units, status, send time and the last notice's reason. `sendFormation` follows the unknown-outcome path. An accepted split or combine clears the selected hex.
+
+### Deviations
+
+- Cancel is a superseding instruction, not a recall (above). The engine supports nothing else, and doc 81 did not claim a cancel.
+- The two view types were tightened, not only added. One synthetic standing order in `contracts.test.ts` (`standing order of another side`) gained the now-required keys.
+- After the red commit: `formations.test.ts` expected `hexDistance([11,14],[13,15])` to be 2. That was my arithmetic; `grid.distance` gives 3, and the test was corrected. A `formationHelp` test was added. The `replay.test.ts` fake API gained the two new methods for `tsc`.
+- The desk repeats engine rules (limits, matching keys, texts). This is pinned by the drift test above, not removed. Moving them into the view would be an engine change.
+- Pegasus Bridge's sapper units and Hill 223's units with declared rout or exploit keys look splittable on the desk. The engine refuses them with its text, because the keys are not in the commander view.
+
+### Digests
+
+Doc 74's `digests.py` and doc 76's `run_digests.sh` were copied unchanged from `slice4a-64048b6`. They ran on a `git archive` of `ae339fc` and on this tree: every headless catalog entry without timings, and desk play of all five player scenarios to the end. Both comparisons are identical: `cmp desk EXIT=0` and `cmp catalog without timings EXIT=0` (8 catalog lines, 5 desk lines; `run-digests.log`, `digests/`). The scripted and headless paths never post either command, so their records are unchanged. A desk game that sends a standing order or a split or combine stores a `standing` or `formation` action in its record, so its digest differs from the same game without it. That is expected, not a regression.
+
+### Gates
+
+Evidence is under the git-ignored `apps/poc/artifacts/slice4b-47f6e03/` in this worktree. `MANIFEST.txt` lists the files, and each gate log ends with `EXIT=`.
+
+| Gate | Result |
+|---|---|
+| `npm ci --offline`, `npm run typecheck` | exit 0 |
+| `npm test` | web 108 of 108, contracts 85 of 85; exit 0 |
+| `make smoke-web` | `SMOKE PASSED`. At Little Round Top, U1 Preserve the force was sent (SO1) and cancelled (SO2 Balanced, a higher version), and headquarters U2 split 20 to 14,15 (F1); the POC holds each. At Hougoumont, A2 split 30 west to 9,9 across the wall: the desk sent it, and the engine's "A wall or shut gate separates that hex from the formation." is shown, with no operation added |
+| `make test-poc` | `Ran 808 tests … OK`; every node check passed; exit 0 |
+| `make headless-poc` | winner union, 60 turns, 2,573 events, replay `identical` (63 revisions), as before |
+| `make smoke-poc` | exit 0 |
+
+**Red first** (`red/`): at `91d5c61` on the previous sources, the contracts suite fails to load `requests.test.ts` (no `formationSubmission`; 1 of 64 fails). The web suite fails to load `commands`, `formations` and `standing` (no `sendFormation` and the rest; 6 of 85 fail).
+
+**Mutations** (`mutations/`): each was applied at `47f6e03` and turned the suite red, then was restored.
+- D: `cancelBody` offering Cancel whatever the current template: 1 of 108 fails (`cancel sends the battle's first template, and only while …`).
+- D: the relay dropping the standing-order body check: 2 of 108 fail (`… a malformed one is a 400 never relayed`, `only the routes the desk uses are relayed …`).
+- E: `combineRefusal` without the adjacency check: 1 of 108 fails (`combine partners are the adjacent own formations the engine would accept`).
+- E: the contract accepting a combine with itself: contracts `combine: with itself` and web `a standing order and a formation post their checked body …` fail.
+
 ## Review notes
 
 code-critic at `e1dbd58`: **APPROVE**, no CRITICAL or HIGH. The critic re-ran `npm test` in `apps/web` (89 of 89), `tsc --noEmit` (clean) and `check_map_geometry.mjs` (pass). It re-ran `record.py`; `git status` stayed clean, so every fixture regenerates byte-identically. It confirmed:
@@ -146,3 +206,19 @@ Two LOW notes, not fixed (below the fix bar):
 - `apps/poc/scripts/check_map_geometry.mjs` runs only with `PYTHONPATH=.` from `apps/poc`. This predates the branch.
 
 Also carried from §11: the signals panel is confirmed on a headless-only Pegasus variant, not on a playable game. Hill 223's shack label is still cut off at the left edge and needs a label rule.
+
+### Slice 4b (bt-T20)
+
+code-critic at `a0f0eb5`: **APPROVE**, no CRITICAL or HIGH. The critic re-ran `npm test` (web 108 of 108, contracts 85 of 85) and `tsc --noEmit` in both packages (clean). It confirmed:
+
+- There is no diff under `apps/poc`.
+- Cancel sends the view's own first standing template, never a hard-coded Balanced, and is not offered when the unit already holds it.
+- The desk's split and combine checks follow `formations.validate` in order and use the engine's own refusal text.
+- `checkedBody` forwards only the parsed contract copy and rejects unknown keys, including `__proto__`.
+- A malformed body returns 400 before any upstream call, so the relay does not fail open.
+
+Credential scan over `origin/main...HEAD`: clean.
+
+One LOW note, not fixed (below the fix bar): the drift-guard test in `apps/web/test/formations.test.ts` falls back to a 60-character prefix match. A changed tail of a long engine refusal text would still pass. Comparing the full string would close it.
+
+Owner-visible behaviour: the engine cannot recall a standing order. Cancel therefore sends the battle's first template, which replaces the old order when it arrives. A true recall needs an engine change.

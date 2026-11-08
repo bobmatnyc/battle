@@ -2,9 +2,10 @@
 // Every response is read through the commander-view contract, so a God view
 // (or any omniscient field) is refused rather than drawn.
 import {
-  orderSubmission, parse, readCommanderReplay, readCommanderState, readHistory, readMapDocument, readScenarioList,
-  type BattleCursor, type CommanderState, type CommanderView, type HistoryEntry, type MapDocument,
-  type OrderSubmission, type ScenarioList,
+  formationSubmission, orderSubmission, parse, readCommanderReplay, readCommanderState, readHistory, readMapDocument,
+  readScenarioList, standingOrderSubmission,
+  type BattleCursor, type CommanderState, type CommanderView, type FormationSubmission, type HistoryEntry, type MapDocument,
+  type OrderSubmission, type ScenarioList, type StandingOrderSubmission,
 } from "@battle/contracts";
 
 /** A request the server refused: its HTTP status and the server's own text.
@@ -34,6 +35,10 @@ export interface DeskApi {
   history(gameId: string): Promise<HistoryEntry[]>;
   /** The player's commander view at `revision`, read only; never God's or another side's. */
   replay(gameId: string, revision: number): Promise<CommanderView>;
+  /** docs/research/81 §12: one standing-order instruction (POST /api/standing-orders). */
+  standingOrder(body: StandingOrderSubmission): Promise<CommanderState>;
+  /** docs/research/81 §12: one split or combine (POST /api/formations). */
+  formation(body: FormationSubmission): Promise<CommanderState>;
 }
 
 async function body(response: Response): Promise<unknown> {
@@ -53,10 +58,12 @@ async function body(response: Response): Promise<unknown> {
 
 /** Why: refusals must reach the player, and the desk must never hold a God view.
  * What: GET /api/state, /api/map, /api/scenarios, /api/history and /api/replay (game and
- * revision only, so the commander view); POST /api/orders, /api/clock and /api/new.
+ * revision only, so the commander view); POST /api/orders, /api/clock, /api/new, and
+ * /api/standing-orders and /api/formations, each body checked against its contract before it is sent.
  * A non-2xx reply throws DeskRefusal with the server's `error` text; replies pass the contracts.
  * Test: `a server refusal keeps its status and text`, `a God view is refused, so the desk cannot draw omniscient state`,
  * `a relay reply marked outcome unknown is a refusal the desk can tell apart`,
+ * `a standing order and a formation post their checked body; a malformed one is not sent`,
  * `the scenario catalog is read through its contract, and a new battle posts the chosen id at the cursor`,
  * `history and replay requests name the game and revision only`. */
 export function createDeskApi(request: typeof fetch, base = ""): DeskApi {
@@ -79,5 +86,9 @@ export function createDeskApi(request: typeof fetch, base = ""): DeskApi {
     history: async (gameId: string) => readHistory(await get(`/api/history?${new URLSearchParams({game_id: gameId})}`)),
     replay: async (gameId: string, revision: number) =>
       readCommanderReplay(await get(`/api/replay?${new URLSearchParams({game_id: gameId, revision: String(revision)})}`)),
+    standingOrder: async (submission: StandingOrderSubmission) =>
+      readCommanderState(await post("/api/standing-orders", parse(standingOrderSubmission, submission))),
+    formation: async (submission: FormationSubmission) =>
+      readCommanderState(await post("/api/formations", parse(formationSubmission, submission))),
   });
 }

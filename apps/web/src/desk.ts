@@ -4,9 +4,12 @@
 // the commander view. Rules stay in Python; every refusal is shown in #notice with the server's own text.
 import type {CommanderState, CommanderView, MapDocument, ScenarioList} from "@battle/contracts";
 import {DeskRefusal, type DeskApi} from "./api.ts";
-import {reread, sendOrder, startBattle, type Loaded} from "./commands.ts";
+import {reread, sendFormation, sendOrder, sendStanding, startBattle, type Loaded} from "./commands.ts";
 import {statusTableFor} from "./feature-sources.ts";
 import {featureLegend} from "./features.ts";
+import {
+  combineBody, combinePartners, defaultSplit, formationHelp, operationsMarkup, partnerOptions, splitBody,
+} from "./formations.ts";
 import {orderBody, templateFor} from "./orders.ts";
 import {
   dispatchesMarkup, missionMarkup, outcomeText, scenarioOptions, signalsMarkup, templateHelp, templateOptions, unitCardMarkup,
@@ -17,6 +20,7 @@ import {
   type Replay,
 } from "./replay.ts";
 import {clickMap, emptySelection, ownUnit, type MapTarget, type Notice, type Selection} from "./selection.ts";
+import {cancelBody, standingBody, standingCurrent, standingHelp, standingListMarkup, standingOptions} from "./standing.ts";
 import {battleClock, timeAt} from "./timeline.ts";
 
 const POLL_MS = 1000;
@@ -49,7 +53,8 @@ function target(node: EventTarget | null): MapTarget | null {
 /** Why: the TypeScript desk must play the POC battle with the same information limits.
  * What: loads the commander view, map and scenario catalog, renders them with the map features
  * (status from `featureSources`, the POC's BattleFeatureSources), and handles map clicks, orders
- * of every offered kind, the clock, the grid toggle, starting a scenario and the commander replay;
+ * of every offered kind, standing orders (send and cancel) and split/combine (docs/research/81 §12),
+ * the clock, the grid toggle, starting a scenario and the commander replay;
  * polls while the clock runs or a new battle's map still needs reading. A command whose outcome
  * the relay could not confirm is followed by a re-read. While replaying, the map, header and
  * panels show the recorded view, and orders, the clock and new battles are disabled. Playback
@@ -73,6 +78,13 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
   const liveButton = element<HTMLButtonElement>(doc, "replay-live");
   const playButton = element<HTMLButtonElement>(doc, "replay-play");
   const speedSelect = element<HTMLSelectElement>(doc, "replay-speed");
+  const standingSelect = element<HTMLSelectElement>(doc, "standing-profile");
+  const standingButton = element<HTMLButtonElement>(doc, "send-standing");
+  const cancelButton = element<HTMLButtonElement>(doc, "cancel-standing");
+  const splitInput = element<HTMLInputElement>(doc, "split-count");
+  const splitButton = element<HTMLButtonElement>(doc, "send-split");
+  const partnerSelect = element<HTMLSelectElement>(doc, "combine-partner");
+  const combineButton = element<HTMLButtonElement>(doc, "send-combine");
   let view: CommanderState;
   let terrain: MapDocument;
   let terrainGame = "";  // the game `terrain` belongs to
@@ -80,6 +92,9 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
   let replay: Replay | null = null;
   let selection: Selection = emptySelection;
   let kind = "move";
+  let profile = "";       // the standing template chosen in the form
+  let splitCount = 0;
+  let splitFor = "";      // the unit `splitCount` was defaulted for
   let current: Notice | null = null;
   let busy = false;
   let polling = false;
@@ -116,6 +131,40 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     const open = ordersOpen(view, replay, busy) && fresh();
     kindSelect.disabled = !open || !unit;
     sendButton.disabled = !open || orderBody(view, selection, kind) === null;
+  }
+
+  // docs/research/81 §12: standing orders, split and combine for the selected unit. The lists show
+  // the drawn view (live or replayed); the bodies are built from the live view, as orders are.
+  function renderCommandForms(): void {
+    const seen = shown();
+    const unit = ownUnit(seen, selection.unitId);
+    const open = ordersOpen(view, replay, busy) && fresh() && unit !== undefined;
+    if (!seen.standing_templates.some((t) => t.id === profile)) profile = seen.standing_templates[0]?.id ?? "";
+    const options = standingOptions(seen, profile);
+    if (standingSelect.dataset["options"] !== options) { standingSelect.innerHTML = options; standingSelect.dataset["options"] = options; }
+    standingSelect.value = profile;
+    standingSelect.disabled = !open;
+    element(doc, "standing-current").textContent = unit ? `${unit.id}: ${standingCurrent(seen, unit)}`
+      : "Select one of your counters to give it standing instructions.";
+    const first = seen.standing_templates[0]?.label ?? "";
+    element(doc, "standing-help").innerHTML = standingHelp(seen, profile)
+      + (first ? `<br><small>An instruction already sent cannot be recalled; Cancel sends ${esc(first)}, which supersedes it on arrival.</small>` : "");
+    standingButton.disabled = !open || standingBody(view, selection.unitId, profile) === null;
+    cancelButton.disabled = !open || cancelBody(view, selection.unitId) === null;
+    element(doc, "standing-orders").innerHTML = standingListMarkup(seen, clock);
+
+    if (unit && unit.id !== splitFor) { splitCount = defaultSplit(unit); splitFor = unit.id; splitInput.value = String(splitCount); }
+    const partners = unit ? combinePartners(seen, unit) : [];
+    const chosen = partners.some((u) => u.id === partnerSelect.value) ? partnerSelect.value : partners[0]?.id ?? "";
+    const choices = partnerOptions(partners, chosen);
+    if (partnerSelect.dataset["options"] !== choices) { partnerSelect.innerHTML = choices; partnerSelect.dataset["options"] = choices; }
+    partnerSelect.value = chosen;
+    splitInput.disabled = !open;
+    partnerSelect.disabled = !open || !partners.length;
+    splitButton.disabled = !open || splitBody(view, selection.unitId, splitCount, selection.destination) === null;
+    combineButton.disabled = !open || combineBody(view, selection.unitId, chosen) === null;
+    element(doc, "formation-help").textContent = unit && !replay ? formationHelp(seen, unit, splitCount, selection.destination) : "";
+    element(doc, "formation-ops").innerHTML = operationsMarkup(seen, clock);
   }
 
   function renderReplay(): void {
@@ -165,6 +214,7 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     element(doc, "signals").innerHTML = signals ?? "";
     element(doc, "contacts").innerHTML = contactsMarkup(seen, clock);
     renderOrderForm();
+    renderCommandForms();
     renderReplay();
     if (catalog) {
       const options = scenarioOptions(catalog, view.scenario_brief?.id ?? null);
@@ -251,6 +301,33 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     if (step.notice.kind === "accepted") selection = {unitId: selection.unitId, destination: null};
     return step.notice;
   }));
+
+  // docs/research/81 §12: as an order: pause first, build the body from the live view, and on an
+  // unknown outcome re-read (commands.ts). A refusal shows the engine's own text (act).
+  const command = (build: () => Promise<Notice>): void => void act(async () => {
+    if (replay) return {kind: "info", text: REPLAYING};
+    await paused();
+    return build();
+  });
+  const standing = (body: ReturnType<typeof standingBody>): Promise<Notice> => {
+    if (!body) return Promise.resolve({kind: "info", text: "Select one of your counters and a standing instruction it can take."});
+    return sendStanding(api, held(), body).then((step) => { adopt(step.loaded); return step.notice; });
+  };
+  const formation = (body: ReturnType<typeof splitBody>): Promise<Notice> => {
+    if (!body) return Promise.resolve({kind: "info", text: "Select a counter, then an adjacent hex for a split or a partner to combine with."});
+    return sendFormation(api, held(), body).then((step) => {
+      adopt(step.loaded);
+      if (step.notice.kind === "accepted") selection = {unitId: selection.unitId, destination: null};
+      return step.notice;
+    });
+  };
+  standingSelect.addEventListener("change", () => { profile = standingSelect.value; render(); });
+  standingButton.addEventListener("click", () => command(() => standing(standingBody(view, selection.unitId, profile))));
+  cancelButton.addEventListener("click", () => command(() => standing(cancelBody(view, selection.unitId))));
+  splitInput.addEventListener("input", () => { splitCount = Number(splitInput.value); render(); });
+  partnerSelect.addEventListener("change", () => render());
+  splitButton.addEventListener("click", () => command(() => formation(splitBody(view, selection.unitId, splitCount, selection.destination))));
+  combineButton.addEventListener("click", () => command(() => formation(combineBody(view, selection.unitId, partnerSelect.value))));
 
   clockButton.addEventListener("click", () => act(async () => {
     view = await api.clock(view.clock.running ? "pause" : "start", view.game_id);

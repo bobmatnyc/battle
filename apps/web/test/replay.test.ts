@@ -21,6 +21,7 @@ function replayApi(side = "union"): DeskApi & {asked: string[]} {
   const never = async (): Promise<never> => { throw new Error("not used by replay"); };
   return {
     asked, state: never, map: never, scenarios: never, orders: never, clock: never, newBattle: never,
+    standingOrder: never, formation: never,
     history: async (gameId) => { asked.push(`history ${gameId}`); return entries(); },
     replay: async (gameId, revision) => {
       asked.push(`replay ${gameId} ${revision}`);

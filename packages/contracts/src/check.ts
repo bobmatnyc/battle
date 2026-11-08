@@ -34,6 +34,12 @@ export function fail(path: string, problem: string): never {
 export const string: Check<string> = (input, path) =>
   typeof input === "string" ? input : fail(path, `expected string, got ${describe(input)}`);
 
+/** A string with at least one character (ids, cursors). */
+export const nonEmpty: Check<string> = (input, path) => {
+  const value = string(input, path);
+  return value ? value : fail(path, "expected a non-empty string");
+};
+
 export const boolean: Check<boolean> = (input, path) =>
   typeof input === "boolean" ? input : fail(path, `expected boolean, got ${describe(input)}`);
 

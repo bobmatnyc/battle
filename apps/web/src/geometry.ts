@@ -11,6 +11,16 @@ export function hexCenter(pos: Hex, radius: number): [number, number] {
   return [(col + 0.5 * (row & 1)) * Math.sqrt(3) * radius + MARGIN_X, row * 1.5 * radius + MARGIN_Y];
 }
 
+/** Hexes between `a` and `b`, as the POC counts them (grid.distance: odd-row offset to cube). */
+export function hexDistance(a: Hex, b: Hex): number {
+  const cube = ([col, row]: Hex): [number, number, number] => {
+    const x = col - (row - (row & 1)) / 2;
+    return [x, -x - row, row];
+  };
+  const [p, q] = [cube(a), cube(b)];
+  return Math.max(...p.map((value, index) => Math.abs(value - q[index]!)));
+}
+
 /** SVG `points` for the hex outline. */
 export function hexPoints(pos: Hex, radius: number): string {
   const [x, y] = hexCenter(pos, radius);

@@ -1,7 +1,7 @@
 // HTTP responses and request bodies of the Python POC (adapters/http_api.py):
 // /api/state, /api/replay, /api/history and the /api/orders body.
 import {
-  array, boolean, count, fail, hex, jsonObject, literal, nullable, number, object, parse,
+  array, boolean, count, fail, hex, jsonObject, literal, nonEmpty, nullable, number, object, parse,
   refine, string, type Check, type JsonObject,
 } from "./check.ts";
 import {commanderView, godView, type CommanderView, type GodView} from "./views.ts";
@@ -30,11 +30,6 @@ export const chatMessage: Check<ChatMessage> = object({
   id: count, game_id: string, turn: count, role: literal("user", "assistant"),
   content: string, proposals: array(jsonObject), source: string,
 });
-
-const nonEmpty: Check<string> = (input, path) => {
-  const value = string(input, path);
-  return value ? value : fail(path, "expected a non-empty string");
-};
 
 /** Fields BattleService.state adds to the projection; a replay has none. */
 export const LIVE_FIELDS = [

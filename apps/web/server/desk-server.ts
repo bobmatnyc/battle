@@ -13,6 +13,7 @@ import {stripTypeScriptTypes} from "node:module";
 import type {AddressInfo} from "node:net";
 import {resolve, sep} from "node:path";
 import {fileURLToPath} from "node:url";
+import {ContractError, formationSubmission, parse, standingOrderSubmission, type Check} from "@battle/contracts";
 
 const WEB_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const ROOTS: Record<string, string> = {
@@ -39,7 +40,30 @@ export const ROUTES: Readonly<Record<string, "GET" | "POST">> = Object.freeze({
   "/api/state": "GET", "/api/map": "GET", "/api/scenarios": "GET",
   "/api/orders": "POST", "/api/clock": "POST", "/api/new": "POST",
   "/api/history": "GET", "/api/replay": "GET",
+  "/api/standing-orders": "POST", "/api/formations": "POST",
 });
+
+/** docs/research/81 §12: the routes whose body is relayed only as the checked copy of its contract. */
+export const BODY_CONTRACTS: Readonly<Record<string, Check<unknown>>> = Object.freeze({
+  "/api/standing-orders": standingOrderSubmission, "/api/formations": formationSubmission,
+});
+
+/** Why: the desk server forwards only the key set the POC command accepts.
+ * What: `payload` unchanged on a route without a body contract; else the JSON re-serialized from
+ * the contract's checked copy, or a 400 refusal naming the bad field (never relayed).
+ * Test: `standing orders and formations are relayed only as contract-valid bodies; a malformed one is a 400 never relayed`. */
+export function checkedBody(path: string, payload: Buffer): Buffer | [number, string] {
+  const contract = BODY_CONTRACTS[path];
+  if (!contract) return payload;
+  let input: unknown;
+  try { input = JSON.parse(payload.toString("utf8")); } catch { return [400, `${path} needs a JSON body.`]; }
+  try {
+    return Buffer.from(JSON.stringify(parse(contract, input)));
+  } catch (error) {
+    if (error instanceof ContractError) return [400, `The desk refused a malformed request: ${error.message}`];
+    throw error;
+  }
+}
 
 /** The query keys relayed per route, each required once; every other route's query is dropped.
  * Replay takes no `side` or `view`, so the POC replays the player's own commander view only. */
@@ -156,7 +180,9 @@ function readBody(req: IncomingMessage): Promise<Buffer> {
 // re-reads state rather than report a plain failure (docs/research/71, review #6).
 // `path` is relayTarget's: the path, plus game_id and revision on the replay routes only.
 async function relay(poc: URL, path: string, req: IncomingMessage, res: ServerResponse, timeoutMs: number): Promise<void> {
-  const payload = req.method === "POST" ? await readBody(req) : Buffer.alloc(0);
+  const checked = req.method === "POST" ? checkedBody(path, await readBody(req)) : Buffer.alloc(0);
+  if (!Buffer.isBuffer(checked)) return sendError(res, checked[0], checked[1]);
+  const payload = checked;
   const headers: Record<string, string> = {Host: poc.host};
   if (req.headers.origin) headers["Origin"] = poc.origin;
   if (req.headers["content-type"]) headers["Content-Type"] = req.headers["content-type"];

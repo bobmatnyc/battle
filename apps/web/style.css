@@ -75,5 +75,8 @@ button { margin: 4px 4px 0 0; padding: 6px 10px; }
 .order-help { font-size: 12px; margin: 4px 0; }
 .order-help p { margin: 2px 0; }
 .dispatches { max-height: 220px; overflow-y: auto; font-size: 12px; }
+.standing-orders, .formation-ops { max-height: 140px; overflow-y: auto; font-size: 12px; }
+.standing-current { font-size: 12px; margin: 2px 0 6px; }
+#split-count { width: 5em; }
 select { padding: 4px; max-width: 100%; }
 @media (max-width: 760px) { .desk { grid-template-columns: 1fr; } }
