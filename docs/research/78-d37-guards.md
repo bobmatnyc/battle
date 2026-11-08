@@ -1,6 +1,6 @@
 # 78 — D37 guards on the paid model batch
 
-**Date:** 2026-11-08. **Task:** bt-T13. **Rulings:** D37 (Bob): option A of [69](69-model-run-cost-estimate.md) §5, Sonnet 5.5, 12 games, a $14 cap (planning $10.65, worst case $30.15), on a new OpenRouter key limited to $14. Architect key decision: battle project scope, secret `OPENROUTER_API_KEY_D37`, injected as `OPENROUTER_API_KEY` into the batch process only. Architect acceptance (14:45Z): items 1 to 7 below. Code head `8bbb87c`, base `65775a1` (draft PR #14's branch rebased onto it). No model API was called, no key was read and nothing was spent.
+**Date:** 2026-11-08. **Task:** bt-T13. **Rulings:** D37 (Bob): option A of [69](69-model-run-cost-estimate.md) §5, Sonnet 5.5, 12 games, a $14 cap (planning $10.65, worst case $30.15), on a new OpenRouter key limited to $14. Architect key decision: battle project scope, secret `OPENROUTER_API_KEY_D37`, injected as `OPENROUTER_API_KEY` into the batch process only. Architect acceptance (14:45Z): items 1 to 7 below. Code head `a0fdc84`, base `b5a8c9f`. Draft PR #14's branch was rebased onto `65775a1` (code head `8bbb87c`), then, after the review round of section 3a, onto `b5a8c9f`. No model API was called, no key was read and nothing was spent.
 
 This doc closes what [69](69-model-run-cost-estimate.md) §9 left open: "the third control of section 5 (the OpenRouter key's credit limit equal to the cap) stays open, pending D37".
 
@@ -18,7 +18,7 @@ This doc closes what [69](69-model-run-cost-estimate.md) §9 left open: "the thi
 
 Item 6 (the existing guards) is unchanged code; section 3 lists its tests.
 
-**Exit codes.** 0: every planned game finished as a model game within the cap. 2: refused before start (dirty tree, key, key limit, flags). 3: the cap (a budget stop, or spend at the cap). 4: a failed game (fallback, missing cost, replay mismatch, interrupt). 5: an OpenRouter credit or budget refusal.
+**Exit codes.** 0: every planned game finished as a model game within the cap. 2: refused before start (dirty tree, no named plan, a price override, key, key limit, flags). 3: the cap (a budget stop, or spend at the cap). 4: a failed game (fallback, missing cost, replay mismatch, interrupt). 5: an OpenRouter credit or budget refusal.
 
 ## 2. OpenRouter behaviour the guards rely on
 
@@ -67,21 +67,39 @@ These go through the real adapter (`OpenRouterProvider` and `fetch_key_info`) wi
 | m4b | the flag refusal removed | the override test, "SystemExit not raised" |
 | m5 | the `provider_limit` branch in `play` removed | the stop test, 4 of 4 cases |
 
+## 3a. Review round (code-critic WARN on `998063c`)
+
+| Item | Change | Files |
+|---|---|---|
+| A (HIGH) | `--input-price` and `--output-price` are refused for a model listed in `battle.spend.PRICES`, so an override can no longer lower the reserve below the real price. `Price` refuses a rate of 0 or below. `--model anthropic/claude-sonnet-5.5 --cap-usd 14 --input-price 0 --output-price 0` exits 2 before any provider call | `apps/poc/scripts/model_runs.py` (`price_for`), `apps/poc/battle/spend.py` (`Price`) |
+| B (MEDIUM, PM decision) | A run that would spend needs a named plan in `PAID_PLANS`. Without `--paid-plan`, `main` refuses a real run before the key-info call. `run_batch` refuses the OpenRouter adapter unless `paid_plan` names a plan whose model and cap the batch has. Dry runs and tests with fake providers keep the generic path | `apps/poc/scripts/model_runs.py` (`main`, `run_batch`) |
+| C (MEDIUM) | `key_limit_check` refuses a key whose `limit_reset` is not None (daily, weekly, monthly or an unrecognised value): a reset would re-arm the key during the batch | `apps/poc/battle/paid_batch.py` |
+| D (LOW) | The key is sent with `Request.add_unredirected_header("Authorization", …)` on the key-info and chat-completions requests, so urllib does not copy it to a redirect target | `apps/poc/battle/adapters/openrouter.py` |
+
+Test fixtures that priced a side at $0 now use small positive rates (`FREE` is `Price(1e-9, 1e-9, 1)`); the exact-cap tests build reserves of exactly $0.01 and $0.02 from 1,024 overhead tokens at $0.0009765625 per million plus 9,999 or 19,999 output tokens at $1 per million.
+
+| Item | Test | Red first on `998063c` | Mutation |
+|---|---|---|---|
+| A | `test_price_overrides_cannot_lower_a_listed_price_and_no_rate_is_zero` | the zero-price, $0.001 and list-price overrides reach the provider ("this opener or provider must not be called"); `Price(0.0, 10.0, 1)` and `Price(2.0, 0.0, 1)` raise nothing | mA1: the override refusal removed, red; mA2: `r <= 0` back to `r < 0`, red |
+| B | `test_a_real_run_needs_a_named_plan` | the generic real run is not refused for a missing plan ("'named plan' not found") | mB1: the `main` refusal removed, red; mB2: the `run_batch` refusal removed, red |
+| C | `test_key_limit_check_accepts_only_a_key_limited_to_the_cap` (cases: resets monthly, daily, unrecognised) | 3 cases fail, "True is not false" | mC: the reset refusal removed, red |
+| D | `test_the_key_header_is_not_copied_on_redirect` | both requests carry the key in redirected headers ("None != 'Bearer …'") | mD1: key-info header back to `headers=`, red; mD2: chat header back to `headers=`, red |
+
 ## 4. Gates, digests and evidence
 
-All under the git-ignored `apps/poc/artifacts/d37-guards-8bbb87c/` in the main checkout. `MANIFEST.txt` lists every file and each gate's exit code. Each log starts with its command and ends with `EXIT=`.
+Round 2, on the rebased head: all under the git-ignored `apps/poc/artifacts/d37-guards-a0fdc84/` in the main checkout (red first on `998063c`, mutations, gates, digests, dry run). Round 1 (`8bbb87c` on `65775a1`): `apps/poc/artifacts/d37-guards-8bbb87c/` (red first on `44babae` and mutations for items 1 to 5, as in section 3). `MANIFEST.txt` lists every file and each log's exit code. Each log starts with its command and ends with `EXIT=`. The gates ran one at a time.
 
 | Gate | Result |
 |---|---|
-| `make test-poc` | `Ran 791 tests … OK` (765 at `65775a1`, plus the branch's 15 and the 11 above), then `smoke_ui.mjs`, map geometry, map features, route and sight; exit 0 |
-| `make headless-poc` | Little Round Top: winner union, 60 turns, 2,573 events, the same unit strengths, replay `identical` (63 revisions), as at `65775a1` (`headless-poc-main.log`) |
+| `make test-poc` | `Ran 795 tests … OK` (766 at `b5a8c9f`, plus the branch's 15 in `test_model_runs.py` and 14 in `test_d37_guards.py`), then `smoke_ui.mjs`, map geometry, map features, route and sight; exit 0 |
+| `make headless-poc` | Little Round Top: winner union, 60 turns, 2,573 events, the same unit strengths, replay `identical` (63 revisions), as at `b5a8c9f` (`headless-poc-main.log`) |
 | `make smoke-poc` | exit 0 |
 | `npm ci --offline`, `npm run typecheck`, `npm test` | not run: nothing under `packages/` or `apps/web` changed |
 | dry run | `python3 scripts/model_runs.py --paid-plan d37-option-a --dry-run`, exit 0 (`dry-run.log`) |
 
-**Digest comparison against `65775a1`** (`digests.py`, on a `git archive` export of `65775a1` and the head tree): a scripted headless run of every headless catalog entry and every named variant of Concord, Pegasus (with its range and crossed sensitivities), Hill 223 and Gergovia, the sha256 of the result without `game_id` and the final state. 59 of 59 digests are identical (`digests-compare.log`, `digests-main.log`, `digests-head.log`). The head run used the tree at `c60e3f1`, whose `apps/poc/battle` is the same as `8bbb87c` (`diff-battle-since-digest-run.log` is empty); `digests.py` imports only `battle`. The guards change no scripted play.
+**Digest comparison against `b5a8c9f`** (`digests.py`, on a `git archive` export of `b5a8c9f` and the head tree): a scripted headless run of every headless catalog entry and every named variant of Concord, Pegasus (with its range and crossed sensitivities), Hill 223 and Gergovia, the sha256 of the result without `game_id` and the final state. 59 of 59 digests are identical (`digests-compare.log`, `digests-main.log`, `digests-head.log`; the head run is six shards, `digests-head-shard0.log` to `shard5.log`). The guards change no scripted play.
 
-A first `make test-poc` run, made while both digest runs loaded the machine, failed one wall-clock test, `test_degenerate_reply_under_cap_stays_fast` (0.27 s against a 0.25 s bound, in reply parsing that this change does not touch). The recorded run was made after the digest runs ended (`test-poc-under-load.log` keeps the first).
+In round 1 a `make test-poc` run made while two digest runs loaded the machine failed one wall-clock test, `test_degenerate_reply_under_cap_stays_fast` (0.27 s against 0.25 s, in reply parsing this change does not touch); see section 7.
 
 ## 5. The paid run (not run)
 
@@ -101,11 +119,18 @@ First, the same command with `--dry-run` in place of `--dir …` and no `tm secr
 
 ## 6. Deviations and open points
 
-- **Generic path.** Without `--paid-plan`, `model_runs.py` still takes `--plan`, `--model`, `--games` and `--cap-usd` for other approved batches (doc 69 stage 1, option B). It has the same key, key-limit, cap and provider-limit guards, but not the model pin. With the D37 key, its key check passes only with `--cap-usd 14`, because the key's limit must not exceed the cap and its remaining credit must cover it.
+- **Generic path (PM decision, review item B).** A run that would spend needs a named plan in `PAID_PLANS`; only `d37-option-a` exists. Without `--paid-plan`, `model_runs.py` accepts `--plan`, `--model`, `--games` and `--cap-usd` only for `--dry-run` and for tests with fake providers. Another batch (doc 69 stage 1, option B) needs its plan approved and added to `PAID_PLANS` first.
 - **The generic path no longer reads `.env.local`.** Doc 69 §9 said the driver loaded `Settings.load()` (environment, then `.env.local`). Item 3 requires the environment only, so a generic batch now also needs the key in its environment. The desk and `python3 -m battle` are unchanged.
-- **`limit_reset`.** A key whose limit resets (daily, weekly, monthly) passes the check; the reset is recorded. A reset during the batch could re-arm the key, but the $14 cap still bounds the batch.
-- **Base.** The brief named `65775a1`. `main` moved to `b5a8c9f` (#18, doc 77) during the task; that commit touches Cannae files, docs 68 and 77 and the README index. A test merge of this branch onto it (`merge-tree-onto-b5a8c9f.log`) conflicts only in the `docs/research/README.md` index, where doc 77's entry and this doc's both end the file; the resolution keeps both, 77 then 78. The code merges cleanly.
+- **`limit_reset`.** A key whose limit resets (daily, weekly, monthly, or an unrecognised value) is refused (review item C). The D37 key must be created with a limit that never resets.
+- **Base.** Round 1 was on `65775a1`, as the brief named. `main` moved to `b5a8c9f` (#18, doc 77) during that round; round 2 rebased onto it. The only conflict was the `docs/research/README.md` index, where docs 77 and 78 both ended the file; the resolution keeps 77, then 78.
 
 ## 7. Review notes
 
-Pending review.
+Pending PM.
+
+Recorded from the code-critic review of `998063c`, not fixed in this round (the PM's ruling):
+
+- A crash outside `HeadlessRunner.run` (for example while `build_headless` opens the database) leaves no `runs.jsonl` record for that game.
+- `CommanderService.chat` calls the provider without the `before_request` hook. The batch never calls `chat`.
+- The batch does not check that the model the provider returned is the requested model.
+- `test_degenerate_reply_under_cap_stays_fast` asserts a 0.25 s wall-clock bound and fails under machine load.
