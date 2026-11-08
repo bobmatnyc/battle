@@ -9,7 +9,7 @@ import unittest
 from dataclasses import replace
 
 from battle import grid, victory
-from battle.scenario_cannae import CANNAE_ENVELOPMENT as ENTRY, VARIANTS, cannae_entry
+from battle.scenario_cannae import CANNAE_ENVELOPMENT as ENTRY, PRESS_ROW, VARIANTS, cannae_entry
 from battle.scenario_entry import build_state, validate
 from battle.victory_encircle import D38
 
@@ -95,6 +95,41 @@ class Q2WallTests(unittest.TestCase):
         self.assertEqual(known(ENTRY, routed=False), 0)
         self.assertIsNone(known(ENTRY, routed=True))
         self.assertEqual(known(OLD, routed=True), 0)
+
+
+class Q3RearEdgeTests(unittest.TestCase):
+    """D38 Q3: a Roman unit that reaches the Carthaginian rear (row-0) edge has broken through."""
+
+    def scored(self, entry, l1, carthaginians):
+        """``entry``'s start with L1 at ``l1``, the Carthaginians on ``carthaginians`` and the rest
+        of them at (0, 20); returns the snapshot after one score."""
+        s = build_state(entry)
+        placed = [u for u in s["units"] if u["side"] == "carthaginian"]
+        for u in placed:
+            u["pos"] = [0, 20]
+        for u, p in zip(placed, carthaginians):
+            u["pos"] = list(p)
+        unit(s, "L1")["pos"] = list(l1)
+        victory.score(s)
+        return s
+
+    def test_q3_a_unit_on_the_rear_edge_has_broken_through(self):
+        ring = grid.neighbors([5, 0])  # Every neighbour held, at zoc 1: no path to any exit.
+        old, new = self.scored(OLD, (5, 0), ring), self.scored(ENTRY, (5, 0), ring)
+        self.assertEqual(old["victory"]["record"][-1][1], 1)
+        self.assertNotIn("broke_through", old["victory"])
+        self.assertEqual(new["victory"]["record"][-1][1], 0)
+        self.assertEqual(new["victory"]["broke_through"], {"L1": [0, 3550]})
+        from battle.victory_encircle import REAR_EDGE_ROW
+
+        self.assertEqual((REAR_EDGE_ROW, PRESS_ROW), (0, 0))  # The edge the Roman press aims at.
+
+    def test_q3_a_path_to_the_rear_edge_is_a_way_out(self):
+        wall = [(c, 4) for c in range(0, 23, 2)]  # At zoc 1 the whole of row 4 is shut.
+        self.assertEqual(self.scored(OLD, (5, 1), wall)["victory"]["record"][-1][1], 1)
+        new = self.scored(ENTRY, (5, 1), wall)["victory"]
+        self.assertEqual(new["record"][-1][1], 0)
+        self.assertEqual(new["broke_through"], {})  # A way out, not yet a breakthrough.
 
 
 if __name__ == "__main__":

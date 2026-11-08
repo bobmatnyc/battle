@@ -310,6 +310,7 @@ class CannaeRunTests(unittest.TestCase):
         self.assertEqual((row["replay"], row["turn"], row["time"]), ("identical", 12, "08:36:00"))
         self.assertEqual(len(final["victory"]["record"]), 12)
         self.assertIn(row["winner"], ("roman", "carthaginian"))
+        self.assertEqual((row["edition"], row["broke_through"]), ("cannae-d38", {}))  # docs/research/82 Q3.
         self.assertEqual(sorted(runs.ENTRIES), sorted(["default", *VARIANTS]))
 
 

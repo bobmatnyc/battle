@@ -27,6 +27,7 @@ BREAK_ONLY_BELOW_SHARE = True
 # D38 (Bob 2026-11-08 17:41Z): the Cannae rules edition of docs/research/82, opted into per entry.
 D38 = "cannae-d38"
 EDITIONS = (D38,)
+REAR_EDGE_ROW = 0  # D38 Q3: the Carthaginian rear map edge (scenario_cannae.PRESS_ROW).
 
 
 def encircle_only_problems(entry):
@@ -147,6 +148,21 @@ def _wall(u, d38):
     return _live(u) and not (d38 and u["status"] in INEFFECTIVE)
 
 
+def _measure(cells, pocket, enemies, v, flow=True):
+    """Why: D38 Q3 (docs/research/82; doc 79 §7 Q3 (c)) reads a Roman unit at
+    the Carthaginian rear edge as broken through, not enclosed.
+    What: ``enclosure`` with the snapshot's exits; under ``cannae-d38`` every
+    hex of row ``REAR_EDGE_ROW`` is an exit too, and a pocket unit standing on
+    that row is never enclosed, whatever its neighbours.
+    Test: `test_q3_a_unit_on_the_rear_edge_has_broken_through`,
+    `test_q3_a_path_to_the_rear_edge_is_a_way_out`."""
+    if v.get("edition") != D38:
+        return enclosure(cells, pocket, enemies, v["exits"], v["zoc"], flow)
+    edge = [[c, REAR_EDGE_ROW] for c in range(grid.COLS) if [c, REAR_EDGE_ROW] not in v["exits"]]
+    enclosed, open_exits, narrowest = enclosure(cells, pocket, enemies, v["exits"] + edge, v["zoc"], flow)
+    return [uid for uid in enclosed if pocket[uid][1] != REAR_EDGE_ROW], open_exits, narrowest
+
+
 class Encircle:
     """Doc 63 §5 ``encircle``. Each interval a unit of ``pocket_units`` (the
     attacker's heavy infantry) is enclosed when ``enclosure`` finds no route
@@ -200,7 +216,8 @@ class Encircle:
     def setup(self, entry):
         v = entry.victory
         force = sum(_starting_strength(entry, uid) for uid in v.pocket_units)
-        edition = {} if v.edition is None else {"edition": v.edition}  # docs/research/82: opt-in only.
+        # docs/research/82: opt-in only; ``broke_through`` is D38 Q3's record.
+        edition = {} if v.edition is None else {"edition": v.edition, "broke_through": {}}
         return {**edition, "kind": self.kind, "objective_name": v.objective_name, "exits": [list(p) for p in v.exits],
                 "pocket_units": list(v.pocket_units), "centre_units": list(v.centre_units), "zoc": v.zoc,
                 "force": force, "enclosed_needed": -(-force * v.min_enclosed_pct // 100),
@@ -222,7 +239,7 @@ class Encircle:
             else:
                 pocket = {c["id"]: c["pos"] for c in seen if c["id"] in v["pocket_units"]}
                 enemies = [u["pos"] for u in own]
-            if pocket and enclosure(s["cells"], pocket, enemies, v["exits"], v["zoc"], flow=False)[0]:
+            if pocket and _measure(s["cells"], pocket, enemies, v, flow=False)[0]:
                 v["known_closed_turn"][side] = s["turn"]
 
     def score(self, s):
@@ -234,7 +251,7 @@ class Encircle:
         units = {u["id"]: u for u in s["units"]}
         pocket = {uid: units[uid]["pos"] for uid in v["pocket_units"] if _live(units[uid])}
         enemies = [u["pos"] for u in s["units"] if u["side"] == defender and _wall(u, d38)]
-        enclosed, open_exits, narrowest = enclosure(s["cells"], pocket, enemies, v["exits"], v["zoc"])
+        enclosed, open_exits, narrowest = _measure(s["cells"], pocket, enemies, v)
         men = sum(units[uid]["strength"] for uid in enclosed)
         lost = sum(units[uid]["initial"] - units[uid]["strength"] for uid in v["pocket_units"])
         contact = sum(1 for p in pocket.values() if any(grid.distance(p, e) <= 1 for e in enemies))
@@ -246,6 +263,9 @@ class Encircle:
         for u in s["units"]:
             if u["side"] == attacker and _live(u) and grid.key(u["pos"]) in exits and u["id"] not in v["exited"]:
                 v["exited"][u["id"]] = [s["turn"], u["strength"]]
+        for uid, p in pocket.items():  # D38 Q3: recorded, first interval and men on the rear edge.
+            if d38 and p[1] == REAR_EDGE_ROW and uid not in v["broke_through"]:
+                v["broke_through"][uid] = [s["turn"], units[uid]["strength"]]
         broken = [uid for uid in v["centre_units"] if units[uid]["status"] in INEFFECTIVE or units[uid]["strength"] <= 0]
         below = men + lost < v["enclosed_needed"] or not BREAK_ONLY_BELOW_SHARE  # Dd8 (Bob 2026-11-07): Q2
         if len(broken) >= v["centre_break"] and below:
