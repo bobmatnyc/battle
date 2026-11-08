@@ -106,7 +106,7 @@ One measured run at `aa8789f`, scripted on both sides, no model, no spend. Comma
 
 The run matches the Mac run in every printed field. `cannae_runs.py` does not print the headless digests, so they were not compared.
 
-Evidence: `evo-linux:~/analytics/bt12-aa8789f/` and `apps/poc/artifacts/cannae-ride-4a766e7/evo/` (`MANIFEST.txt`; sqlite sha256 `36a9f1be`...`b7e5`).
+Evidence: EVO run dir `bt12-aa8789f` and `apps/poc/artifacts/cannae-ride-4a766e7/evo/` (`MANIFEST.txt`; sqlite sha256 `36a9f1be`...`b7e5`).
 
 The ride now fires, but the outcome is still a Roman win. The 14-run batch waits for the Architect.
 
