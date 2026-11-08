@@ -28,28 +28,32 @@ test("a child that exits before it is ready rejects with its output", {timeout: 
 
 test("a browser that gives no DevTools endpoint is killed and launch rejects", {timeout: 10000}, async () => {
   const dir = mkdtempSync(join(tmpdir(), "battle-silent-browser."));
-  const binary = join(dir, "browser");
-  writeFileSync(binary, "#!/bin/sh\nexec sleep 300\n");
-  chmodSync(binary, 0o755);
-  let pid: number | undefined;
-  await assert.rejects(launch(binary, join(dir, "profile"), process.env, 300).catch((error: Error & {pid?: number}) => {
-    pid = error.pid;
-    throw error;
-  }), /no DevTools endpoint/);
-  assert.ok(pid, "the error names the killed process");
-  assert.equal(alive(pid), false);
+  try {
+    const binary = join(dir, "browser");
+    writeFileSync(binary, "#!/bin/sh\nexec sleep 300\n");
+    chmodSync(binary, 0o755);
+    let pid: number | undefined;
+    await assert.rejects(launch(binary, join(dir, "profile"), process.env, 300).catch((error: Error & {pid?: number}) => {
+      pid = error.pid;
+      throw error;
+    }), /no DevTools endpoint/);
+    assert.ok(pid, "the error names the killed process");
+    assert.equal(alive(pid), false);
+  } finally { removeDir(dir); }
 });
 
-function hungBrowser(): {dir: string; binary: string} {
+// Slice 2 review: the fake browser's temporary directory is removed whether the test passes or fails.
+async function withHungBrowser(work: (dir: string, binary: string) => Promise<void>): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), "battle-hung-browser."));
-  const binary = join(dir, "browser");
-  writeFileSync(binary, "#!/bin/sh\nsleep 300 &\necho $! >&2\nwait\n");  // a helper, like Chrome's
-  chmodSync(binary, 0o755);
-  return {dir, binary};
+  try {
+    const binary = join(dir, "browser");
+    writeFileSync(binary, "#!/bin/sh\nsleep 300 &\necho $! >&2\nwait\n");  // a helper, like Chrome's
+    chmodSync(binary, 0o755);
+    await work(dir, binary);
+  } finally { removeDir(dir); }
 }
 
-test("launch registers the browser before it waits, so cleanup can stop its group mid-launch", {timeout: 10000}, async () => {
-  const {dir, binary} = hungBrowser();
+test("launch registers the browser before it waits, so cleanup can stop its group mid-launch", {timeout: 10000}, () => withHungBrowser(async (dir, binary) => {
   let registered: ReturnType<typeof spawn> | undefined;
   const launching = launch(binary, join(dir, "profile"), process.env, 60000, (child) => { registered = child; return true; });
   launching.catch(() => {});
@@ -59,15 +63,21 @@ test("launch registers the browser before it waits, so cleanup can stop its grou
   await assert.rejects(launching, /exited/);
   assert.equal(alive(registered.pid), false);
   assert.equal(alive(-registered.pid!), false, "no process is left in the browser's group");
-});
+}));
 
-test("launch refuses to start a browser once cleanup has begun", {timeout: 10000}, async () => {
-  const {dir, binary} = hungBrowser();
+test("launch refuses to start a browser once cleanup has begun", {timeout: 10000}, () => withHungBrowser(async (dir, binary) => {
   let pid: number | undefined;
   await assert.rejects(launch(binary, join(dir, "profile"), process.env, 60000, (child) => { pid = child.pid; return false; }),
     /cleanup has begun/);
   assert.ok(pid);
   assert.equal(alive(-pid!), false, "the refused browser's group is stopped");
+}));
+
+test("the hung-browser helper removes its directory even when the test body fails", async () => {
+  let made = "";
+  await assert.rejects(withHungBrowser(async (dir) => { made = dir; throw new Error("body failed"); }), /body failed/);
+  assert.ok(made);
+  assert.equal(existsSync(made), false);
 });
 
 class FakeSocket extends EventTarget implements SocketLike {

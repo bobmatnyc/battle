@@ -1,7 +1,7 @@
 // The local desk server: serves the TypeScript desk as JavaScript and relays /api to a loopback POC.
 import assert from "node:assert/strict";
 import {createServer, request, type IncomingHttpHeaders, type Server} from "node:http";
-import {mkdirSync, mkdtempSync, writeFileSync} from "node:fs";
+import {mkdirSync, mkdtempSync, readFileSync, writeFileSync} from "node:fs";
 import type {AddressInfo} from "node:net";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -164,7 +164,7 @@ test("an unreachable POC is a 502 whose outcome is known: nothing was sent", {ti
 test("only the routes the desk uses are relayed; others never reach the POC", async () => {
   seen.length = 0;
   const refused: [string, string, number][] = [
-    ["GET", "/api/history", 404], ["GET", "/api/replay?revision=0", 404], ["POST", "/api/chat", 404],
+    ["POST", "/api/history", 405], ["POST", "/api/replay", 405], ["POST", "/api/chat", 404],
     ["POST", "/api/advance", 404], ["POST", "/api/mode", 404], ["POST", "/api/standing-orders", 404],
     ["POST", "/api/formations", 404], ["POST", "/api/recommendations", 404], ["GET", "/api/unknown", 404],
     ["GET", "/api/orders", 405], ["POST", "/api/state", 405],
@@ -195,6 +195,55 @@ test("a God view or an export is refused with 403 and never relayed", async () =
   const post = await call("/api/orders?view=god", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
   assert.equal(post.status, 403);
   assert.equal(seen.length, 0);
+});
+
+// Slice 2 review: the relay forwards the path only on the desk's live routes.
+test("the query string is dropped on the desk's live routes", async () => {
+  seen.length = 0;
+  assert.equal((await call("/api/state?game_id=abc&revision=2&side=confederate&x=1")).status, 200);
+  assert.equal((await call("/api/map?game_id=abc")).status, 200);
+  await call("/api/orders?revision=9", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+  assert.deepEqual(seen.map((s) => s.url), ["/api/state", "/api/map", "/api/orders"]);
+});
+
+// docs/research/73: the commander replay uses the POC's own /api/history and /api/replay.
+test("replay and history relay only game_id and revision, so only the player's commander view is replayed", async () => {
+  seen.length = 0;
+  assert.equal((await call("/api/history?game_id=f1c7f1c7f1c7f1c7")).status, 200);
+  assert.equal((await call("/api/replay?revision=3&game_id=f1c7f1c7f1c7f1c7")).status, 200);
+  assert.deepEqual(seen.map((s) => s.url), ["/api/history?game_id=f1c7f1c7f1c7f1c7", "/api/replay?game_id=f1c7f1c7f1c7f1c7&revision=3"]);
+  seen.length = 0;
+  const refused: [string, number, RegExp][] = [
+    ["/api/replay?game_id=g1&revision=3&side=confederate", 403, /commander view/],
+    ["/api/replay?game_id=g1&revision=3&SIDE=union", 403, /commander view/],
+    ["/api/history?game_id=g1&side=union", 403, /commander view/],
+    ["/api/replay?game_id=g1&revision=3&view=god", 403, /God view/],
+    ["/api/replay?game_id=g1", 400, /revision/],
+    ["/api/replay?revision=3", 400, /game_id/],
+    ["/api/history", 400, /game_id/],
+    ["/api/replay?game_id=g1&revision=-1", 400, /revision/],
+    ["/api/replay?game_id=g1&revision=3&revision=4", 400, /revision/],
+    ["/api/replay?game_id=..%2Fx&revision=3", 400, /game_id/],
+    ["/api/replay?game_id=g1&revision=3&format=full", 400, /game_id and revision/],
+  ];
+  for (const [path, status, error] of refused) {
+    const reply = await call(path);
+    assert.equal(reply.status, status, path);
+    assert.match(JSON.parse(reply.body).error, error, path);
+  }
+  assert.equal(seen.length, 0, "a refused replay request never reaches the POC");
+});
+
+test("the POC's feature status table is served unchanged, and no other POC file is", async () => {
+  const table = await call("/poc/feature-sources.js");
+  assert.equal(table.status, 200);
+  assert.match(String(table.headers["content-type"]), /text\/javascript/);
+  assert.equal(table.body, readFileSync(new URL("../../poc/static/feature-sources.js", import.meta.url), "utf8"));
+  for (const path of ["/poc/map-features.js", "/poc/app.js", "/poc/../poc/static/app.js", "/poc/feature-sources.ts"]) {
+    assert.equal((await call(path)).status, 404, path);
+  }
+  assert.match((await call("/")).body, /<script src="\/poc\/feature-sources.js"><\/script>\s*<script type="module"/,
+    "the table loads before the desk module");
 });
 
 test("a module that exists but fails to load or strip is a 500 with the reason, not a 404", async () => {

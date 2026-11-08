@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {contactsMarkup, mapMarkup, ordersMarkup} from "../src/render.ts";
-import {commander, map} from "./fixtures.ts";
+import {statusTableFor} from "../src/feature-sources.ts";
+import {commander, map, pocFeatureSources} from "./fixtures.ts";
 
 const count = (text: string, pattern: RegExp): number => (text.match(pattern) ?? []).length;
 
@@ -55,4 +56,26 @@ test("text from the server is escaped", () => {
   const svg = mapMarkup(hostile, map(), {unitId: null, destination: null});
   assert.ok(!svg.includes("<img"));
   assert.ok(svg.includes("&lt;img"));
+});
+
+test("the map draws the commander view's features above the hexes and below the counters, with status in each hex tooltip", () => {
+  const view = commander();
+  const sources = statusTableFor(pocFeatureSources(), view.scenario_brief?.id);
+  const svg = mapMarkup(view, map(), {unitId: null, destination: null}, sources);
+  const layer = svg.indexOf("<g class=\"battle-features\"");
+  assert.ok(layer > svg.lastIndexOf("<polygon class=\"hex"), "features are drawn over the hexes");
+  assert.ok(layer < svg.indexOf("<g class=\"units\">"), "counters stay on top");
+  assert.equal(count(svg, /class="feature-mark feature-road"/g), view.map_features.filter((f) => f.kind === "road").length);
+  assert.equal(count(svg, /<rect class="footprint"/g), view.map_features.filter((f) => f.kind === "building").length);
+  const farm = view.map_features.find((f) => f.id === "farmstead") as {pos: [number, number]};
+  assert.match(svg, new RegExp(`data-c="${farm.pos[0]}" data-r="${farm.pos[1]}"[^>]*><title>Hex ${farm.pos.join(",")} [^<]*· Farmstead \\(Illustrative: `));
+});
+
+test("water and marsh cells have their own fill", () => {
+  const terrain = map();
+  terrain.cells[0] = {...terrain.cells[0]!, terrain: "water"};
+  terrain.cells[1] = {...terrain.cells[1]!, terrain: "marsh"};
+  const svg = mapMarkup(commander(), terrain, {unitId: null, destination: null});
+  assert.match(svg, /data-c="0" data-r="0"[^>]*fill="#b9d3e3"/);
+  assert.match(svg, /data-c="1" data-r="0"[^>]*fill="#d7e3cf"/);
 });
