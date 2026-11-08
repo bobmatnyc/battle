@@ -76,7 +76,7 @@ class CannaeEntryTests(unittest.TestCase):
         self.assertNotIn(ENTRY, PLAYER_SCENARIOS)  # Doc 63 §9 q12: headless only.
         dry_run(validate(ENTRY))
         s = build_state(ENTRY)
-        self.assertEqual((s["rules"], s["scenario"]), ("poc-13", "cannae-envelopment-v1"))
+        self.assertEqual((s["rules"], s["scenario"]), ("poc-13", "cannae-envelopment-v2"))  # docs/research/82: cannae-d38.
         self.assertEqual(s["sides"], [{"id": "roman", "name": "Roman", "role": "attacker"},
                                       {"id": "carthaginian", "name": "Carthaginian", "role": "defender"}])
         self.assertEqual((ENTRY.start_time, ENTRY.player, s["commanders"]["roman"]["unit_id"]),
@@ -172,7 +172,7 @@ class CannaeEntryTests(unittest.TestCase):
                 self.assertEqual(differences(VARIANTS[name].entry), paths)
         for d in CAVALRY_DELAYS:
             entry = VARIANTS[f"cavalry-delayed-{d}"].entry
-            self.assertEqual((differences(entry), entry.scripted["carthaginian"]), (set(), cavalry_delay_policy(d)))
+            self.assertEqual((differences(entry), entry.scripted["carthaginian"]), (set(), cavalry_delay_policy(d, 2)))
         self.assertIn("units.L2.pos", differences(VARIANTS["wide-front"].entry))
         for name, v in VARIANTS.items():
             dry_run(validate(v.entry))
@@ -275,7 +275,7 @@ class CannaePolicyTests(unittest.TestCase):
                           if o["unit_id"] in HASDRUBAL])
 
     def test_a_cavalry_delay_holds_the_ride_for_its_intervals(self):
-        units, delayed = self._carthaginians(), POLICIES[cavalry_delay_policy(10)]
+        units, delayed = self._carthaginians(), POLICIES[cavalry_delay_policy(10)]  # v1: HC1 only.
         rides = lambda orders: [o for o in orders if o["unit_id"] in HASDRUBAL]
         self.assertEqual(rides(delayed(observation(20, units, orders=FALLS))[1]),
                          [{"unit_id": "HC1", "stance": "hold", "destination": None}])
@@ -310,6 +310,7 @@ class CannaeRunTests(unittest.TestCase):
         self.assertEqual((row["replay"], row["turn"], row["time"]), ("identical", 12, "08:36:00"))
         self.assertEqual(len(final["victory"]["record"]), 12)
         self.assertIn(row["winner"], ("roman", "carthaginian"))
+        self.assertEqual((row["edition"], row["broke_through"]), ("cannae-d38", {}))  # docs/research/82 Q3.
         self.assertEqual(sorted(runs.ENTRIES), sorted(["default", *VARIANTS]))
 
 

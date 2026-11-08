@@ -61,8 +61,9 @@ CARTHAGINIAN_POLICY = "scripted-cannae-carthaginian-v1"
 DESERTERS_POLICY = "scripted-cannae-carthaginian-deserters-v1"
 
 
-def cavalry_delay_policy(delay):
-    return f"scripted-cannae-carthaginian-cavalry-delay-{delay}-v1"
+def cavalry_delay_policy(delay, version=1):
+    """The delay control's id; v2 holds all three horse units (D38 Q5, docs/research/82)."""
+    return f"scripted-cannae-carthaginian-cavalry-delay-{delay}-v{version}"
 
 
 LEGIONS = tuple(f"L{i}" for i in range(1, 9))
@@ -290,11 +291,25 @@ PROVENANCE = {
 }
 
 
+# victory_encircle.D38, spelt here: importing that module first would close an import cycle through victory.
+D38 = "cannae-d38"
+D38_PROVENANCE = ("authored: D38 (Bob 2026-11-08 17:41Z), the cannae-d38 edition of docs/research/82 on doc 79 §7: "
+                  "a routed defender is no wall (Q2); a Roman unit at the row-0 edge has broken through (Q3); "
+                  "the share held for 20 consecutive intervals wins at once (Q1); cavalry-delayed holds all "
+                  "three horse units (Q5)")
+
+
 def cannae_entry(variant=None, *, design=True, wheels=AFRICANS, horse=1, dust=False, wide=False, reserve=False,
-                 deserters=False, zoc=1, command="SC1", scripted=None, notes=None):
+                 deserters=False, zoc=1, command="SC1", scripted=None, notes=None, edition=D38):
     """One Cannae entry; ``variant`` None is the catalog default. The
-    keywords change one question each; ``notes`` adds provenance."""
+    keywords change one question each; ``notes`` adds provenance.
+    ``edition`` is the encircle rules edition: D38 (docs/research/82, the
+    catalog's), or None for the rules every run before it was recorded under,
+    with the ``-v1`` snapshot label.
+    Test: `test_every_cannae_entry_opts_into_the_d38_edition`,
+    `test_the_old_edition_entry_builds_the_d4e3ac7_opening`."""
     suffix = "" if variant is None else f"-{variant}"
+    version = 1 if edition is None else 2  # docs/research/82: the D38 edition is a new snapshot label.
     return ScenarioEntry(
         id="cannae-envelopment" + suffix,
         title="Cannae" + ("" if variant is None else f" ({variant})"),
@@ -302,7 +317,7 @@ def cannae_entry(variant=None, *, design=True, wheels=AFRICANS, horse=1, dust=Fa
         rules=RULES_VERSION,
         prompt_version="cannae-side-v1",
         prompt_setting="the plain of the Aufidus near Cannae, Apulia, 216 BCE",
-        labels={RULES_VERSION: f"cannae-envelopment{suffix}-v1"},
+        labels={RULES_VERSION: f"cannae-envelopment{suffix}-v{version}"},
         location="The plain by the Aufidus · Cannae, Apulia",
         date="216 BCE",
         start_time="08:00:00",
@@ -323,7 +338,8 @@ def cannae_entry(variant=None, *, design=True, wheels=AFRICANS, horse=1, dust=Fa
         victory=VictoryEntry(kind="encircle", objective=ROMAN_HQ, deadline_turns=DEADLINE,
                              objective_name="the larger camp", exits=tuple(EXITS.values()),
                              pocket_units=HEAVY,
-                             centre_units=CENTRE, zoc=zoc, min_enclosed_pct=50, centre_break=5),
+                             centre_units=CENTRE, zoc=zoc, min_enclosed_pct=50, centre_break=5,
+                             edition=edition),
         map=MapEntry(terrain=terrain, features=FEATURES, cols=COLS, rows=ROWS, metres_per_hex=METRES_PER_HEX,
                      width=1080, height=840,
                      source="Authored, schematic: an open plain with the river on the Roman right (docs/research/63, 68).",
@@ -337,7 +353,7 @@ def cannae_entry(variant=None, *, design=True, wheels=AFRICANS, horse=1, dust=Fa
         tactics=TACTICS_V11,
         army=ARMY,
         scripted=scripted or {"roman": ROMAN_POLICY, "carthaginian": CARTHAGINIAN_POLICY},
-        provenance={**PROVENANCE, **(notes or {})},
+        provenance={**PROVENANCE, **({"victory.edition": D38_PROVENANCE} if edition else {}), **(notes or {})},
     )
 
 
@@ -352,7 +368,7 @@ def _variants():
     ) + tuple(
         (f"cavalry-delayed-{d}", "doc 63 §8 cavalry-delayed (10, 20, 40)",
          f"Hasdrubal's horse waits {d} intervals after its trigger before it rides", "doc 36; authored",
-         dict(scripted={"roman": ROMAN_POLICY, "carthaginian": cavalry_delay_policy(d)})) for d in CAVALRY_DELAYS
+         dict(scripted={"roman": ROMAN_POLICY, "carthaginian": cavalry_delay_policy(d, 2)})) for d in CAVALRY_DELAYS
     ) + tuple(
         (f"one-wing-fixed-{uid.lower()}", "doc 63 §8 one-wing-fixed", f"{uid} has no wheel trigger", "doc 36",
          dict(wheels=tuple(a for a in AFRICANS if a != uid))) for uid in AFRICANS

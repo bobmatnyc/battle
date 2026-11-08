@@ -11,7 +11,8 @@ For each it prints one JSON line: the winner, end turn and clock time, the
 reason, replay status, the pocket's closing interval on the ground and in each
 headquarters' delivered reports, the most units and men enclosed at any
 interval and when, the last ``record`` row, the attacker units that reached an
-exit (interval and men), per unit the end strength, status, hex and front,
+exit (interval and men), the encircle edition and, under ``cannae-d38``, the
+pocket units that broke through to the rear edge (docs/research/82), per unit the end strength, status, hex and front,
 the yields, wheels and exploit events, each cavalry unit's first fight and the
 interval it left it, Hasdrubal's pursuit (D34), ride and charge order turns, delivered orders
 and their mean delay per side, losses per side against the sources' order of
@@ -86,6 +87,8 @@ def summarise(name, entry, result, final, seconds):
         "closed_turn": v["closed_turn"], "known_closed_turn": v["known_closed_turn"],
         "peak_enclosed": peak and {"turn": peak[0], "units": peak[1], "men": peak[2]},
         "last_record": v["record"][-1] if v["record"] else None, "exited": v["exited"],
+        # docs/research/82: the cannae-d38 edition and its Q3 record; None before it.
+        "edition": v.get("edition"), "broke_through": v.get("broke_through"),
         "units": {u["id"]: [u["strength"], u["status"], u["pos"], u.get("front")] for u in final["units"]},
         "yields": {u["id"]: u["yielded"] for u in final["units"] if u.get("yielded")},
         "wheels": {e["unit_id"]: e["turn"] for e in ev if e["kind"] == "unit_wheeled"},
