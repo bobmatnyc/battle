@@ -30,12 +30,25 @@ CASES = {
     # docs/research/74: Laurie's company marches from its own start down the town road, away from
     # the column. Concord has no building, so it has no sight case.
     'concord-north-bridge': {'unit': 'B2', 'road': 'town-road', 'start': None, 'goal': -1, 'sight': None},
+    # docs/research/75: the west counter-attack group marches the Benouville road from its own start
+    # to the hex before the guard's post. Test arrangement, not a scenario change: the default charges
+    # end the battle at turn 5 (docs/research/54 §5), before any 7-step march, so the test state has
+    # no demolition rule. Pegasus has no building, so it has no sight case.
+    'pegasus-bridge': {'unit': 'R1', 'road': 'benouville-road', 'start': None, 'goal': -2, 'sight': None,
+                       'no_demolition': True},
+    # Hill 223 has no road and no building: no route or sight case.
+    'hill-223-patrol': None,
 }
 out = {}
 for sid in catalog.ids():
     case = CASES[sid]
+    if case is None:
+        out[sid] = None
+        continue
     entry = catalog.resolve(sid)
     s = build_state(entry)
+    if case.get('no_demolition'):
+        s['bridge_demolition'] = []
     road = next(f for f in s['map_features'] if f['id'] == case['road'])
     u = next(u for u in s['units'] if u['id'] == case['unit'])
     if case['start'] is not None:
@@ -103,6 +116,7 @@ function crossesRect(a,b,[x,y,w,h]){
 const outDir=process.argv[2];
 const lines=[];
 for(const [sid,c] of Object.entries(cases)){
+  if(!c){lines.push(`${sid}: no road and no building, so no route or sight case`);continue;}
   context.args=[c.features,{metresPerHex:c.metres_per_hex,cells:c.cells,sources:vm.runInContext(`BattleFeatureSources.forScenario(${JSON.stringify(sid)})`,context)}];
   const layer=vm.runInContext('BattleFeatures.render(args[0],center,esc,args[1])',context);
   // Route: the engine moved the unit to its goal, every step one road hex to the next over a road edge.
@@ -154,5 +168,5 @@ for(const [sid,c] of Object.entries(cases)){
     writeFileSync(join(outDir,`${sid}-route-sight.svg`),svg);
   }
 }
-assert.deepEqual(Object.keys(cases).sort(),['concord-north-bridge','hougoumont-north-gate','little-round-top']);
+assert.deepEqual(Object.keys(cases).sort(),['concord-north-bridge','hill-223-patrol','hougoumont-north-gate','little-round-top','pegasus-bridge']);
 console.log('Route and sight passed:\n  '+lines.join('\n  '));

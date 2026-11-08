@@ -1,20 +1,19 @@
 // Map-feature screenshot harness (docs/research/72 §6). Offline, localhost only, no credentials.
 // Starts an offline POC on a temporary SQLite file and a free port and a headless Chrome/Chromium
-// with its own profile, then captures the command map for Little Round Top, Hougoumont and
-// Concord at the fit view and zoomed in, each with the hex grid on and off, plus the feature
-// legend; plays Concord on the desk to a result (docs/research/74: header, water, roads and
-// bridge, an order accepted, the outcome headline); and one read-only render each of the
-// headless maps with features (Pegasus, Hill 223) through the same static/cartography.js,
-// feature-sources.js and map-features.js, from each entry's commander view, without adding
-// them to the player picker.
+// with its own profile, then captures the command map for every player scenario (Little Round
+// Top, Hougoumont, Concord, Pegasus Bridge, Hill 223) at the fit view and zoomed in, each with
+// the hex grid on and off, plus the feature legend; and plays Concord (docs/research/74), Pegasus
+// Bridge and Hill 223 (docs/research/75) on the desk to a result: header, the marks drawn, an
+// order accepted, the outcome headline and reason. docs/research/75: no headless entry with
+// drawn marks remains, so the read-only renders of docs/research/72 §6 are gone.
 // Usage: node scripts/map_screenshots.mjs <output dir>
 // Exit 0: passed. 1: failed. 3: BLOCKED, no runnable browser (never a pass).
 // Fault injection: MAP_HARNESS_FAULT=throw|sigint (after the page opens), MAP_HARNESS_POC_READY
 // (text the POC never prints), MAP_HARNESS_DEADLINE_MS. Every exit path stops the POC and the
 // browser's process group, removes the profile and database directory, and verifies both are gone.
 import assert from 'node:assert/strict';
-import {spawn, spawnSync} from 'node:child_process';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync} from 'node:fs';
+import {spawn} from 'node:child_process';
+import {existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync} from 'node:fs';
 import {createServer} from 'node:net';
 import {homedir, tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
@@ -26,7 +25,6 @@ mkdirSync(out,{recursive:true});
 const FAULT=process.env.MAP_HARNESS_FAULT||'';
 const READY=new RegExp(process.env.MAP_HARNESS_POC_READY||'Battle ready');
 const DEADLINE_MS=Number(process.env.MAP_HARNESS_DEADLINE_MS||180000);
-const HEADLESS=['pegasus-bridge','hill-223-patrol'];
 const CONCORD='concord-north-bridge';
 
 function findBrowser(){
@@ -99,47 +97,6 @@ class Page{
     return `${file} (${Math.round(box.width)}x${Math.round(box.height)} css px at 2x)`;
   }
   close(){this.ws.close();}
-}
-
-// Commander views and briefing cells of the headless entries, as /api/state and /api/map give them.
-function headlessData(){
-  const script=`
-import json
-from battle.adapters.rules import RulesSimulation
-from battle.bootstrap import build_headless_scenarios
-from battle.presentation import present_view
-from battle.scenario_entry import build_state, map_document
-catalog = build_headless_scenarios()
-out = {}
-for sid in ${JSON.stringify(HEADLESS)}:
-    entry = catalog.resolve(sid)
-    out[sid] = {'title': entry.title, 'location': entry.location, 'map': map_document(entry),
-                'features': present_view(RulesSimulation().view(build_state(entry)), entry)['map_features']}
-print(json.dumps(out))`;
-  // A synchronous child blocks the deadline and signal handlers, so it has its own bound.
-  const r=spawnSync('python3',['-c',script],{cwd:POC,encoding:'utf8',maxBuffer:64<<20,env:cleanEnv(),timeout:60000});
-  if(r.error)throw new Error(`headless map data: ${r.error.message}`);
-  assert.equal(r.status,0,r.stderr);
-  return JSON.parse(r.stdout);
-}
-// One self-contained page per headless map: the shipped static files inline, the data inline.
-function headlessPage(sid,d){
-  const file=f=>readFileSync(join(POC,'static',f),'utf8').replaceAll('</script','<\\/script');
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${sid} read-only render</title><style>${file('style.css')}</style>
-<style>body{padding:14px;width:1100px}#map{width:1080px;height:840px}.read-only{font:12px sans-serif;color:#e7e2cf;margin:0 0 8px}</style></head><body>
-<p class="read-only">READ-ONLY RENDER · ${d.title} · ${d.location} · commander view at the opening, not a player scenario</p>
-<svg id="map" viewBox="0 0 1080 840"></svg><details class="feature-legend" id="legend-panel" open><summary>Map features</summary><div id="feature-legend"></div></details>
-<script>${file('cartography.js')}</script><script>${file('feature-sources.js')}</script><script>${file('map-features.js')}</script>
-<script>
-const data=${JSON.stringify(d).replaceAll('</','<\\/')};
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const center=p=>[(p[0]+.5*(p[1]&1))*Math.sqrt(3)*25.5+24,p[1]*38.25+26];
-const options={metresPerHex:data.map.metres_per_hex,cells:data.map.cells,sources:BattleFeatureSources.forScenario(${JSON.stringify(sid)})};
-const hexes=data.map.cells.map(c=>{const [x,y]=center(c.pos);return '<polygon class="hex" points="'+[0,1,2,3,4,5].map(i=>{const a=(60*i-30)*Math.PI/180;return (x+25.5*Math.cos(a))+','+(y+25.5*Math.sin(a));}).join(' ')+'"/>';}).join('');
-document.getElementById('map').innerHTML=BattleMap.render(data.map.cells,false,false)+'<g>'+hexes+'</g>'+BattleFeatures.render(data.features,center,esc,options);
-document.getElementById('feature-legend').innerHTML=BattleFeatures.legend(data.features,esc,options);
-document.documentElement.dataset.ready='true';
-</script></body></html>`;
 }
 
 async function desk(page,port,sid,label,log){
@@ -222,6 +179,72 @@ async function concordPlay(page,port,log){
   log.push(`concord: played to ${done.winner} at ${done.turn} intervals; headline "${headline}"; ${british.length} British decisions, all scripted-concord-regulars-v1; mode ${done.mode}`);
   shots.push(await page.shot('concord-outcome.png','body'));
 }
+
+// docs/research/75: Pegasus Bridge and Hill 223 through the desk's own controls, offline and
+// scripted, to a result. Each spec names its header, its drawn marks, one order and its opponent.
+const ERAS=[
+  {sid:'pegasus-bridge',label:'pegasus',clock:'00:25',campaign:'NORMANDY · 6 JUNE 1944',
+   date:/Tuesday, (6 June|June 6,) 1944/,location:/Caen Canal bridge · Bénouville, Normandy/,
+   drawn:`({water:mapData.cells.filter(c=>c.terrain==='water').length,marsh:mapData.cells.filter(c=>c.terrain==='marsh').length,
+     fill:BattleMap.render(mapData.cells,true,false).includes('#b9d3e3'),
+     roads:[...document.querySelectorAll('#map [data-feature$="-road"] .road-casing')].map(n=>n.closest('[data-feature]').dataset.feature),
+     canal:!!document.querySelector('#map [data-feature="canal-bridge"] .bridge-deck'),
+     charges:!!document.querySelector('#map [data-feature="canal-bridge"] .bridge-charges'),
+     label:document.querySelector('#map [data-feature="canal-bridge"] .feature-label')?.textContent,
+     orne:!!document.querySelector('#map [data-feature="crossing:19,10"] .bridge-deck')})`,
+   check(d){
+     assert.ok(d.water>0&&d.fill&&d.marsh>0,'the canal and the Orne are water, the marsh between them is marsh');
+     assert.deepEqual(d.roads.sort(),['benouville-road','bridges-road','ranville-road']);
+     assert.ok(d.canal&&d.charges&&d.orne,'both bridges are drawn, the canal bridge with its charges');
+     assert.equal(d.label,'Caen Canal bridge · charges');
+     return `${d.water} water and ${d.marsh} marsh hexes; roads ${d.roads.join(', ')}; canal bridge "${d.label}" and the Orne bridge drawn`;
+   },
+   order:{unit:'D24',to:[9,10],why:'24 Platoon, with the sappers, onto the canal bridge'},
+   opponent:'german',policy:'scripted-pegasus-guard-v1'},
+  {sid:'hill-223-patrol',label:'hill-223',clock:'06:45',campaign:'ARGONNE · 8 OCTOBER 1918',
+   date:/Tuesday, (8 October|October 8,) 1918/,location:/Hill southwest of Hill 223 · Châtel-Chéhéry, Argonne/,
+   drawn:`({woods:mapData.cells.filter(c=>c.terrain==='woods').length,
+     trench:document.querySelector('#map [data-feature="old-trench"]')?.dataset.status,
+     place:document.querySelector('#map .place-label')?.textContent})`,
+   check(d){
+     assert.ok(d.woods>0,'the ravine and the east-crest woods are woods');
+     assert.equal(d.trench,'sourced');
+     assert.equal(d.place,'Command post at the shack');
+     return `${d.woods} woods hexes; old trench (${d.trench}); objective "${d.place}"`;
+   },
+   order:{unit:'A3',to:[16,6],why:'the right of the company line, by runner'},
+   opponent:'german',policy:'scripted-hill-223-german-v1'},
+];
+async function eraPlay(page,port,log,era){
+  const head=await page.eval(`({clock:document.getElementById('clock').textContent,date:document.getElementById('battle-date').textContent,
+    location:document.getElementById('battle-location').textContent,campaign:document.getElementById('campaign-line').textContent,
+    header:[...document.querySelectorAll('.masthead,.field-heading')].map(n=>n.innerText).join(' ')})`);
+  assert.deepEqual([head.clock,head.campaign],[era.clock,era.campaign]);
+  assert.match(head.date,era.date);  // The browser's locale orders day and month.
+  assert.match(head.location,era.location);
+  assert.doesNotMatch(head.header,/\bturn\b|revision/i,'no turn counter or revision label');
+  log.push(`${era.label}: header ${head.clock} · ${head.date} · ${head.location}; no turn or revision label`);
+  log.push(`${era.label}: ${era.check(await page.eval(era.drawn))}`);
+  const {unit,to}=era.order;
+  await page.eval(`(selectUnit(${JSON.stringify(unit)}),destination=${JSON.stringify(to)},renderControls(),document.getElementById('send-order').click(),true)`);
+  const order=await page.until(`the ${unit} order on record`,`fetch('/api/state').then(r=>r.json()).then(s=>s.orders.find(o=>o.unit_id===${JSON.stringify(unit)}&&o.stance==='move'&&String(o.destination)===${JSON.stringify(String(to))})||null)`);
+  log.push(`${era.label}: order accepted ${order.id} ${unit} move -> ${to} (${order.status}): ${era.order.why}`);
+  shots.push(await page.shot(`${era.label}-order.png`,'body'));
+  const live=await api(port,'/api/state');
+  await api(port,'/api/clock',{game_id:live.game_id,command:'speed',speed:60});
+  await page.until('the clock control',`!document.getElementById('clock-toggle').disabled`);
+  await page.eval(`document.getElementById('clock-toggle').click(),true`);
+  const outcome=await page.until(`the ${era.label} outcome`,`state.status==='complete'&&!document.getElementById('outcome').classList.contains('hidden')?document.getElementById('outcome').innerText:null`,120000);
+  const done=await api(port,'/api/state?view=god');
+  const theirs=done.decisions.filter(d=>d.side===era.opponent&&d.role!=='staff');
+  assert.ok(theirs.length>0&&theirs.every(d=>d.source==='scripted'&&d.policy===era.policy),`the desk opponent played ${era.policy}`);
+  const outcomes=done.scenario_brief.outcomes;
+  const headline=outcome.split('\n')[0];
+  assert.equal(headline,done.winner===done.side?outcomes.win:done.winner==='draw'?outcomes.draw:outcomes.loss);
+  assert.ok(outcome.includes(done.reason),'the server reason is shown with the headline');
+  log.push(`${era.label}: played to ${done.winner} at ${done.turn} intervals; headline "${headline}"; reason "${done.reason}"; ${theirs.length} ${era.opponent} decisions, all ${era.policy}; mode ${done.mode}`);
+  shots.push(await page.shot(`${era.label}-outcome.png`,'body'));
+}
 let shots;
 
 async function run(held,log){
@@ -249,20 +272,14 @@ async function run(held,log){
   shots.push(...await desk(held.page,port,'hougoumont-north-gate','hougoumont',log));
   shots.push(...await desk(held.page,port,CONCORD,'concord',log));
   await concordPlay(held.page,port,log);
+  for(const era of ERAS){
+    shots.push(...await desk(held.page,port,era.sid,era.label,log));
+    await eraPlay(held.page,port,log,era);
+  }
   // The picker offers exactly the player scenarios.
   const picker=await held.page.eval(`[...document.querySelectorAll('#scenario-select option')].map(o=>o.value)`);
-  assert.deepEqual(picker,['little-round-top','hougoumont-north-gate',CONCORD]);
+  assert.deepEqual(picker,['little-round-top','hougoumont-north-gate',CONCORD,...ERAS.map(e=>e.sid)]);
   log.push(`player picker: ${picker.join(', ')}`);
-  const data=headlessData();
-  for(const sid of HEADLESS){
-    const file=join(out,`${sid}-render.html`);writeFileSync(file,headlessPage(sid,data[sid]));
-    await held.page.send('Page.navigate',{url:'file://'+file});
-    await held.page.until(`${sid} render`,`document.documentElement.dataset.ready==='true'`);
-    const marks=await held.page.eval(`document.querySelectorAll('#map [data-feature]').length`);
-    assert.ok(marks>0,`${sid}: marks drawn`);
-    log.push(`${sid}: ${marks} marks drawn read-only (${sid}-render.html)`);
-    shots.push(await held.page.shot(`${sid}-render.png`,'body'));
-  }
   log.push('screenshots:',...shots.map(s=>'  '+s));
   return 0;
 }
@@ -301,7 +318,7 @@ async function main(){
     const deadline=new Promise((_,bad)=>{timer=setTimeout(()=>bad(new Error(`harness passed its ${DEADLINE_MS} ms deadline`)),DEADLINE_MS);});
     code=await Promise.race([run(held,log),deadline]).finally(()=>clearTimeout(timer));
     console.log(log.join('\n'));
-    if(code===0)console.log('HARNESS PASSED: desk screenshots with the grid on and off, legends, tooltips, Concord played to a result and read-only renders written.');
+    if(code===0)console.log('HARNESS PASSED: desk screenshots with the grid on and off, legends and tooltips for every player scenario; Concord, Pegasus Bridge and Hill 223 played to a result.');
   }catch(e){
     console.log(log.join('\n'));
     console.error(`HARNESS FAILED: ${e.stack||e}`);code=1;

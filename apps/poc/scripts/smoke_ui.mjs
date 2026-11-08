@@ -28,7 +28,10 @@ def shown(scenario_id):
     shown_view["analysis"] = assess(v)
     return {"view": shown_view, "map": catalog.map(scenario_id)}
 print(json.dumps({**shown("little-round-top"), "hougoumont": shown("hougoumont-north-gate"),
-                  "concord": shown("concord-north-bridge"), "replays": replays}))`;
+                  "concord": shown("concord-north-bridge"), "pegasus": shown("pegasus-bridge"),
+                  "hill": shown("hill-223-patrol"), "replays": replays,
+                  # docs/research/75: the mock server lists the player catalog itself, in order.
+                  "catalog": [{"id": i, "title": catalog.resolve(i).title} for i in catalog.ids()]}))`;
 const generated=spawnSync('python3',['-c',fixtureScript],{cwd:root,encoding:'utf8'});
 assert.equal(generated.status,0);
 const initial={...JSON.parse(generated.stdout).view,game_id:'test-initial',mode:'scripted',messages:[],clock:{running:false,inflight:false,speed:10,remaining_seconds:30,speeds:[0.5,1,2,5,10,30,60]}};
@@ -41,6 +44,12 @@ const replays=JSON.parse(generated.stdout).replays;
 const replayed=path=>{const q=new URLSearchParams(path.split('?')[1]);return {...replays[q.get('view')==='god'?'god':q.get('side')||'union'],revision:+q.get('revision')};};
 const hougoumontView={...hougoumont.view,game_id:'test-hougoumont',mode:'scripted',messages:[],clock:initial.clock};
 const concordView={...concord.view,game_id:'test-concord',mode:'scripted',messages:[],clock:initial.clock};
+// docs/research/75: Pegasus Bridge and Hill 223, served with their cells so water and woods are drawn.
+const {pegasus,hill,catalog:playerCatalog}=JSON.parse(generated.stdout);
+const pegasusView={...pegasus.view,game_id:'test-pegasus',mode:'scripted',messages:[],clock:initial.clock};
+const hillView={...hill.view,game_id:'test-hill',mode:'scripted',messages:[],clock:initial.clock};
+const WITH_CELLS={'concord-north-bridge':[concord.map,concordView],'pegasus-bridge':[pegasus.map,pegasusView],
+  'hill-223-patrol':[hill.map,hillView]};
 let served='little-round-top';  // Which scenario the mock server is playing.
 let completed=false;  // docs/research/65: the opponent's replay unlocks only after the battle.
 const liveInitial=()=>completed?{...initial,status:'complete',winner:'union',reason:'The Union held out until the scenario deadline.'}:initial;
@@ -49,13 +58,13 @@ const context=vm.createContext({document:{getElementById:element},window:{matchM
   confirm(){throw Error('Native dialogs must not be used');},
   fetch:async(path,options)=>{
     requests.push({path,options});
-    if(path==='/api/new'&&options?.body){const asked=JSON.parse(options.body).scenario;served=['hougoumont-north-gate','concord-north-bridge'].includes(asked)?asked:'little-round-top';}
-    const hg=served==='hougoumont-north-gate',cc=served==='concord-north-bridge';
-    const catalog={default:'little-round-top',scenarios:[{id:'little-round-top',title:'Little Round Top'},{id:'hougoumont-north-gate',title:'Hougoumont: the north gate'},{id:'concord-north-bridge',title:'Concord North Bridge'}]};
+    if(path==='/api/new'&&options?.body){const asked=JSON.parse(options.body).scenario;served=['hougoumont-north-gate',...Object.keys(WITH_CELLS)].includes(asked)?asked:'little-round-top';}
+    const hg=served==='hougoumont-north-gate',cells=WITH_CELLS[served];
+    const catalog={default:'little-round-top',scenarios:playerCatalog};
     if(path.startsWith('/api/history'))return {ok:true,json:async()=>[{revision:0,turn:0},{revision:1,turn:0}]};
     if(path.startsWith('/api/replay'))return {ok:true,json:async()=>replayed(path)};
-    // Concord's map keeps its cells, so its water and the bridge crossing are drawn (docs/research/74).
-    return {ok:true,json:async()=>path==='/api/map'?(cc?concord.map:{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}):path==='/api/scenarios'?catalog:cc?concordView:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:liveInitial()};}});
+    // Concord's, Pegasus's and Hill 223's maps keep their cells, so water, woods and bridges are drawn (docs/research/74, 75).
+    return {ok:true,json:async()=>path==='/api/map'?(cells?cells[0]:{...(hg?hougoumont:JSON.parse(generated.stdout)).map,cells:[]}):path==='/api/scenarios'?catalog:cells?cells[1]:hg?hougoumontView:path==='/api/new'?{...initial,game_id:'test-fresh'}:liveInitial()};}});
 vm.runInContext(readFileSync(new URL('../static/cartography.js',import.meta.url),'utf8'),context);
 for(const file of ['api-client.js','troop-analysis.js','scenario-picker.js','timeline.js','unit-icons.js','feature-sources.js','map-features.js'])vm.runInContext(readFileSync(new URL('../static/'+file,import.meta.url),'utf8'),context);
 vm.runInContext(readFileSync(new URL('../static/app.js',import.meta.url),'utf8'),context);
@@ -386,3 +395,71 @@ assert.match(element('outcome').innerHTML,/The bridge is carried\..*The Provinci
 vm.runInContext("state.winner='british';render()",context);
 assert.match(element('outcome').innerHTML,/The regulars hold the bridge\./);
 console.log('Concord UI passed: picker and Reset, 19 April 1775 local header, brief, water, roads and the North Bridge drawn, an order sent, report ages from seconds_per_turn, outcome headlines.');
+
+// docs/research/75: Pegasus Bridge and Hill 223, the fourth and fifth player scenarios, through the same
+// picker and Reset: the local 1944 and 1918 header, the brief, the features drawn, an order, the headlines.
+async function switchTo(id,gameId,title){
+  assert.match(element('scenario-select').innerHTML,new RegExp(`value="${id}"`));
+  element('scenario-select').value=id;
+  element('scenario-select').onchange();
+  const mapRequests=requests.filter(r=>r.path==='/api/map').length;
+  await element('new-game').onclick();
+  assert.equal(JSON.parse(requests.filter(r=>r.path==='/api/new').at(-1).options.body).scenario,id);
+  assert.equal(requests.filter(r=>r.path==='/api/map').length,mapRequests+1);
+  assert.equal(vm.runInContext('state.game_id',context),gameId);
+  assert.equal(context.document.title,`battle · ${title}`);
+  for(const field of ['clock','battle-date','battle-location','campaign-line','clock-status'])
+    assert.doesNotMatch(element(field).textContent,/\bturn\b|revision/i,field);
+}
+async function orderFromDesk(unit,destination){
+  vm.runInContext(`selectUnit(${JSON.stringify(unit)})`,context);
+  await element('unit-order').onclick();element('unit-order-kind').value='move';await element('unit-order-kind').onchange();
+  vm.runInContext(`destination=${JSON.stringify(destination)};renderControls()`,context);
+  await element('unit-action-form').onsubmit({preventDefault(){}});
+  assert.deepEqual(JSON.parse(requests.filter(r=>r.path==='/api/orders').at(-1).options.body).orders,[{unit_id:unit,stance:'move',destination}]);
+}
+const literal=text=>text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function headlines(view,winner,loser,texts){
+  vm.runInContext(`state=liveState=${JSON.stringify(view)};render()`,context);
+  vm.runInContext(`Object.assign(state,{status:'complete',winner:${JSON.stringify(winner)},reason:'Reason from the server.'});render()`,context);
+  assert.match(element('outcome').innerHTML,new RegExp(`${literal(texts.win)}.*Reason from the server`));
+  vm.runInContext(`state.winner=${JSON.stringify(loser)};render()`,context);
+  assert.match(element('outcome').innerHTML,new RegExp(literal(texts.loss)));
+}
+
+await switchTo('pegasus-bridge','test-pegasus','Pegasus Bridge');
+assert.equal(element('campaign-line').textContent,'NORMANDY · 6 JUNE 1944');
+assert.equal(element('clock').textContent,'00:25');
+assert.match(element('battle-date').textContent,/6 June 1944/);
+assert.match(element('battle-location').textContent,/Caen Canal bridge · Bénouville, Normandy/);
+assert.equal(element('mission-title').textContent,'Seize the canal bridge');
+assert.match(element('mission-text').innerHTML,/24 Platoon.*Neilson.*<strong>03:25<\/strong>.*Ham/);
+assert.equal(element('objective-key').textContent,'BRIDGE');
+assert.match(element('map').innerHTML,/class="place-label">Caen Canal bridge</);
+assert.match(element('map').innerHTML,/#b9d3e3/);  // The canal and the Orne.
+assert.match(element('map').innerHTML,/#d7e3cf/);  // The marsh between them.
+// Both bridges: the canal bridge as known (wired with charges), the Orne bridge from its crossing cell.
+assert.match(element('map').innerHTML,/data-feature="canal-bridge"[^>]*data-status="reconstructed"/);
+assert.match(element('map').innerHTML,/class="bridge-charges"/);
+assert.match(element('map').innerHTML,/Caen Canal bridge · charges/);
+assert.match(element('map').innerHTML,/data-feature="crossing:19,10"[^>]*data-status="sourced"/);
+for(const road of ['benouville-road','bridges-road','ranville-road'])assert.match(element('map').innerHTML,new RegExp(`data-feature="${road}"`));
+assert.equal(vm.runInContext('state.voice_profile',context),'wwii-1944-en-v1');
+await orderFromDesk('D24',[9,10]);  // 24 Platoon, with the sappers, onto the bridge.
+headlines(pegasusView,'british','german',pegasus.view.scenario_brief.outcomes);
+console.log('Pegasus UI passed: picker and Reset, 6 June 1944 local header, brief, canal, marsh, roads, the canal bridge with its charges and the Orne bridge drawn, an order sent, outcome headlines.');
+
+await switchTo('hill-223-patrol','test-hill','Hill 223');
+assert.equal(element('campaign-line').textContent,'ARGONNE · 8 OCTOBER 1918');
+assert.equal(element('clock').textContent,'06:45');
+assert.match(element('battle-date').textContent,/8 October 1918/);
+assert.match(element('battle-location').textContent,/Hill southwest of Hill 223 · Châtel-Chéhéry, Argonne/);
+assert.equal(element('mission-title').textContent,'Bring the patrol back');
+assert.match(element('mission-text').innerHTML,/Acting Sergeant Early.*runner.*5 men and one prisoner.*<strong>10:30<\/strong>/);
+assert.equal(element('objective-key').textContent,'SHACK');
+assert.match(element('map').innerHTML,/class="place-label">Command post at the shack</);
+assert.match(element('map').innerHTML,/data-feature="old-trench"[^>]*data-status="sourced"/);
+assert.equal(vm.runInContext('state.voice_profile',context),'wwi-1918-en-v1');
+await orderFromDesk('A3',[16,6]);  // The right of the company line, by runner.
+headlines(hillView,'american','german',hill.view.scenario_brief.outcomes);
+console.log('Hill 223 UI passed: picker and Reset, 8 October 1918 local header, brief, the shack objective and the old trench drawn, an order sent, outcome headlines.');
