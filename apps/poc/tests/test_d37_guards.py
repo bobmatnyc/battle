@@ -179,13 +179,26 @@ class KeyLimitTest(unittest.TestCase):
         unlimited = key_limit_check({**good, "limit": None, "limit_remaining": None, "usage": 3.5}, 14.0)
         self.assertEqual((unlimited["ok"], unlimited["unlimited"], unlimited["reasons"]), (True, True, []))
         self.assertEqual((unlimited["limit"], unlimited["limit_remaining"]), (None, None))
-        absent = {k: v for k, v in good.items() if k not in ("limit", "limit_remaining")}
+        # bt-T24 (Bob, option B): a resetting limit passes when the cap remains; the record keeps the reset.
+        for name, change in {"limited, resets monthly": {"limit_reset": "monthly"},
+                             "limited, resets daily": {"limit_reset": "daily"},
+                             "limited, resets weekly, $20 limit": {"limit": 20.0, "limit_reset": "weekly"},
+                             "limited, other reset string": {"limit_reset": "hourly"},
+                             "unlimited, resets monthly": {"limit": None, "limit_remaining": None,
+                                                           "limit_reset": "monthly"}}.items():
+            with self.subTest(name):
+                passed = key_limit_check({**good, **change}, 14.0)
+                self.assertEqual((passed["ok"], passed["reasons"]), (True, []))
+                self.assertEqual(passed["limit_reset"], change["limit_reset"])
+                self.assertEqual(passed["unlimited"], name.startswith("unlimited"))
+        absent ={k: v for k, v in good.items() if k not in ("limit", "limit_remaining")}
         bad = {
             "limit null, remaining set": {"limit": None},
             "remaining null, limit set": {"limit_remaining": None},
             "remaining below the cap": {"limit_remaining": 13.99},
             "unlimited but free tier": {"limit": None, "limit_remaining": None, "is_free_tier": True},
-            "unlimited but resets": {"limit": None, "limit_remaining": None, "limit_reset": "monthly"},
+            "unlimited but the reset is empty": {"limit": None, "limit_remaining": None, "limit_reset": ""},
+            "unlimited but the reset is a number": {"limit": None, "limit_remaining": None, "limit_reset": 30},
             "remaining not a number": {"limit_remaining": "14"},
             "remaining a boolean": {"limit_remaining": True},
             "free tier": {"is_free_tier": True},
@@ -193,9 +206,19 @@ class KeyLimitTest(unittest.TestCase):
             "limit not a number": {"limit": "14"},
             "limit a boolean": {"limit": True},
             "remaining missing": {"limit_remaining": float("nan")},
-            "limit resets monthly": {"limit_reset": "monthly"},  # D37 review C: a reset re-arms the key.
-            "limit resets daily": {"limit_reset": "daily"},
-            "limit_reset unrecognised": {"limit_reset": "hourly"},
+            # bt-T24: a resetting key still needs the cap remaining, and the reset must be a non-empty string.
+            "resets monthly, remaining below the cap": {"limit_reset": "monthly", "limit_remaining": 13.99},
+            "resets monthly, free tier": {"limit_reset": "monthly", "is_free_tier": True},
+            "resets monthly, only limit null": {"limit_reset": "monthly", "limit": None},
+            "resets monthly, remaining not a number": {"limit_reset": "monthly", "limit_remaining": "14"},
+            "limit_reset empty string": {"limit_reset": ""},
+            "limit_reset only whitespace": {"limit_reset": "  "},
+            "limit_reset a number": {"limit_reset": 30},
+            "limit_reset zero": {"limit_reset": 0},
+            "limit_reset true": {"limit_reset": True},
+            "limit_reset false": {"limit_reset": False},
+            "limit_reset a list": {"limit_reset": ["monthly"]},
+            "limit_reset an object": {"limit_reset": {"every": "month"}},
         }
         for name, change in bad.items():
             with self.subTest(name):
@@ -245,7 +268,8 @@ class KeyLimitTest(unittest.TestCase):
         argv = ["--plan", "pegasus-bridge", "--model", SONNET, "--games", "1", "--cap-usd", "14"]
         env = {"OPENROUTER_API_KEY": DUMMY_KEY}
         for opener in (key_reply(limit=None), key_reply(limit_remaining=None), key_reply(limit_remaining=1.0),
-                       key_reply(is_free_tier=True), key_reply(limit_reset="monthly"),
+                       key_reply(is_free_tier=True), key_reply(limit_reset="monthly", limit_remaining=13.99),
+                       key_reply(limit_reset=""), key_reply(limit_reset=30),
                        lambda request, timeout: (_ for _ in ()).throw(OSError())):
             with tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err, \
                     self.assertRaises(SystemExit) as refused:
@@ -529,6 +553,29 @@ class UnlimitedKeyTest(unittest.TestCase):
         self.assertEqual((check["ok"], check["unlimited"], check["limit"], check["limit_remaining"], check["usage"]),
                          (True, True, None, None, 3.5))
         self.assertEqual(check["endpoint"], KEY_INFO_URL)
+        self.assertNotIn(DUMMY_KEY, written)
+        self.assertNotIn("masked-key-label", written)
+
+    def test_a_monthly_reset_key_with_the_cap_remaining_passes_through_main_and_the_manifest_records_the_reset(self):
+        # bt-T24 (Bob, option B): the battle key's limit resets monthly; with $14 remaining it may run.
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
+            git_repo(tmp)
+            code = model_runs.main([*GENERIC, "--dir", str(Path(tmp) / "b")], repo=tmp,
+                                   environ={"OPENROUTER_API_KEY": DUMMY_KEY},
+                                   key_opener=key_reply(limit=20.0, limit_remaining=14.0, limit_reset="monthly",
+                                                        usage=6.0),
+                                   provider_for=lambda e: CostFake(e, [0.01] * 10))
+            manifest = json.loads((Path(tmp) / "b" / "manifest.json").read_text())
+            written = batch_files(Path(tmp) / "b")
+            every_byte = b"".join(p.read_bytes() for p in (Path(tmp) / "b").rglob("*") if p.is_file())
+        self.assertNotIn(DUMMY_KEY.encode(), every_byte)  # Every file, the game databases included.
+        self.assertNotIn(b"masked-key-label", every_byte)
+        self.assertEqual(code, model_runs.EXIT_DONE)
+        check = manifest["key_check"]
+        self.assertEqual((check["ok"], check["unlimited"], check["limit_reset"], check["limit"],
+                          check["limit_remaining"], check["usage"]), (True, False, "monthly", 20.0, 14.0, 6.0))
+        self.assertEqual(check["endpoint"], KEY_INFO_URL)
+        self.assertNotIn("label", check)
         self.assertNotIn(DUMMY_KEY, written)
         self.assertNotIn("masked-key-label", written)
 
