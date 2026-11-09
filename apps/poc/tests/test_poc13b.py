@@ -348,7 +348,7 @@ class CarriedReviewTests(unittest.TestCase):
                 self.assertIn("hold/rest/resupply/dig_in/hold_fire/open_fire use null",
                               command_policy.system_prompt(next(iter(entry.sides)), entry))
         self.assertEqual((scenario.LITTLE_ROUND_TOP.prompt_version, HOUGOUMONT_NORTH_GATE.prompt_version),
-                         ("lrt-side-v3", "hougoumont-side-v2"))
+                         ("lrt-side-v4", "hougoumont-side-v2"))
 
     def test_model_telemetry_records_the_rules_edition_and_order_catalog(self):
         from battle.adapters.rules import RulesSimulation

@@ -7,7 +7,7 @@ that resets is accepted on the same terms), takes the key only
 from the environment the batch was started with, and fixes
 the model, plan and cap the owner approved, so none of them comes from a file
 or a flag by accident.
-What: ``PAID_PLANS`` (``d37-option-a``), ``plan_settings`` and
+What: ``PAID_PLANS`` (``d37-option-a``, ``bt-t28-lrt-v4``), ``plan_settings`` and
 ``environment_settings`` (the key from the given environment only, never
 ``.env.local``), ``key_limit_check`` (a pure check of the key-info ``data``
 against the cap) and ``check_key`` (fetch through an injectable opener, then
@@ -66,7 +66,15 @@ D37_OPTION_A = PaidPlan(
     items=(("little-round-top", 1), ("hougoumont-north-gate", 1), ("concord-north-bridge", 3),
            ("pegasus-bridge", 3), ("gergovia-recall", 2), ("hill-223-patrol", 2)),
 )
-PAID_PLANS = {D37_OPTION_A.name: D37_OPTION_A}
+# bt-T28: one Little Round Top game on prompt lrt-side-v4, at the D37 settings and cap.
+BT_T28_LRT_V4 = replace(
+    D37_OPTION_A,
+    name="bt-t28-lrt-v4",
+    ruling=("bt-T28 (Bob, relayed by the Architect 12:51Z): fix the Little Round Top prompt gap, then "
+            "re-run that one scenario; Sonnet 5.5, 1 game, $14 cap"),
+    items=(("little-round-top", 1),),
+)
+PAID_PLANS = {plan.name: plan for plan in (D37_OPTION_A, BT_T28_LRT_V4)}
 
 
 def environment_key(environ):

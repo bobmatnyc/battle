@@ -22,7 +22,9 @@ from battle.adapters.rules import ScenarioRegistry
 from battle.bootstrap import build_replay
 from battle.command_policy import scripted_actions, scripted_policy
 from battle.config import Settings
-from battle.paid_batch import D37_OPTION_A, check_key, fake_key_opener, key_limit_check, plan_settings
+from battle.paid_batch import (
+    BT_T28_LRT_V4, D37_OPTION_A, PAID_PLANS, check_key, fake_key_opener, key_limit_check, plan_settings,
+)
 from battle.scenario import LITTLE_ROUND_TOP
 from battle.spend import BudgetExhausted, Price, SpendGuard
 
@@ -342,13 +344,13 @@ class KeyFromEnvironmentTest(unittest.TestCase):
                                  key_check=None, opener=never)
 
 
-def paid_run(tmp, chat):
-    """Runs ``--paid-plan d37-option-a`` with fake key and chat openers."""
+def paid_run(tmp, chat, plan=D37_OPTION_A, key_opener=None):
+    """Runs ``--paid-plan <plan>`` (default d37-option-a) with fake key and chat openers."""
     git_repo(tmp)
     with redirect_stdout(io.StringIO()):
-        code = model_runs.main(["--paid-plan", D37_OPTION_A.name, "--dir", str(Path(tmp) / "b")], repo=tmp,
-                               environ={"OPENROUTER_API_KEY": DUMMY_KEY}, key_opener=fake_key_opener(14.0),
-                               chat_opener=chat)
+        code = model_runs.main(["--paid-plan", plan.name, "--dir", str(Path(tmp) / "b")], repo=tmp,
+                               environ={"OPENROUTER_API_KEY": DUMMY_KEY},
+                               key_opener=key_opener or fake_key_opener(14.0), chat_opener=chat)
     out = Path(tmp) / "b"
     return (code, json.loads((out / "manifest.json").read_text()),
             [json.loads(line) for line in (out / "runs.jsonl").read_text().splitlines()],
@@ -398,6 +400,61 @@ class PinnedModelTest(unittest.TestCase):
         self.assertEqual(shown["play_order"], [f"{item} x{n}" for item, n in D37_OPTION_A.items])
         self.assertTrue(shown["key_check"]["ok"])
         self.assertIn("fake", shown["key_check"]["opener"])
+
+
+class SingleGamePlanTest(unittest.TestCase):
+    """bt-T28: ``bt-t28-lrt-v4`` is one Little Round Top game at the D37 settings, under the same guards."""
+
+    def test_bt_t28_plan_is_one_little_round_top_game_at_the_d37_settings(self):
+        self.assertIs(PAID_PLANS["bt-t28-lrt-v4"], BT_T28_LRT_V4)
+        self.assertEqual((BT_T28_LRT_V4.items, BT_T28_LRT_V4.games, BT_T28_LRT_V4.plan()),
+                         ((("little-round-top", 1),), 1, ["little-round-top:1"]))
+        fields = ("model", "effort", "max_tokens", "timeout", "cap_usd")
+        self.assertEqual([getattr(BT_T28_LRT_V4, f) for f in fields], [SONNET, "high", 4000, 90.0, 14.0])
+        self.assertEqual([getattr(BT_T28_LRT_V4, f) for f in fields], [getattr(D37_OPTION_A, f) for f in fields])
+        self.assertEqual(plan_settings(BT_T28_LRT_V4), plan_settings(D37_OPTION_A))
+        self.assertIn("12:51Z", BT_T28_LRT_V4.ruling)
+        self.assertIn("bt-T28", BT_T28_LRT_V4.ruling)
+        self.assertEqual(D37_OPTION_A.games, 12)  # The D37 plan is unchanged.
+
+    def test_bt_t28_dry_run_reads_no_key_calls_nothing_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()) as out:
+            git_repo(tmp)
+            code = model_runs.main(["--paid-plan", BT_T28_LRT_V4.name, "--dir", str(Path(tmp) / "b"), "--dry-run"],
+                                   repo=tmp, environ={}, key_opener=never, chat_opener=never)
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), [".git"])
+        shown = json.loads(out.getvalue())
+        self.assertEqual(code, 0)
+        self.assertEqual((shown["paid_plan"], shown["model"], shown["cap_usd"], shown["games"], shown["plan"]),
+                         ("bt-t28-lrt-v4", SONNET, 14.0, 1, {"little-round-top": 1}))
+        self.assertEqual(shown["key"], "not read in a dry run")
+
+    def test_bt_t28_plan_keeps_the_override_refusal_reservation_and_provider_limit_stop(self):
+        with tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err, \
+                redirect_stdout(io.StringIO()), self.assertRaises(SystemExit):
+            git_repo(tmp)
+            model_runs.main(["--paid-plan", BT_T28_LRT_V4.name, "--games", "2", "--dir", str(Path(tmp) / "b")],
+                            repo=tmp, environ={"OPENROUTER_API_KEY": DUMMY_KEY},
+                            key_opener=fake_key_opener(14.0), chat_opener=never)
+        self.assertIn("--paid-plan bt-t28-lrt-v4 fixes", err.getvalue())
+        # The D37 key's shape: a $50 limit that resets monthly, with the cap remaining (bt-T24).
+        resetting = key_reply(limit=50.0, limit_remaining=36.0, limit_reset="monthly", usage=14.0)
+        refusal = http_error(402, {"error": {"code": 402, "metadata": {"limit_source": "openrouter_credits"}}})
+        chat = ChatOpener(LITTLE_ROUND_TOP, refuse_at=3, refusal=refusal)
+        with tempfile.TemporaryDirectory() as tmp:
+            code, manifest, games, summary, _ = paid_run(tmp, chat, BT_T28_LRT_V4, resetting)
+        self.assertEqual((code, len(chat.bodies), summary["planned"]), (model_runs.EXIT_PROVIDER_LIMIT, 3, 1))
+        self.assertEqual({(b["model"], b["max_tokens"], b["reasoning"]["effort"]) for b in chat.bodies},
+                         {(SONNET, 4000, "high")})
+        self.assertEqual((manifest["paid_plan"], manifest["key_check"]["limit_reset"]), ("bt-t28-lrt-v4", "monthly"))
+        self.assertEqual(games[0]["pins"]["sides"]["union"]["prompt_version"], "lrt-side-v4")
+        self.assertEqual((manifest["closed"]["played"], manifest["closed"]["not_started"]), (1, 0))
+        # The reservation: after a $13.99 call the next call's reserve would pass $14, so it is never sent.
+        chat = ChatOpener(LITTLE_ROUND_TOP, cost=13.99)
+        with tempfile.TemporaryDirectory() as tmp:
+            code, manifest, games, summary, _ = paid_run(tmp, chat, BT_T28_LRT_V4)
+        self.assertEqual((code, len(chat.bodies)), (model_runs.EXIT_CAP, 1))
+        self.assertLessEqual(manifest["closed"]["spent_usd"], 14.0)
 
 
 class ProviderLimitTest(unittest.TestCase):

@@ -45,7 +45,7 @@ LITTLE_ROUND_TOP = ScenarioEntry(
     title='Little Round Top',
     variant=None,
     rules=RULES_VERSION,
-    prompt_version='lrt-side-v3',  # poc-13B: fire orders added to the null-destination list.
+    prompt_version='lrt-side-v4',  # v3 (poc-13B) plus the Union summit ring radius (bt-T28).
     prompt_setting='Little Round Top, 1863',
     labels={'poc-1':'little-round-top-v2','poc-2':'little-round-top-v2',
             'poc-3':'little-round-top-v3','poc-4':'little-round-top-v4',
@@ -63,7 +63,8 @@ LITTLE_ROUND_TOP = ScenarioEntry(
     sides={
         'union': SideEntry(
             name='Union', role='defender', command_unit='U2', headquarters=(14,8),
-            mission='You command the Union defenders. Your mission: hold the marked summit objective until turn 60. The summit can be lost before then if the enemy holds it while none of your formations remains effective nearby.',
+            # bt-T28: Union LRT prompt states the summit ring radius (doc 84 §6.1)
+            mission='You command the Union defenders. Your mission: hold the marked summit objective until turn 60. The summit can be lost before then if the enemy occupies it, within one hex of it (the summit hex or the six hexes around it), with none of your formations effective within one hex of it.',
             charge="hold the marked summit until five o'clock",
             supply=SupplyEntry('Union ammunition point',(14,8),2400,'rifled muskets'),
             brief=SideBrief(

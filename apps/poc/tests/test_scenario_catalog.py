@@ -46,11 +46,19 @@ LRT_PROMPT_V2_SHA256 = {
     "confederate": "6e359c8a3508fe20d19d4baeceb9293b3362c1c578d3f597086c017fccc5d0b9",
 }
 # lrt-side-v3 (poc-13B): v2 with hold_fire/open_fire in the null-destination list.
-LRT_PROMPT_SHA256 = {
+LRT_PROMPT_V3_SHA256 = {
     "union": "aefce49436d3a9c667b66adc03cf1d6a2a9ef69e46720a6d14c81f82e4c3db22",
     "confederate": "5d251b37edb1a70c3974b02c454630f499bf52f2a1458b936fedf87d4f89e67a",
 }
+# lrt-side-v4 (bt-T28): v3 with the summit ring radius in the Union mission; Confederate unchanged.
+LRT_PROMPT_SHA256 = {
+    "union": "33a3aa2ef3b1d38499e71c11c87a2394eb9e437461d3a2b6a2ea70a7ac1bbf7f",
+    "confederate": "5d251b37edb1a70c3974b02c454630f499bf52f2a1458b936fedf87d4f89e67a",
+}
 V3_CLAUSE, V2_CLAUSE = "dig_in/hold_fire/open_fire use null", "dig_in use null"
+V4_UNION_LOSS = ("the enemy occupies it, within one hex of it (the summit hex or the six hexes around it), "
+                 "with none of your formations effective within one hex of it.")
+V3_UNION_LOSS = "the enemy holds it while none of your formations remains effective nearby."
 LRT_MAP_SHA256 = "bd39cef2937dd5e6a0d478306dd99aaecf470bb54e46b750cec5006b7dcf32fa"
 
 
@@ -83,18 +91,33 @@ class LittleRoundTopEntryTests(unittest.TestCase):
         self.assertEqual(json.dumps(catalog.create()), json.dumps(scenario.create()))
         self.assertEqual(sha256(json.dumps(catalog.map())), LRT_MAP_SHA256)
 
-    def test_little_round_top_prompt_is_byte_identical_to_lrt_side_v3(self):
-        self.assertEqual(LITTLE_ROUND_TOP.prompt_version, "lrt-side-v3")
+    def test_little_round_top_prompt_is_byte_identical_to_lrt_side_v4(self):
+        self.assertEqual(LITTLE_ROUND_TOP.prompt_version, "lrt-side-v4")
         for side, digest in LRT_PROMPT_SHA256.items():
             with self.subTest(side=side):
                 self.assertEqual(sha256(command_policy.system_prompt(side)), digest)
-                # poc-13B: v3 is v2 with only the fire orders added to one clause.
-                v2 = command_policy.system_prompt(side).replace(V3_CLAUSE, V2_CLAUSE)
-                self.assertEqual(sha256(v2), LRT_PROMPT_V2_SHA256[side])
                 self.assertEqual(
                     command_policy.system_prompt(side, LITTLE_ROUND_TOP),
                     command_policy.system_prompt(side),
                 )
+
+    def test_union_mission_states_the_summit_ring_like_the_confederate_one(self):
+        # bt-T28 (doc 84 §6.1): both sides' prompts state the one-hex capture ring.
+        union, confederate = (command_policy.system_prompt(side) for side in ("union", "confederate"))
+        self.assertIn(V4_UNION_LOSS, union)
+        self.assertNotIn(V3_UNION_LOSS, union)
+        self.assertIn("within one hex of it", confederate)
+        self.assertEqual(LITTLE_ROUND_TOP.victory.radius, 1)
+
+    def test_little_round_top_prompt_is_byte_identical_to_lrt_side_v3(self):
+        for side, digest in LRT_PROMPT_V3_SHA256.items():
+            with self.subTest(side=side):
+                # bt-T28: v4 is v3 with only the Union loss sentence changed.
+                v3 = command_policy.system_prompt(side).replace(V4_UNION_LOSS, V3_UNION_LOSS)
+                self.assertEqual(sha256(v3), digest)
+                # poc-13B: v3 is v2 with only the fire orders added to one clause.
+                v2 = v3.replace(V3_CLAUSE, V2_CLAUSE)
+                self.assertEqual(sha256(v2), LRT_PROMPT_V2_SHA256[side])
 
 
 class CatalogTests(unittest.TestCase):
@@ -322,7 +345,7 @@ class SecondScenarioTests(unittest.TestCase):
             commander.decide(state, side="union")
         # Little Round Top still needs no catalog, as before.
         decision = commander.decide(scenario.create(), side="union")
-        self.assertEqual(decision["prompt_version"], "lrt-side-v3")
+        self.assertEqual(decision["prompt_version"], "lrt-side-v4")
 
 
 class SelectionTests(unittest.TestCase):
