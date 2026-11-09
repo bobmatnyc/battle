@@ -355,9 +355,9 @@ def system_prompt(side, scenario=None):
     """Why: a player-side model must see only its own side's mission (fog of war).
     What: returns the shared rules text for ``scenario`` (default Little Round
     Top) plus ``side``'s mission from the entry and the entry's voice rules.
-    Little Round Top's text is byte-identical to prompt version ``lrt-side-v3``.
+    Little Round Top's text is byte-identical to prompt version ``lrt-side-v4``.
     Test: `test_player_prompt_excludes_opponent_mission_and_truth`,
-    `test_little_round_top_prompt_is_byte_identical_to_lrt_side_v3`.
+    `test_little_round_top_prompt_is_byte_identical_to_lrt_side_v4`.
     """
     scenario = scenario or DEFAULT_SCENARIO
     return (

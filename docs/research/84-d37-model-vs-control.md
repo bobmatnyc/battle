@@ -114,6 +114,8 @@ The repo does not define bt-G01. These are options for the owner, each a prompt,
 
 **Limits.** One game per cell except Concord, Pegasus and Hill 223. Temperature 0.3, so repeats differ (doc 69 §7). The replays hold later orders fixed while the state changes. The control databases are local re-runs. The replay scripts, their outputs and the control logs are in [84-counterfactuals/](84-counterfactuals/). The control databases are in the git-ignored archive `apps/poc/artifacts/d37-option-a-f1f4210/counterfactuals/` (see `MANIFEST.txt` there).
 
+**Prompt version after this doc (bt-T28).** Option 1 is applied: the Union Little Round Top mission now states the summit ring (the summit hex or the six hexes around it), as the Confederate mission already did. The prompt version is now `lrt-side-v4`; the Confederate prompt text is unchanged. The Little Round Top result in this doc was made under `lrt-side-v3` and does not carry across to `lrt-side-v4`. A re-run is a new baseline. Scripted control results are unchanged, as the scripted control reads no prompt.
+
 ## Review notes
 
 code-critic fact-check at `23ea365`: **APPROVE**, no BLOCK or HIGH. The critic checked the doc against the `d37-option-a-f1f4210` artifacts, read-only, with no model call. These claims match the records:

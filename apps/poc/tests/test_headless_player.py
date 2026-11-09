@@ -399,7 +399,7 @@ class CompositionTests(unittest.TestCase):
             )
             scripted = build_headless(Path(tmp) / "scripted.sqlite")
         metadata = runner.metadata(scenario.create())
-        self.assertEqual(metadata["prompt_version"], "lrt-side-v3")
+        self.assertEqual(metadata["prompt_version"], "lrt-side-v4")
         self.assertEqual(metadata["response_format"], "json_schema:commander_orders")
         self.assertIsNone(scripted.metadata(scenario.create())["response_format"])
 
