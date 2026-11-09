@@ -45,8 +45,8 @@ async function zoomTo(page: Page, expected: string): Promise<void> {
 /** Why: at 2x the player must see the objective and its marks, read every label whole, and click the hex
  * or counter under the pointer (docs/research/80 §7, 81 §11). What: zooms in; the window is the POC desk's
  * focus rule's, the objective's circle is inside the frame and every label lies inside it (checkLabels);
- * Fit restores the fit markup byte for byte; at 2x again a real click at the transform's point of an own
- * counter selects it, and every in-frame hex centre hit-tests to that hex (or a counter on it), and a click
+ * Fit restores the fit markup byte for byte; at 2x again (panned with the buttons until an own counter is in
+ * frame) a real click at the transform's point of that counter selects it, and every in-frame hex centre hit-tests to that hex (or a counter on it), and a click
  * on one sets it as the destination. Leaves the fit view. Returns a one-line summary. */
 export async function checkZoom(page: Page, pocPort: number, artifacts: string, shot: string): Promise<string> {
   const {state, map} = await read(pocPort);
@@ -66,13 +66,31 @@ export async function checkZoom(page: Page, pocPort: number, artifacts: string, 
   await until("the fit view again", async () => (await shown(page)) === fitBox);
   assert.equal(await markup(page), fitMarkup, "Fit draws the fit markup byte for byte");
 
-  // Clicks at 2x through the transform: a counter, then every hex in frame, then a destination.
+  // Clicks at 2x through the transform: a counter, then every hex in frame, then a destination. Where no own
+  // counter is in the 2x frame (Hill 223's patrol starts away from the shack), the pan buttons bring one in.
   await zoomTo(page, expected);
-  const at = await page.evaluate<Box>(BOX);
-  const point = (pos: readonly [number, number]): Point => toScreen(window, at, hexCenter(pos, map.radius));
   const crowded = (pos: readonly number[]): boolean => [...state.units, ...state.contacts].filter((u) => String(u.pos) === String(pos)).length > 1;
-  const unit = state.units.find((u) => usable(at, point(u.pos)) && !crowded(u.pos));
-  assert.ok(unit, "an own counter is in the 2x frame");
+  const unit = state.units.find((u) => !crowded(u.pos));
+  assert.ok(unit, "an own counter alone in its hex");
+  let zoom: Zoom = zoomIn(FIT, map, mapFocus(state, map)), panned = 0;
+  for (;;) {
+    const w = zoomWindow(zoom, map), [x, y] = hexCenter(unit.pos, map.radius), r = map.radius;
+    const step: [number, number] = [x < w.x0 + r ? -1 : x > w.x1 - r ? 1 : 0, y < w.y0 + r ? -1 : y > w.y1 - r ? 1 : 0];
+    if (!step[0] && !step[1]) break;
+    assert.ok(panned < 6, `${unit.id} brought into the 2x frame`);
+    const moves: [number, number, string][] = [[step[0], 0, step[0] < 0 ? "#map-pan-w" : "#map-pan-e"], [0, step[1], step[1] < 0 ? "#map-pan-n" : "#map-pan-s"]];
+    for (const [dx, dy, button] of moves) {
+      if (!dx && !dy) continue;
+      zoom = pan(zoom, map, dx, dy);
+      const next = viewBox(zoomWindow(zoom, map));
+      await clickOn(page, button);
+      await until(`the pan to ${next}`, async () => (await shown(page)) === next);
+      panned += 1;
+    }
+  }
+  const frame = zoomWindow(zoom, map);
+  const at = await page.evaluate<Box>(BOX);
+  const point = (pos: readonly [number, number]): Point => toScreen(frame, at, hexCenter(pos, map.radius));
   assert.equal((await hitAt(page, point(unit.pos)))["unit"], unit.id, `the transform's point for ${unit.id} is on its counter`);
   await page.click(...point(unit.pos));
   await until(`${unit.id} selected at 2x`, () => page.evaluate<boolean>(
@@ -83,7 +101,7 @@ export async function checkZoom(page: Page, pocPort: number, artifacts: string, 
     if (!usable(at, p)) continue;
     const hit = await hitAt(page, p);
     assert.ok(hit["hex"] === null || String(hit["hex"]) === String(cell.pos), `hex ${cell.pos} at 2x hit-tests to hex ${hit["hex"]}`);
-    assert.deepEqual(hexAt(map.cells, map.radius, toScene(window, at, p)), cell.pos);
+    assert.deepEqual(hexAt(map.cells, map.radius, toScene(frame, at, p)), cell.pos);
     hexes += 1;
     const d = hexDistance(unit.pos, cell.pos);
     if (!target && hit["hex"] && d >= 2 && d <= 6) target = cell.pos;
@@ -95,7 +113,7 @@ export async function checkZoom(page: Page, pocPort: number, artifacts: string, 
   await clickOn(page, "#map-fit");
   await until("the fit view after the clicks", async () => (await shown(page)) === fitBox);
   return `2x window ${expected} (objective in frame); ${labels}; Fit restored the fit markup byte for byte; `
-    + `at 2x ${unit.id} selected by a click at the transform's point, ${hexes} hexes hit-test to themselves, destination ${target} set`;
+    + `at 2x (${panned} pan click(s), window ${viewBox(frame)}) ${unit.id} selected by a click at the transform's point, ${hexes} hexes hit-test to themselves, destination ${target} set`;
 }
 
 /** Why: zoom is presentation only, so replay must play at 2x and its controls must not stack listeners.
