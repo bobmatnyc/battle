@@ -4,6 +4,8 @@
 
 **B62 (bt-T21):** Bob's ruling B62 ("use the current key") replaces the key-limit rule of item 2 and the key named in §5; see §8.
 
+**bt-T24:** Bob's ruling of 2026-11-09 01:44Z (option B, "Relax the guard: accept a resetting limit when $14+ remains") replaces the `limit_reset` rule of §8; see §9.
+
 This doc closes what [69](69-model-run-cost-estimate.md) §9 left open: "the third control of section 5 (the OpenRouter key's credit limit equal to the cap) stays open, pending D37".
 
 ## 1. What changed
@@ -252,3 +254,78 @@ Credential scan over `origin/main...HEAD`: clean. The only secret names are `OPE
 - The provider-limit stop, exit 5.
 
 The known limits in §8 still apply.
+
+## 9. A limit that resets (bt-T24)
+
+**Why.** The paid run exited 2 before any spend. The battle key's limit resets monthly, and `key_limit_check` refused every non-null `limit_reset` (D37 review C, kept by §8).
+
+**Ruling.** Bob, 2026-11-09 01:44Z, option B: "Relax the guard: accept a resetting limit when $14+ remains". Base `774eaae`. No model API was called, no key was read and nothing was spent.
+
+**Rule change** (`apps/poc/battle/paid_batch.py`, `key_limit_check`):
+
+- `limit_reset` must be present and either null or a non-empty string. A limited key with a reset (`"monthly"`, `"daily"`, `"weekly"` or any other non-empty string) passes on the same terms as one without: `limit` and `limit_remaining` both finite, non-boolean numbers, and `limit_remaining` >= the $14 cap.
+- The `key_check` record in `manifest.json` carries `limit_reset` as read (for example `"monthly"`). It never carries the key or `label`. A malformed reset is recorded as `unrecognised`.
+- Still refused, as on `774eaae`: `limit_reset` absent; `limit_reset` a number, a boolean, a list, an object, an empty string or only whitespace; `is_free_tier` true, absent or not a boolean; an amount that is not a finite number, or is a boolean; exactly one of `limit` and `limit_remaining` null; either amount absent; `limit_remaining` below the cap; any key-info call error. Each refusal exits 2 before any file is written.
+
+**Readings.**
+
+1. "$14+ remains" is read as `limit_remaining` >= the cap, compared as exact decimals, the comparison §8 already makes. $14.00 remaining passes; $13.99 refuses.
+2. An unlimited key (`limit` and `limit_remaining` both null) with a reset string passes, and the record carries `unlimited: true` and the reset. The ruling's condition is that $14 or more remains; a key with no limit meets it. The reset of an unlimited key has nothing to re-arm.
+3. Any non-empty string passes, not only `daily`, `weekly` and `monthly`. The ruling names no set, and a reset can only add credit (below). A string that is empty or only whitespace refuses as malformed: it does not say whether the limit resets.
+
+**Why the $14 still holds.** The code cap does not read the key. The reservation (`battle.spend.SpendGuard`), cost reconciliation and the provider-limit stop (exit 5) bound the batch at $14, as in §8; `spend.py` and the stop are unchanged. A reset during the run raises the key's remaining credit back to its limit. It can let a call through that the key would otherwise refuse, but the reservation refuses any call whose worst case would pass $14 in this process, whatever the key holds. A reset never lowers the remaining credit, so the key's credit never drops below the $14 the check saw less what is spent on the key meanwhile (this batch, or another user of the same key).
+
+**Known limits.** Those of §8 still apply. The dry run's fake opener still answers as a key limited to the cap with no reset (`limit_reset: null`); it does not model the monthly key.
+
+**Tests** (`apps/poc/tests/test_d37_guards.py`):
+
+| Test | Proves |
+|---|---|
+| `test_key_limit_check_accepts_an_unlimited_key_or_one_with_the_cap_remaining` (changed) | limited keys resetting monthly, daily, weekly (with a $20 limit) and `hourly`, and an unlimited key resetting monthly, pass with no reasons and record the reset; refused: a monthly key with $13.99 remaining, free tier, only `limit` null or a string amount; a reset that is an empty string, whitespace, 30, 0, true, false, a list or an object; an unlimited key with an empty or numeric reset. The earlier refusal cases are kept |
+| `test_main_refuses_to_start_when_the_key_check_fails_and_records_a_passing_check_without_the_key` (changed) | the monthly key with $14 remaining left the refusal list; a monthly key with $13.99 remaining, an empty reset and a numeric reset joined it (exit 2, no directory, no key on stderr) |
+| `test_a_monthly_reset_key_with_the_cap_remaining_passes_through_main_and_the_manifest_records_the_reset` (new) | `main` with a fake key-info opener answering limit $20, $14 remaining, `monthly`: exit 0, `key_check` has `ok` true, `unlimited` false, `limit_reset` `"monthly"`; no file in the batch directory (the game databases included) holds the key or `label` |
+
+**Red first** (commit `11e13d4`, tests only, on `774eaae` code): 18 tests, failures=5 and errors=1. The five passing subtests of the table refuse ("the key's limit resets (monthly); use a key whose limit never resets"); the new `main` test exits 2 (`PaidRunRefused`).
+
+**Mutations** (`python3 -B -m unittest tests.test_d37_guards`, one at a time, restored from `HEAD` after each): 5 of 5 red.
+
+| Mutation | Change | Red |
+|---|---|---|
+| m1 | the cap check skipped for a key with a reset | the table (monthly, $13.99 remaining) and the `main` refusal test |
+| m2 | an empty or whitespace reset accepted (any string) | the table (empty, whitespace, unlimited with empty) and the `main` refusal test |
+| m3 | any truthy reset accepted | the table (number, true, list, object, whitespace, unlimited with a number) and the `main` refusal test |
+| m4 | the record's `limit_reset` always null | the table (five passing cases) and the new `main` test |
+| m5 | an absent `limit_reset` accepted | the table (the absent-field shapes) |
+
+**Gates** (code at `11fcab9`): `make test-poc` exit 0 (`Ran 818 tests … OK`, then the UI smoke and the map, feature, route and sight checks); `make headless-poc` exit 0 (Little Round Top: union, 60 turns, 2,573 events, replay `identical`, 63 revisions); `make smoke-poc` exit 0; the dry run `env -u OPENROUTER_API_KEY python3 scripts/model_runs.py --paid-plan d37-option-a --dry-run --dir <tmp>` exit 0, Sonnet 5.5, $14 cap, 12 games, the fake key check `ok` with `limit_reset: null`, nothing written. The diff touches no rules, engine, scenario or spend file, so engine outcomes and digests are unchanged.
+
+## Review notes (bt-T24)
+
+code-critic at `c84d971`: **APPROVE**, no CRITICAL or HIGH. The critic ran `test_d37_guards.py` (18 tests) and `test_model_runs.py` (15 tests), and both passed. It called `key_limit_check` directly with a $14 cap and probed:
+
+- **Remaining amount, with a monthly reset:** 13.99, `True`, NaN, infinity, -1, `"14"` and `None` all refuse. A remaining amount of 14 or 14.0000001 passes.
+- **Reset value:** `""`, `"  "`, `0`, `False`, `[]` and `{}` all refuse, and the record shows each as `"unrecognised"`.
+- **Missing fields:** a reset with no remaining amount refuses. A limited key with no `limit_reset` field also refuses.
+- **Other refusals:** a reply with only one of the two amounts null refuses, and so does a free-tier key.
+- **Unlimited key:** a key with a monthly reset passes, which is reading 2.
+
+It confirmed:
+
+- The record never holds the label. `test_d37_guards.py:559` shows the key and the label absent from every file in the batch directory, game databases included.
+- `spend.py` and `model_runs.py` are unchanged.
+- The only logic change is the `limit_reset` branch, and every refusal the ruling did not relax is kept.
+
+Credential scan over `origin/main...HEAD`: clean. The test key is `dummy-not-a-key`.
+
+Two LOW notes, not fixed (below the fix bar):
+
+- `paid_batch.py:151` accepts a reset string such as `"monthly\n"`, and so does any long string. The value goes into the manifest as read. This follows reading 3 ("any non-blank string") and cannot expose the key.
+- A cosmetic missing space in `test_d37_guards.py` (`absent ={…}`).
+
+**What bounds the $14 cap with the current key:**
+
+- The worst-case reservation, before each call.
+- The cost charged after each call, which stops the run if that cost cannot be read.
+- The provider-limit stop, exit 5.
+
+A monthly reset during the run can only add provider credit.
