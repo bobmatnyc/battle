@@ -99,14 +99,14 @@ A replay with no model orders, and a replay of the recorded orders, each give th
 | pegasus-bridge | german, 5 | german, 5 | Contact arms the demolition at turn 1 with the fuse due at 5 (`seq` 6, `demolition_armed`). The bridge falls at 5 (`seq` 254) in all three games and the control. The platoons halt at first contact. D24, D25 and B14 end on the same hexes with the same strengths in all four runs, whatever the orders. |
 | hill-223-patrol | american, 27 | american, 27 | The patrol's raid and return are entry data. The orders that arrived were dig-in for the rear units (turns 4 to 10). The two orders to A1 were sent at 18 and 21 and due at 28 and 29, after the end at 27 (`seq` 977). Report age is 8 to 10 turns at the post (idx 14 text). |
 
-In these three the outcome did not change under either tested order set. That does not show that no other orders could change it. In Hougoumont the model is also at an action-set disadvantage: the control uses the standing instruction `close_on_breach`, which the reply cannot carry (doc 69 §10). It made no difference here. 17 of 20 Hougoumont calls returned no order and cost $0.28 of $0.34.
+In these three the outcome did not change under either tested order set. That does not show that no other orders could change it. In Hougoumont the model is also at an action-set disadvantage: the control uses the standing instruction `close_on_breach`, which the reply cannot carry (doc 69 §10). No replay tested what `close_on_breach` would change. 17 of 20 Hougoumont calls returned no order and cost $0.28 of $0.34.
 
 ## 6. Options for bt-G01 tuning (no rule change)
 
 The repo does not define bt-G01. These are options for the owner, each a prompt, plan or driver change. The unused $11.95 under the cap is not authorization for further runs; bt-D13 (owner) governs any tuning or rerun.
 
 1. **Put the capture radius in the Union Little Round Top prompt** (the ring text the Confederate prompt already has). This is a new prompt version, `lrt-side-v4`, and a new baseline; docs 47 and 51 say results do not carry across a prompt change. It would test whether the loss is the reading or the play.
-2. **Add a no-orders replay as a second control.** It costs nothing and separates "the model decided" from "the scenario decided". Here it shows Little Round Top is a model effect (28 against 60), Concord a model effect (20 against 8), and the other three no effect.
+2. **Add a no-orders replay as a second control.** It costs nothing and compares the model's orders with no orders at all. Here it shows a model effect at Little Round Top (28 against 60) and at Concord (20 against 8). For the other three it shows no difference under the two tested order sets.
 3. **Sample before concluding on Gergovia and Concord.** One game each flipped on one choice. At about $0.39 and $0.07 a game, five games of each cost about $2.3, within the $11.95 left.
 4. **Drop or replace the inert entries.** Default Pegasus, Hill 223 and Hougoumont cost $0.88 and showed nothing. Doc 69 §8 gap 7 already named the Pegasus default; the `guard-only` and `surrender-on-threat` variants give the model leverage.
 5. **Skip calls with nothing new to decide.** 52 of 88 calls returned no order ($1.15). A driver rule that skips a call when no new report has arrived would cut spend and leave the rules alone. It changes the decision cadence the control uses, so it needs a new baseline.
@@ -131,3 +131,12 @@ Credential scan over `origin/main...HEAD`: clean. The doc names the provider onl
 One WARN, not fixed: the critic did not re-run the replay and control results. These are the control wins, the Little Round Top variants at 28 and 35, the Gergovia swaps and the Concord no-orders British win at 20. Nothing the critic could check contradicts them. The replay scripts were scratch files in `/tmp` and were not committed at that time; see the follow-up below.
 
 **Follow-up (bt-T27, Codex review 02:45Z).** The replay scripts, their outputs and the control logs are now committed in `84-counterfactuals/`, and the control databases are in the git-ignored archive path named in the Limits. Section 5 now limits its claims to the two order sets tested, which are no model orders and the recorded orders. It no longer says the scenario fixed the outcome. The Little Round Top prompt cause is now a hypothesis that needs a versioned prompt test against the same seed and settings. Section 6 now states that the unused $11.95 is not authorization for further runs and that bt-D13 (owner) governs any tuning or rerun. No result, count or figure changed.
+
+**Review of the follow-up.** code-critic at `9f79c1d` returned **WARN**, with no doc 84 claim misleading and no secret committed. It confirmed the following:
+
+- Section 5, the hypothesis wording and the §6 sentence are in place.
+- No number changed.
+- The six control logs are small plain-text summaries.
+- The archive `MANIFEST.txt` sizes and sha256 values match the six control databases.
+
+It found two sentences that still claimed more than the two tested order sets. Both are fixed in this commit. §5 no longer says `close_on_breach` "made no difference", because no replay tested it. §6 option 2 now limits "no effect" to "no difference under the two tested order sets". The credential scan is clean. The scripts and the README hold absolute local paths (`/Users/masa/...`, `/tmp/t25`), which are noted for anyone who re-runs them.
