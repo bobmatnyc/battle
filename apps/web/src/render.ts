@@ -3,7 +3,7 @@
 // (estimates); exact enemy values are not in the view, and none is drawn.
 import type {CommanderView, Contact, MapDocument, UnitReport} from "@battle/contracts";
 import type {StatusTable} from "./feature-sources.ts";
-import {featureLayer, featureNotes, titlePlace, type FeatureOptions, type Rect} from "./features.ts";
+import {featureLayer, featureNotes, titlePlace, type FeatureOptions, type LabelPlace, type Rect} from "./features.ts";
 import {hexCenter, hexPoints} from "./geometry.ts";
 import {esc} from "./markup.ts";
 import type {Selection} from "./selection.ts";
@@ -52,18 +52,27 @@ function counter(kind: "friendly" | "contact", id: string, point: [number, numbe
 export const featureOptions = (map: MapDocument, sources: StatusTable): FeatureOptions =>
   ({metresPerHex: map.metres_per_hex, cells: map.cells, sources, radius: map.radius});
 
+/** The objective's label as the map draws it: its text, baseline `y`, and the place `titlePlace` gives it inside `frame`. */
+export function objectiveLabel(view: CommanderView, map: MapDocument, frame: Rect): {text: string; x: number; y: number; anchor: LabelPlace["anchor"]} {
+  const r = map.radius, [ox, oy] = hexCenter(view.objective, r);
+  const text = view.scenario_brief?.objective.label ?? "Objective", y = oy + r * 0.6 + 12;
+  return {text, y, ...titlePlace([{text, y, size: 11}], ox, r * 0.6, frame)};
+}
+
 /** Why: the map is the player's main view and must show only what the commander view holds.
  * What: SVG markup: one hex per map cell (its tooltip names each feature mark on it, with
  * status), the objective (with a dashed ring round it and its neighbours when the brief's
  * `objective.ring` is set; its label kept inside the map), the view's map features (labels kept inside the
- * map, docs/research/80 §7), a dashed line to the chosen destination,
+ * map, docs/research/80 §7, or inside `frame`, the window a zoomed desk shows: bt-T26), a dashed line to the chosen destination,
  * a counter per own unit (`data-unit`) and per contact (`data-contact`).
  * Test: `the map draws every cell and the player's own counters`,
  * `enemy counters come from contacts and carry no exact values`, `text from the server is escaped`,
  * `a hold-objective brief rings the objective`, `no ring without the brief's ring flag or without a brief`,
  * `the map draws the commander view's features above the hexes and below the counters, with status in each hex tooltip`,
- * `the objective label stays inside the map when the objective is in an edge column`. */
-export function mapMarkup(view: CommanderView, map: MapDocument, selection: Selection, sources: StatusTable = {}): string {
+ * `the objective label stays inside the map when the objective is in an edge column`,
+ * `at 2x every label is placed inside the zoomed window, and a label whose mark is off screen is hidden`. */
+export function mapMarkup(view: CommanderView, map: MapDocument, selection: Selection, sources: StatusTable = {},
+  frame: Rect = {x0: 0, y0: 0, x1: map.width, y1: map.height}): string {
   const r = map.radius;
   const chosen = selection.destination ? String(selection.destination) : "";
   const options = featureOptions(map, sources);
@@ -74,16 +83,15 @@ export function mapMarkup(view: CommanderView, map: MapDocument, selection: Sele
       + `fill="${TERRAIN_FILL[cell.terrain] ?? "#ddd"}"><title>Hex ${cell.pos.join(",")} · ${esc(cell.terrain)} · ${cell.elevation} m${notes}</title></polygon>`;
   }).join("");
   const [ox, oy] = hexCenter(view.objective, r);
-  const label = view.scenario_brief?.objective.label ?? "Objective";
   // bt-T11: the brief sets `ring` for a hold-objective victory; no brief, no ring.
   const ring = view.scenario_brief?.objective.ring === true
     ? `<circle class="objective-ring" pointer-events="none" cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="${(r * RING_PER_RADIUS).toFixed(1)}"/>`
     : "";
-  // bt-T23 (docs/research/80 §7): the map frame; no feature label and not the objective's label may cross it.
-  const frame: Rect = {x0: 0, y0: 0, x1: map.width, y1: map.height};
-  const title = titlePlace([{text: label, y: oy + r * 0.6 + 12, size: 11}], ox, r * 0.6, frame);
+  // bt-T23 (docs/research/80 §7): no feature label and not the objective's label may cross the frame;
+  // bt-T26: the frame is the window the map shows (the whole map at fit).
+  const title = objectiveLabel(view, map, frame);
   const objective = `<g class="objective" pointer-events="none">${ring}<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="${(r * 0.6).toFixed(1)}"/>`
-    + `<text x="${title.x.toFixed(1)}" y="${(oy + r * 0.6 + 12).toFixed(1)}" text-anchor="${title.anchor}">${esc(label)}</text></g>`;
+    + `<text x="${title.x.toFixed(1)}" y="${title.y.toFixed(1)}" text-anchor="${title.anchor}">${esc(title.text)}</text></g>`;
   const unit = view.units.find((u) => u.id === selection.unitId);
   let route = "";
   if (unit && selection.destination) {

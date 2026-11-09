@@ -222,3 +222,81 @@ Credential scan over `origin/main...HEAD`: clean.
 One LOW note, not fixed (below the fix bar): the drift-guard test in `apps/web/test/formations.test.ts` falls back to a 60-character prefix match. A changed tail of a long engine refusal text would still pass. Comparing the full string would close it.
 
 Owner-visible behaviour: the engine cannot recall a standing order. Cancel therefore sends the battle's first template, which replaces the old order when it arrives. A true recall needs an engine change.
+
+## 13. TS desk zoom (bt-T26)
+
+**Task:** bt-T26. Branch `bt-t26-ts-zoom` from `f1f4210`. Commits: `adfdbd4` (tests, red), `21063d2` (zoom), `71ba4e8` (smoke-web test edit, below), then this section. Presentation only: `git diff --stat f1f4210 HEAD -- apps/poc/battle packages/contracts/src` is empty.
+
+### What was built
+
+- `apps/web/src/zoom.ts` (new, pure): the camera is the fit view or 2×. `zoomWindow` gives the part of the map the frame shows, in scene px: the whole map at fit, and at 2× a window of half the map's width and height about a centre, kept on the map. `mapFocus` and `focusCentre` port the POC desk's rule (§11 B; `apps/poc/static/app.js` `mapFocus`, `map-view.js` `focusCentre`). `core` is the objective hex with its label as drawn at fit; `all` adds every map feature with a `pos`. Per axis, the zoom takes the least move from the map's middle that keeps `all` in frame, else `core`, else centres `core`. `pan` moves the 2× window by half its size, kept on the map. `toScreen`, `toScene` and `hexAt` state the screen transform, so the tests and smoke-web can check where a click lands.
+- `apps/web/src/desk.ts`: the toolbar gains Zoom in, Zoom out, Fit, four pan buttons (West, North, South, East) and a `1× view` / `2× view` readout. The SVG `viewBox` is the zoom's window, and `mapMarkup` places every label inside that window. Clicks still reach the desk through the browser's hit-testing (`closest("[data-unit]")`, `[data-c]`), so a click at 2× selects whatever is drawn under the pointer, as at fit. The zoom resets to fit when the desk adopts a new game (scenario switch or new battle). It persists through replay and polls. The listeners are added once, in `startDesk`.
+- `apps/web/src/render.ts`: `mapMarkup` takes an optional `frame` (default: the whole map) and passes it to `featureLayer` and to the objective label's `titlePlace` (doc 80 §7). `objectiveLabel` is the label's text and place; `mapFocus` reads it.
+- Pan is by buttons, not drag. A drag would have to be told apart from the clicks that select counters and hexes; the buttons need no such rule.
+
+At 2×, Pegasus Bridge's window is `270 210 540 420`. The marks run from the canal to the Orne pillbox, which is wider than the window, so the window holds the objective and its label; four labels whose marks are off screen are hidden by the rule. Hill 223's window is `20.58 243.5 540 420`: the shack (column 0), its label and the old trench are in frame. Screenshots: `screenshots/desk-pegasus-zoom2x.png`, `desk-hill-223-zoom2x.png`, the replay at 2× `desk-*-replay-zoom2x.png`, and fit `desk-*-features.png`.
+
+### Checks added
+
+| Check | Addition |
+|---|---|
+| `apps/web/test/zoom.test.ts` (5 tests) | Fit is the whole map with the old viewBox, and `mapMarkup` at the fit window equals the old call byte for byte. Zoom-in focus on Hill 223 (all in frame) and Pegasus (objective only), plus the rule's no-focus and too-wide cases. At 2× every label's rule box is inside the window, and the pillbox label is hidden. Every hex centre in the 2× window, offset a third of a radius, maps back to its hex; the same screen point names another hex at fit. Pan steps, clamping and no pan at fit |
+| `apps/web/scripts/smoke-zoom.ts` (new), called from `era()` in `smoke-browser.ts` for Pegasus Bridge and Hill 223 | The battle opens at fit (Hill 223 after Pegasus was left at 2×: the reset). Zoom in gives the focus window; the objective circle and every label are inside the SVG frame (`checkLabels`). Fit restores the fit `innerHTML` byte for byte. At 2×, a real click at the transform's point of an own counter selects it. Every hex centre in frame hit-tests to that hex or a counter on it (132 at Pegasus, 125 at Hill 223), and a click sets the destination. After the outcome, the replay plays every record at the fastest speed at 2×, with the window kept and labels inside. Returning to live, reopening and closing, then one pan click moves exactly one step and the opposite click returns |
+
+### Deviations
+
+- Two zoom levels. Zoom out from 2× is the fit view, the same as Fit. The brief asked for 2×; the POC desk allows about 5.7×.
+- Full-page smoke screenshots are not byte-identical to `f1f4210`: the toolbar now has the zoom buttons. They are not byte-stable between runs of the same tree either. Two runs of this head differ by scattered anti-aliased pixels on 5 of 12 fit screenshots (`fit-diff-head-vs-head.log`); against `f1f4210`, 6 of 12 are identical below the toolbar (`fit-diff.log`). The byte-for-byte evidence for the fit view is the markup instead: `fit_markup.ts` renders the map of the five playable scenarios (with and without a selection) through `f1f4210`'s `render.ts` and through this head's, with the fit window. The outputs are identical (`cmp EXIT=0`, 11 lines, 1,055,283 bytes). The page's viewBox string is the same, `0 0 1080 840`, and smoke-web checks that Fit restores the fit `innerHTML`.
+- The first zoom build labelled the pan buttons ◀ ▲ ▼ ▶. Those glyphs came from a fallback font and made the toolbar 6 px taller, so the map moved down. The buttons now carry text labels, and the toolbar keeps its height.
+- After the red commit, one test edit (`71ba4e8`): at Hill 223 no own counter starts inside the 2× window, so smoke-web now pans with the desk's buttons until the first own counter is in frame (one click east), then clicks it. This adds a check and weakens none.
+- At 2× on Hill 223, the fieldworks symbol (drawn 24 px below its hex centre) is cut at the bottom edge, and its label is inside. The focus box counts each mark's hex (± radius), as on the POC desk. Labels are what the frame rule covers.
+
+### Gates
+
+Evidence under the git-ignored `apps/poc/artifacts/ts-zoom-71ba4e8/` in this worktree; `MANIFEST.txt` lists the files and each gate log ends with `EXIT=`.
+
+| Gate | Result |
+|---|---|
+| `npm ci --offline`, `npm run typecheck` | exit 0 |
+| `npm test` | web 117 of 117 (was 112), contracts 85 of 85 |
+| `make smoke-web` | `SMOKE PASSED`, with the zoom lines above for Pegasus Bridge and Hill 223 |
+| `make test-poc` | `Ran 818 tests … OK`; exit 0 |
+| `make headless-poc` | winner union, 60 turns, 2,573 events, replay `identical` (63 revisions), as before |
+| `make smoke-poc` | exit 0 |
+
+**Digests against `f1f4210`**: doc 80's `run_digests.sh` and doc 74's `digests.py`, copied unchanged from `label-edge-5f553f4`, ran on a `git archive` of `f1f4210`'s `apps/poc` and on this tree. They cover every headless catalog entry without timings (8) and desk play of all five player scenarios to the end. Both comparisons are identical: `cmp desk EXIT=0` and `cmp catalog without timings EXIT=0` (`run-digests.log`, `digests/`).
+
+**Red first** (`red/`), the tests of `adfdbd4` on `f1f4210`'s sources: `npm test` cannot load `zoom.test.ts` (no `src/zoom.ts`), 1 of 113 fail; smoke-web cannot load `smoke-zoom.ts` for the same reason.
+
+**Mutations** (`mutations/`), each applied, red, then restored byte for byte:
+- Focus ignored (`focusCentre` returns the map's middle): web 2 of 117 fail (the focus test and the 2× labels test).
+- Frame ignored (`mapMarkup` places labels in the whole map): 1 of 117 fails (`at 2x every label is placed inside the zoomed window …`).
+- Transform without the window's origin (`toScreen`): 1 of 117 fails (`a click at 2x maps to the hex under the pointer`).
+- Fit window one pixel wider: 1 of 117 fails (`the fit view is the whole map …`).
+- Zoom not reset on a new game: `make smoke-web` fails at Hill 223: `objective "PATROL OBJECTIVE" … is cut by the map frame`. Pegasus's 2× window was still applied.
+
+### Review notes (bt-T26)
+
+code-critic at `5e142ec`: **APPROVE**, no CRITICAL or HIGH. The critic ran `apps/web` `npm test` (117 of 117) and the root `npm run typecheck` (clean). It confirmed:
+
+- `zoomWindow` clamps all four edges, and `pan` moves by half the 2× window. `toScreen` and `toScene` are exact inverses.
+- `focusCentre` follows the POC desk's focus rule.
+- The `frame` default in `render.ts` is the old full-map frame, so the fit markup and `viewBox` are unchanged.
+- Zoom resets when `game_id` changes. The zoom buttons get their listeners once in `startDesk`, and a click at 2× uses the browser's own hit-testing.
+- The smoke edit in `71ba4e8` keeps every assertion and bounds its pan loop.
+- There is no diff under `apps/poc/battle` or `packages/contracts/src`.
+
+The critic did not re-run the smoke browser run, the `cmp` proofs or the mutations.
+
+Credential scan over `origin/main...HEAD`: clean.
+
+Two LOW notes, not fixed (below the fix bar):
+
+- `apps/web/src/zoom.ts:7` imports `objectiveLabel` from `render.ts`. This ties the zoom logic to the renderer module, though it is not a cycle.
+- `apps/web/src/desk.ts:261` resets zoom on a new `game_id` only. The server issues a unique id for every game.
+
+Known limits, accepted:
+
+- There are two zoom levels.
+- Pan uses buttons, not drag.
+- At 2× the Hill 223 fieldworks symbol is cut off at the bottom edge, while its label stays inside the frame.

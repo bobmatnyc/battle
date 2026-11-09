@@ -26,6 +26,16 @@
     <div class="map-toolbar">
       <button id="grid-toggle" aria-pressed="true">Hex grid</button>
       <button id="replay-toggle" disabled>Replay battle</button>
+      <span class="map-zoom" role="group" aria-label="Map zoom">
+        <button id="map-zoom-in" disabled>Zoom in</button>
+        <button id="map-zoom-out" disabled>Zoom out</button>
+        <button id="map-fit" disabled>Fit</button>
+        <button id="map-pan-w" aria-label="Pan west" disabled>West</button>
+        <button id="map-pan-n" aria-label="Pan north" disabled>North</button>
+        <button id="map-pan-s" aria-label="Pan south" disabled>South</button>
+        <button id="map-pan-e" aria-label="Pan east" disabled>East</button>
+        <span id="map-zoom-level">1× view</span>
+      </span>
     </div>
     <div id="replay-bar" class="replay-bar" hidden>
       <span id="replay-label"></span>

@@ -22,6 +22,7 @@ import {
 import {clickMap, emptySelection, ownUnit, type MapTarget, type Notice, type Selection} from "./selection.ts";
 import {cancelBody, standingBody, standingCurrent, standingHelp, standingListMarkup, standingOptions} from "./standing.ts";
 import {battleClock, timeAt} from "./timeline.ts";
+import {FIT, mapFocus, pan, viewBox, zoomIn, zoomWindow, type Zoom} from "./zoom.ts";
 
 const POLL_MS = 1000;
 // A paused clock may still be finishing a commander turn (up to the relay timeout).
@@ -54,7 +55,8 @@ function target(node: EventTarget | null): MapTarget | null {
  * What: loads the commander view, map and scenario catalog, renders them with the map features
  * (status from `featureSources`, the POC's BattleFeatureSources), and handles map clicks, orders
  * of every offered kind, standing orders (send and cancel) and split/combine (docs/research/81 §12),
- * the clock, the grid toggle, starting a scenario and the commander replay;
+ * the clock, the grid toggle, zoom (fit or 2x about the objective, with pan; reset for a new game; bt-T26),
+ * starting a scenario and the commander replay;
  * polls while the clock runs or a new battle's map still needs reading. A command whose outcome
  * the relay could not confirm is followed by a re-read. While replaying, the map, header and
  * panels show the recorded view, and orders, the clock and new battles are disabled. Playback
@@ -85,6 +87,11 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
   const splitButton = element<HTMLButtonElement>(doc, "send-split");
   const partnerSelect = element<HTMLSelectElement>(doc, "combine-partner");
   const combineButton = element<HTMLButtonElement>(doc, "send-combine");
+  const zoomInButton = element<HTMLButtonElement>(doc, "map-zoom-in");
+  const zoomOutButton = element<HTMLButtonElement>(doc, "map-zoom-out");
+  const fitButton = element<HTMLButtonElement>(doc, "map-fit");
+  const panButtons = ([["w", -1, 0], ["e", 1, 0], ["n", 0, -1], ["s", 0, 1]] as const)
+    .map(([to, dx, dy]) => ({button: element<HTMLButtonElement>(doc, `map-pan-${to}`), dx, dy}));
   let view: CommanderState;
   let terrain: MapDocument;
   let terrainGame = "";  // the game `terrain` belongs to
@@ -98,6 +105,7 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
   let current: Notice | null = null;
   let busy = false;
   let polling = false;
+  let zoom: Zoom = FIT;   // bt-T26: presentation only; back to fit when a new game is adopted
   const playback = new Playback({
     current: () => replay,
     load: (from, index) => replayAt(api, from, index),
@@ -188,6 +196,15 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     element(doc, "replay-help").textContent = replayHelp();
   }
 
+  // bt-T26: zoom in to 2x (the POC desk's focus), back out to fit, and pan the 2x window.
+  function renderZoom(): void {
+    const drawn = fresh();
+    zoomInButton.disabled = !drawn || zoom.scale === 2;
+    zoomOutButton.disabled = fitButton.disabled = !drawn || zoom.scale === 1;
+    for (const p of panButtons) p.button.disabled = !drawn || pan(zoom, terrain, p.dx, p.dy) === zoom;
+    element(doc, "map-zoom-level").textContent = `${zoom.scale}× view`;
+  }
+
   function render(): void {
     const seen = shown();
     const header = fresh() ? battleClock(terrain.setting, seen.turn, seen.seconds_per_turn, seen.display_locale) : null;
@@ -199,9 +216,12 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     doc.title = `battle · ${seen.scenario_brief?.title ?? "command desk"}`;
     element(doc, "mission").innerHTML = missionMarkup(seen);
     const sources = statusTableFor(featureSources, seen.scenario_brief?.id);
+    renderZoom();
     if (fresh()) {
-      svg.setAttribute("viewBox", `0 0 ${terrain.width} ${terrain.height}`);
-      svg.innerHTML = mapMarkup(seen, terrain, replay ? {unitId: selection.unitId, destination: null} : selection, sources);
+      // bt-T26: the SVG shows the zoom's window, and labels are placed inside it (docs/research/80 §7).
+      const frame = zoomWindow(zoom, terrain);
+      svg.setAttribute("viewBox", viewBox(frame));
+      svg.innerHTML = mapMarkup(seen, terrain, replay ? {unitId: selection.unitId, destination: null} : selection, sources, frame);
       element(doc, "feature-legend").innerHTML = featureLegend(seen.map_features, featureOptions(terrain, sources));
     } else {
       svg.innerHTML = "";
@@ -238,7 +258,7 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
 
   const held = (): Loaded => ({view, terrain, terrainGame});
   function adopt(next: Loaded): void {
-    if (next.view.game_id !== view.game_id) selection = emptySelection;
+    if (next.view.game_id !== view.game_id) { selection = emptySelection; zoom = FIT; }
     ({view, terrain, terrainGame} = next);
   }
 
@@ -289,6 +309,10 @@ export async function startDesk(doc: Document, api: DeskApi, featureSources: unk
     const on = svg.classList.toggle("no-grid");
     gridButton.setAttribute("aria-pressed", String(!on));
   });
+
+  zoomInButton.addEventListener("click", () => { zoom = zoomIn(zoom, terrain, mapFocus(shown(), terrain)); render(); });
+  for (const b of [zoomOutButton, fitButton]) b.addEventListener("click", () => { zoom = FIT; render(); });
+  for (const p of panButtons) p.button.addEventListener("click", () => { zoom = pan(zoom, terrain, p.dx, p.dy); render(); });
 
   sendButton.addEventListener("click", () => act(async () => {
     if (replay) return {kind: "info", text: REPLAYING};
