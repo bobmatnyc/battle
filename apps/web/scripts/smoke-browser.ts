@@ -9,7 +9,7 @@
 // then switches to Hougoumont and checks the header, features (compound and gate),
 // counters, unit card and a Hougoumont-only order, then to Concord (docs/research/74): header,
 // water, roads and bridge, an order, and the clock run to the outcome headline, then to Pegasus
-// Bridge and Hill 223 (docs/research/75) the same way. On every scenario it checks the objective
+// Bridge and Hill 223 (docs/research/75) the same way, each also zoomed to 2x (bt-T26). On every scenario it checks the objective
 // ring is drawn exactly when the brief sets it, takes no clicks, and spans the neighbours (bt-T11).
 //
 // Exit 0: passed. Exit 1: failed (also when the overall deadline passes). Exit 3:
@@ -34,6 +34,7 @@ import {checkFeatures, checkGridToggle, checkLabels, checkReplay, checkRing} fro
 import {checkEngineRefusal, checkSplit, checkStanding} from "./smoke-commands.ts";
 import {checkCard, choose, clickOn, header, nextNotice, noticeText, openHex, poc, screenshot, selectUnit, until, type Doc} from "./smoke-page.ts";
 import {removeDir, stop, waitForOutput, withDeadline} from "./smoke-support.ts";
+import {checkFitAtStart, checkZoom, checkZoomedReplay} from "./smoke-zoom.ts";
 
 const POC_DIR = fileURLToPath(new URL("../../poc/", import.meta.url));
 const BROWSER_ZONE = "Pacific/Kiritimati";  // UTC+14: a browser-zone shift would move 16:30 to another day
@@ -310,6 +311,8 @@ async function era(page: Page, pocPort: number, artifacts: string, spec: Era): P
   await screenshot(page, artifacts, `desk-${spec.shot}-features.png`);
   console.log(`ring: ${await checkRing(page, pocPort)}`);
   console.log(`labels: ${await checkLabels(page)}`);
+  // bt-T26 (docs/research/81 §13): zoom resets on the switch; the 2x view's camera, labels and clicks.
+  console.log(`zoom: ${await checkFitAtStart(page, pocPort)}; ${await checkZoom(page, pocPort, artifacts, spec.shot)}`);
 
   const unit = state["units"].find((u: Doc) => u.id === spec.unit);
   await selectUnit(page, unit.id);
@@ -341,6 +344,7 @@ async function era(page: Page, pocPort: number, artifacts: string, spec: Era): P
   await screenshot(page, artifacts, `desk-${spec.shot}-outcome.png`);
   console.log(`outcome: ${done["winner"]} after ${done["turn"]} intervals · "${outcome["headline"]}" ${outcome["reason"]}; `
     + `${theirs.length} ${spec.opponent} decisions, all ${spec.policy}; mode ${done["mode"]}`);
+  console.log(`zoom replay: ${await checkZoomedReplay(page, pocPort, artifacts, spec.shot)}`);
 }
 
 // `closing` is set when cleanup begins; nothing is started after that, and every child is
@@ -394,7 +398,8 @@ async function body(binary: string, artifacts: string, profile: string, held: St
     + "commander replay back to an earlier interval and return to live, a switch to Hougoumont with its header, "
     + "unit card and Close the gate order, and a switch to Concord with its header, water, roads and bridge, "
     + "a move order and the clock run to the outcome headline, then Pegasus Bridge (canal, marsh, both bridges, the charges "
-    + "as known) and Hill 223 (woods, old trench), each with an order and the clock run to its headline and reason.");
+    + "as known) and Hill 223 (woods, old trench), each with an order and the clock run to its headline and reason, "
+    + "and each at 2x (bt-T26): focus in frame, labels inside the frame, clicks at 2x, Fit byte for byte, replay and pan.");
   return 0;
 }
 
