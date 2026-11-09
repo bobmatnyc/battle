@@ -1,0 +1,2 @@
+Headless artifacts: /var/folders/7s/g9twvy8j0wl58ffgzsmrccv40000gp/T//battle-headless.MOhFEq
+{'game_id': 'f73c977c26d44965', 'winner': 'union', 'turns': 60, 'events': 2573, 'strength': {'U1': 34, 'U2': 26, 'U3': 24, 'C1': 23, 'C2': 23, 'C3': 37}, 'replay': {'revisions': 63, 'turns': 60, 'status': 'identical'}}
