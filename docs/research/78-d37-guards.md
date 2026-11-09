@@ -301,4 +301,31 @@ The known limits in §8 still apply.
 
 ## Review notes (bt-T24)
 
-Pending PM.
+code-critic at `c84d971`: **APPROVE**, no CRITICAL or HIGH. The critic ran `test_d37_guards.py` (18 tests) and `test_model_runs.py` (15 tests), and both passed. It called `key_limit_check` directly with a $14 cap and probed:
+
+- **Remaining amount, with a monthly reset:** 13.99, `True`, NaN, infinity, -1, `"14"` and `None` all refuse. A remaining amount of 14 or 14.0000001 passes.
+- **Reset value:** `""`, `"  "`, `0`, `False`, `[]` and `{}` all refuse, and the record shows each as `"unrecognised"`.
+- **Missing fields:** a reset with no remaining amount refuses. A limited key with no `limit_reset` field also refuses.
+- **Other refusals:** a reply with only one of the two amounts null refuses, and so does a free-tier key.
+- **Unlimited key:** a key with a monthly reset passes, which is reading 2.
+
+It confirmed:
+
+- The record never holds the label. `test_d37_guards.py:559` shows the key and the label absent from every file in the batch directory, game databases included.
+- `spend.py` and `model_runs.py` are unchanged.
+- The only logic change is the `limit_reset` branch, and every refusal the ruling did not relax is kept.
+
+Credential scan over `origin/main...HEAD`: clean. The test key is `dummy-not-a-key`.
+
+Two LOW notes, not fixed (below the fix bar):
+
+- `paid_batch.py:151` accepts a reset string such as `"monthly\n"`, and so does any long string. The value goes into the manifest as read. This follows reading 3 ("any non-blank string") and cannot expose the key.
+- A cosmetic missing space in `test_d37_guards.py` (`absent ={…}`).
+
+**What bounds the $14 cap with the current key:**
+
+- The worst-case reservation, before each call.
+- The cost charged after each call, which stops the run if that cost cannot be read.
+- The provider-limit stop, exit 5.
+
+A monthly reset during the run can only add provider credit.
