@@ -13,6 +13,10 @@ body { margin: 0; font: 14px/1.4 system-ui, sans-serif; color: #222; background:
 .map-toolbar { display: flex; gap: 6px; margin-bottom: 6px; }
 .map-toolbar button { margin: 0; }
 #grid-toggle[aria-pressed="true"] { background: #23445b; color: #fff; }
+/* bt-T26: zoom and pan sit at the toolbar's right end, on its one row; text labels only, so the row
+   keeps its height and the map does not move. */
+.map-zoom { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+#map-zoom-level { font-size: 12px; color: #555; min-width: 4em; }
 .replay-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 10px; margin-bottom: 6px; background: #3c3520; color: #f2e6c0; border-radius: 3px; }
 .replay-bar[hidden] { display: none; }
 .replay-bar button { margin: 0; }

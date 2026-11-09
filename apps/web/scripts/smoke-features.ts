@@ -174,7 +174,8 @@ const meets = (a: Box, b: Box): boolean => a.x0 < b.x1 - 0.5 && b.x0 < a.x1 - 0.
 /** Why: a feature label under another label or a counter cannot be read (docs/research/75 §8, 80).
  * What: measures the drawn boxes in the page; no feature label meets another, and no counter covers one;
  * every feature label and the objective label lie inside the map frame (bt-T23).
- * The desk has no zoom: its SVG scales as one, so these boxes at any size meet exactly where they do here.
+ * The SVG scales as one, so these boxes at any size meet exactly where they do here. At 2x (bt-T26) the frame
+ * is the same content box, now showing the zoomed window.
  * Returns a one-line summary with the number of labels hidden by the placement rule. */
 export async function checkLabels(page: Page): Promise<string> {
   const found = await page.evaluate<{labels: Box[]; counters: Box[]; hidden: number; frame: Box; objective: Box[]}>(LABEL_BOXES);
