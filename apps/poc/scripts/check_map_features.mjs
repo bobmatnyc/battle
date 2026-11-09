@@ -306,6 +306,9 @@ function drawnLabels(layer){
   return out;
 }
 const meet=(a,b)=>a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1;
+// bt-T23 (docs/research/80 §7): every label stays inside the 1080 x 840 scene the desk shows (static/app.js MAP_FRAME).
+const FRAME={x0:0,y0:0,x1:1080,y1:840};
+const within=(b,f)=>b.x0>=f.x0&&b.y0>=f.y0&&b.x1<=f.x1&&b.y1<=f.y1;
 function countersOf(data){
   const entries=[...data.contacts.map(c=>({unit:{id:c.id},contact:true,enemy:true,point:center(c.pos),report:''})),
     ...data.units.map(u=>({unit:{id:u.id,unit_type:'infantry'},contact:false,enemy:false,point:center(u.pos),report:''}))];
@@ -322,10 +325,11 @@ let labelsChecked=0;
 for(const sid of PLAYABLE){
   const data=scenarios[sid];
   const counters=countersOf(data);
-  const layer=render(data.features,sid,data,{obstacles:counters.obstacles});
+  const layer=render(data.features,sid,data,{obstacles:counters.obstacles,frame:FRAME});
   const labels=drawnLabels(layer);
   assert.ok(labels.length>0,`${sid}: labels drawn`);
   assert.doesNotMatch(layer,/data-label="hidden"/,`${sid}: no label is hidden at the scenario's start`);
+  for(const l of labels)assert.ok(within(l,FRAME),`${sid}: "${l.text}" crosses the map frame ${JSON.stringify(l)}`);
   for(let i=0;i<labels.length;i++){
     for(let j=i+1;j<labels.length;j++)assert.ok(!meet(labels[i],labels[j]),`${sid}: "${labels[i].text}" meets "${labels[j].text}"`);
     for(const c of [...counters.cards,...counters.dots])assert.ok(!meet(labels[i],c),`${sid}: a counter covers "${labels[i].text}"`);
@@ -350,6 +354,27 @@ for(const sid of PLAYABLE){
   assert.deepEqual(place([a],[wall,{x0:0,y0:40,x1:200,y1:90}]),[['a',null]],'no free place hides the label');
   assert.deepEqual(place([{...a,candidates:[spot(10,20)]},{...b,candidates:[spot(10,20)]}],[]),[['b',spot(10,20)],['a',null]],
     'of two labels that want one place the higher-numbered priority is hidden');
+  // bt-T23: a place outside the frame is not taken; no place inside it hides the label; no frame, no test.
+  const framed=(specs,frame)=>{
+    context.args=[specs,[],frame];
+    return JSON.parse(vm.runInContext('JSON.stringify([...BattleFeatures.placeLabels(args[0],args[1],args[2]).entries()])',context));
+  };
+  const edge={key:'e',priority:0,text:'Alpha',candidates:[spot(1060,20),{x:1060,y:20,anchor:'end'}]};
+  assert.deepEqual(framed([edge]),[['e',spot(1060,20)]],'with no frame the first place is taken, as before');
+  assert.deepEqual(framed([edge],FRAME),[['e',{x:1060,y:20,anchor:'end'}]],'the first place crosses the right edge; the flipped one is taken');
+  assert.deepEqual(framed([{...edge,candidates:[spot(10,5),spot(-4,60)]}],FRAME),[['e',null]],'no place inside the frame hides the label');
+  // The objective's title: Hill 223's shack is in column 0, where the centred title was cut at the left edge.
+  const [x,y]=center([0,11]);
+  const lines=[{text:'Command post at the shack',y:y-118,size:21},{text:'PATROL OBJECTIVE',y:y-97,size:10,spacing:1.4}];
+  context.args=[lines,x,R,FRAME];
+  const title=JSON.parse(vm.runInContext('JSON.stringify(BattleFeatures.titlePlace(...args))',context));
+  assert.equal(title.anchor,'start','the shack title starts right of the left edge');
+  for(const l of lines){
+    context.args=[l.text,{...title,y:l.y},l.size,l.spacing];
+    assert.ok(within(JSON.parse(vm.runInContext('JSON.stringify(BattleFeatures.labelBox(...args))',context)),FRAME),`Hill 223: "${l.text}" inside the frame`);
+  }
+  context.args=[[{text:'Little Round Top',y:300,size:21}],540,R,FRAME];
+  assert.equal(vm.runInContext('JSON.stringify(BattleFeatures.titlePlace(...args))',context),JSON.stringify({x:540,anchor:'middle'}),'a title that fits stays centred');
 }
 assert.ok(summary.some(s=>/hougoumont.* [1-9] buildings/.test(s)));
 assert.equal(compounds,1,'the Hougoumont compound is checked');

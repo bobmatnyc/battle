@@ -92,3 +92,90 @@ Three LOW notes, not fixed (below the fix bar):
 - The desk-parity test in `apps/web/test/features.test.ts` (lines 152-159) uses one scenario and two hand-placed boxes. Parity under each desk's real counter layout is not asserted.
 - `wall` has a `PRIORITY` entry in both desks (`map-features.js:29`, `features.ts:69`), but walls carry no label, so the entry is unused.
 - The evidence in `apps/poc/artifacts/fords-labels-29cfd3e/` is git-ignored and exists only in the main checkout.
+
+## 7. Labels inside the map frame (bt-T23)
+
+**Date:** 2026-11-08. **Task:** bt-T23. Branch `bt-t23-label-edge` from `774eaae`. Commits: `0d4339b` (tests, red), `5f553f4` (the rule), then this section. Presentation only: `git diff --stat 774eaae HEAD -- apps/poc/battle packages/contracts/src` is empty.
+
+### What was wrong
+
+The rule of §2 tested each candidate against counters and earlier labels, never against the map's edge. Doc 81 §11 found Hill 223's objective title, "Command post at the shack", cut at the left edge at the fit view and at 2×: the shack is in column 0 and the title was centred over it. Measured in the browser at `774eaae`, the edge also cut:
+
+| Desk, view | Cut labels |
+|---|---|
+| POC, fit | Hill 223 title and subtitle (left edge); Pegasus "Road from the Orne bridge to Ranville" (right edge) |
+| POC, 2× | Hill 223 title, subtitle and FIELDWORKS; Little Round Top North farm lane, Southern track, Farmstead; Hougoumont "Lane from the north gate to the ridge", "Ride through the wood"; Concord town road; Pegasus Bénouville road, Ranville road, FIELDWORKS |
+| TS, fit | Pegasus Ranville road (right edge); Hill 223 "PATROL OBJECTIVE" (left edge, by the unit test on its markup) |
+
+### The rule, extended
+
+Both desks, the same code shape (`placeLabels`, `titlePlace`, `labelBox` in `apps/poc/static/map-features.js` and `apps/web/src/features.ts`):
+
+1. `placeLabels(specs, obstacles, frame)`: a candidate is taken only if its box lies wholly inside `frame` {x0, y0, x1, y1}, besides meeting no obstacle and no earlier label. A label with no such candidate is hidden as before (`data-label="hidden"`, tooltip and legend kept). No frame, no test: the old behaviour.
+2. Roads gain candidates, appended after all the old ones: the text ending 12 px left of each spot, above then below the line. Other marks already had places on each side (`around`).
+3. The objective's title is not a feature label and is never hidden. `titlePlace(lines, x, hw, frame)` gives the place shared by its lines: centred (the old place), else starting at `x − hw`, else ending at `x + hw`; the first at which every line's box is inside the frame; centred if none is. `labelBox` takes a font size and letter spacing for it (21 px title and 10 px subtitle with 1.4 px spacing on the POC desk; the 11 px objective label on the TS desk). With the defaults it gives the same boxes as before.
+
+Frames. TS desk: the map document's `0 0 width height` (the SVG viewBox); fit only. POC desk: feature labels use `BattleMapView.frame()`, the part of the 1080 × 840 scene the map frame shows. That is the whole scene at the fit view and in the SVG fallback, and the zoomed window at 2×. The desk now renders the map again on MapLibre's `moveend`, so after a zoom or pan the labels are placed for the new frame; a label whose mark is off screen is hidden by the rule instead of drawn cut. The POC title uses the whole scene; `mapFocus` keeps the moved title in the 2× focus box, so the camera keeps it in frame.
+
+### Before and after
+
+The first candidate is unchanged, so a label that fitted before has not moved. Fit screenshots byte-identical before and after: Little Round Top and Hougoumont. Changed at fit: Hill 223 (title and subtitle now start at the shack hex's left edge, `x − 25.5`), Pegasus (the Ranville road label moves onto the line), Concord (the town road label's estimated box ended 1.6 px past the right edge, so it took its next place). On the TS desk the Hill 223 objective label starts at the circle's left edge.
+
+`before/` holds `774eaae`'s Hill 223 screenshots (fit and 2×; title cut), `after/` this head's. In the harness after the change: at fit and 2× on all five scenarios the title, subtitle and every drawn feature label lie inside the frame. Hidden by the rule: 0 at fit everywhere; at 2×, Little Round Top 1 and Pegasus 2 (marks off screen at that camera).
+
+### Checks added
+
+| Check | Addition |
+|---|---|
+| `apps/web/test/features.test.ts` | `a place outside the map frame is not taken, and a label with no place inside it is hidden`; `every feature label lies inside the map frame on the five playable scenarios, with and without counters`; `the objective's title stays centred where it fits and moves inside the frame at an edge`. The parity test now also runs Pegasus (the Ranville road at the east edge) with no counters and with a counter on the line, which sends the label to a flipped place, and compares `titlePlace` on Hill 223. Every catalog layer-parity comparison now passes the frame |
+| `apps/web/test/render.test.ts` | `the objective label stays inside the map when the objective is in an edge column` (columns 0 and 23, and a middle one unchanged) |
+| `apps/poc/scripts/check_map_features.mjs` | Frame cases through `BattleFeatures.placeLabels`; the five scenarios' labels, with their real start counters, inside 1080 × 840; Hill 223's title inside |
+| `apps/web/scripts/smoke-features.ts` `checkLabels` | Every feature label and the objective label inside the SVG's content box, on all five scenarios |
+| `apps/poc/scripts/map_screenshots.mjs` `checkEdges` | At fit and 2×, the title, subtitle and every drawn feature label inside `#map-wrap` clipped to the SVG |
+
+### Gates
+
+Evidence under the git-ignored `apps/poc/artifacts/label-edge-5f553f4/` in this worktree; `MANIFEST.txt` lists the files and each gate log ends with `EXIT=`.
+
+| Gate | Result |
+|---|---|
+| `npm ci --offline`, `npm run typecheck` | exit 0 |
+| `npm test` | web 112 of 112 (was 108), contracts 85 of 85 |
+| `make smoke-web` | `SMOKE PASSED`; on all five scenarios "every feature label and the objective label inside the map frame", 0 hidden |
+| `make test-poc` | `Ran 817 tests … OK`; `Map features passed`; every smoke_ui and map check; exit 0 |
+| `make headless-poc` | winner union, 60 turns, 2,573 events, replay `identical` (63 revisions), as before |
+| `make smoke-poc` | exit 0 |
+| `node apps/poc/scripts/map_screenshots.mjs` | `HARNESS PASSED`; 10 of 10 views inside the frame (above) |
+
+**Digests against `774eaae`** (§4's `run_digests.sh` and doc 74's `digests.py`, copied unchanged), on a `git archive` of `774eaae` and on this tree: every headless catalog entry without timings (8) and desk play of all five player scenarios to the end; `cmp desk EXIT=0`, `cmp catalog without timings EXIT=0` (`run-digests.log`, `digests/`).
+
+**Red first** (`red/`), the tests of `0d4339b` on `774eaae`'s sources: `npm test` cannot load `features.test.ts` (no `titlePlace` export); with a stub `titlePlace` that always centres (the old behaviour, not committed), 5 of 112 fail, among them "Road from the Orne bridge to Ranville crosses the map frame" and "objective 0,11". `check_map_features.mjs`: pegasus-bridge "Road from the Orne bridge to Ranville" crosses the map frame. `make smoke-web`: label "Road from the Orne bridge to Ranville" is cut by the map frame (at Pegasus). `map_screenshots.mjs`: "hougoumont 2x: feature label cut by the map frame: Ride through the wood". The table above comes from the final harness run on `774eaae`'s tree with its assertions turned into log lines (`before/map_screenshots.log`).
+
+**Mutations** (`mutations/`), each red, then restored: TS, the frame test removed from `placeLabels`, `npm test` 5 of 112 fail; POC, the same in `map-features.js`, `check_map_features.mjs` fails, "pegasus-bridge: Road from the Orne bridge to Ranville crosses the map frame".
+
+### Deviations
+
+- The objective's title is outside the feature-label rule (§5): it has no priority and is never hidden. It shares the frame test and candidate idea through `titlePlace`, the same on both desks.
+- The POC desk's 2× frame is the zoomed window, so the desk re-renders on `moveend`, and placement at 2× differs from fit. The brief named the frame test only; without it, nine labels were cut at 2× on four scenarios.
+- After the red commit, three test edits. The harness's 2× check first allowed a label wholly off screen; with the zoomed frame it now requires every drawn label inside, and the "layer unchanged with the grid" baseline is taken per view. The parity test's Ranville case used the bt-T16 hand-placed boxes, under which the label is rightly hidden; it now uses one counter on the line. `smoke_ui.mjs`'s `BattleMapView` stub gained `frame`.
+- Concord's town road label moved at fit although the browser drew it inside (the rule's width estimate is deliberately wide).
+- At 2× on Hill 223, FIELDWORKS lies inside the frame but under the map's help strip ("Select a blue unit…"). Overlays inside the frame are not obstacles to the rule.
+
+### Review notes (bt-T23)
+
+code-critic at `958a9e4`: **APPROVE**, no CRITICAL or HIGH. The critic ran three checks, all passing: `apps/web` `npm test` (112 of 112), root `npm run typecheck`, and `check_map_features.mjs`. It confirmed:
+
+- Both desks use the same frame test, the same candidates and the same order. The new road candidates come last, so a label that fits today does not move.
+- `titlePlace` falls back to the centred place when no candidate fits. It never throws and never hides the title, which is the old behaviour.
+- The POC re-render on `moveend` cannot loop, because `update` never moves the camera. The listener is added once in `init` and is removed by `map.remove()`.
+- There is no diff under `apps/poc/battle` or `packages/contracts/src`.
+- No test-helper edit made after the red commit weakens a check. The 2× check in `map_screenshots.mjs` is now stricter.
+
+Credential scan over `origin/main...HEAD`: clean.
+
+Two LOW notes, not fixed (below the fix bar):
+
+- `apps/poc/static/app.js:83-87` places the objective title against the full scene, not the zoomed view. At 2× the title stays on screen because `mapFocus` keeps it in view, and `map_screenshots.mjs` checks that.
+- `apps/poc/static/map-view.js:110` re-renders the whole map layer after each pan or zoom ends. This happens once per gesture, not once per move event.
+
+Carried forward: overlay strips are not obstacles, so a label can sit inside the frame under the help strip. One example is FIELDWORKS at 2× on Hill 223.

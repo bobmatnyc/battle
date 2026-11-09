@@ -134,6 +134,28 @@ async function checkFrame(page,sid,label,view,log){
   log.push(`${label} ${view}: objective${areas.length?` and ${found.length-1} ${areas.join('/')} hexes`:''} inside the map frame`);
 }
 
+// bt-T23 (docs/research/80 §7): no label is cut by the map frame. The frame is #map-wrap's box clipped to the
+// SVG scene, in screen pixels. At the fit view and at 2x every drawn feature label and the objective's title
+// and subtitle lie inside it. At 2x the desk places the feature labels again for the zoomed frame
+// (BattleMapView.frame), so a label whose mark is off screen is hidden by the rule, not drawn cut.
+const EDGE_BOXES=`(()=>{
+  const w=document.getElementById('map-wrap').getBoundingClientRect(),s=document.getElementById('map').getBoundingClientRect();
+  const frame={x0:Math.max(w.left,s.left),y0:Math.max(w.top,s.top),x1:Math.min(w.right,s.right),y1:Math.min(w.bottom,s.bottom)};
+  const box=n=>{const b=n.getBoundingClientRect();return {name:n.textContent,x0:b.left,y0:b.top,x1:b.right,y1:b.bottom};};
+  return {frame,features:[...document.querySelectorAll('#map .battle-features .feature-label')].map(box),
+    title:[...document.querySelectorAll('#map .place-label, #map .place-subtitle')].filter(n=>n.textContent).map(box),
+    hidden:document.querySelectorAll('#map .battle-features [data-label=hidden]').length};
+})()`;
+async function checkEdges(page,label,view,log){
+  const {frame,features,title,hidden}=await page.eval(EDGE_BOXES);
+  const inside=b=>b.x0>=frame.x0-.5&&b.y0>=frame.y0-.5&&b.x1<=frame.x1+.5&&b.y1<=frame.y1+.5;
+  const cut=b=>`"${b.name}" ${[b.x0,b.y0,b.x1,b.y1].map(Math.round)} in frame ${[frame.x0,frame.y0,frame.x1,frame.y1].map(Math.round)}`;
+  assert.ok(title.length===2,`${label} ${view}: the objective title and subtitle are drawn`);
+  for(const b of title)assert.ok(inside(b),`${label} ${view}: objective title cut by the map frame: ${cut(b)}`);
+  for(const b of features)assert.ok(inside(b),`${label} ${view}: feature label cut by the map frame: ${cut(b)}`);
+  log.push(`${label} ${view}: objective title and subtitle and ${features.length} feature labels inside the map frame; ${hidden} hidden by the rule`);
+}
+
 async function desk(page,port,sid,label,log){
   if(sid!=='little-round-top'){
     await page.eval(`(()=>{const s=document.getElementById('scenario-select');s.value=${JSON.stringify(sid)};s.onchange();document.getElementById('new-game').click();return true;})()`);
@@ -142,7 +164,6 @@ async function desk(page,port,sid,label,log){
   const renderer=await page.eval(`document.getElementById('map-renderer').textContent`);
   log.push(`${label}: renderer "${renderer}"`);
   const layer=()=>page.eval(`document.querySelector('#map .battle-features').outerHTML`);
-  const before=await layer();
   const shots=[];
   for(const zoomed of [false,true]){
     if(zoomed){
@@ -151,8 +172,10 @@ async function desk(page,port,sid,label,log){
         await page.until('2x zoom',`/^2\\.0/.test(document.getElementById('map-zoom').textContent)`);await sleep(400);
       }else log.push(`${label}: SVG fallback has no camera; the zoomed shots are the fit view`);
     }
+    const before=await layer();  // bt-T23: per view; at 2x the labels are placed for the zoomed frame.
     await checkLabels(page,label,zoomed?'2x':'fit',log);
     await checkFrame(page,sid,label,zoomed?'2x':'fit',log);
+    await checkEdges(page,label,zoomed?'2x':'fit',log);
     for(const grid of ['on','off']){
       const off=await page.eval(`document.getElementById('map').classList.contains('no-grid')`);
       if((grid==='off')!==off)await page.eval(`document.getElementById('hex-toggle').click(),true`);
