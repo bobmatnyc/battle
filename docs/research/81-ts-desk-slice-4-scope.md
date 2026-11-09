@@ -277,4 +277,26 @@ Evidence under the git-ignored `apps/poc/artifacts/ts-zoom-71ba4e8/` in this wor
 
 ### Review notes (bt-T26)
 
-pending PM
+code-critic at `5e142ec`: **APPROVE**, no CRITICAL or HIGH. The critic ran `apps/web` `npm test` (117 of 117) and the root `npm run typecheck` (clean). It confirmed:
+
+- `zoomWindow` clamps all four edges, and `pan` moves by half the 2× window. `toScreen` and `toScene` are exact inverses.
+- `focusCentre` follows the POC desk's focus rule.
+- The `frame` default in `render.ts` is the old full-map frame, so the fit markup and `viewBox` are unchanged.
+- Zoom resets when `game_id` changes. The zoom buttons get their listeners once in `startDesk`, and a click at 2× uses the browser's own hit-testing.
+- The smoke edit in `71ba4e8` keeps every assertion and bounds its pan loop.
+- There is no diff under `apps/poc/battle` or `packages/contracts/src`.
+
+The critic did not re-run the smoke browser run, the `cmp` proofs or the mutations.
+
+Credential scan over `origin/main...HEAD`: clean.
+
+Two LOW notes, not fixed (below the fix bar):
+
+- `apps/web/src/zoom.ts:7` imports `objectiveLabel` from `render.ts`. This ties the zoom logic to the renderer module, though it is not a cycle.
+- `apps/web/src/desk.ts:261` resets zoom on a new `game_id` only. The server issues a unique id for every game.
+
+Known limits, accepted:
+
+- There are two zoom levels.
+- Pan uses buttons, not drag.
+- At 2× the Hill 223 fieldworks symbol is cut off at the bottom edge, while its label stays inside the frame.
