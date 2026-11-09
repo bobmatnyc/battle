@@ -114,4 +114,16 @@ The repo does not define bt-G01. These are options for the owner, each a prompt,
 
 ## Review notes
 
-pending PM
+code-critic fact-check at `23ea365`: **APPROVE**, no BLOCK or HIGH. The critic checked the doc against the `d37-option-a-f1f4210` artifacts, read-only, with no model call. These claims match the records:
+
+- **Totals:** 88 decisions, 36 of them with orders. 745,078 input and 55,492 output tokens. $2.045076, equal to `spent_usd`. The 52 no-order decisions cost $1.15028.
+- **Side:** `manifest.json` shows the model played the Union at Little Round Top. `battle_ended` shows a Confederate win at turn 25, so the model lost.
+- **Little Round Top:** U1 left its ring hex at seq 110, and no Union unit entered the ring from turn 4 to 19. The Union mission at `scenario.py:66` does not state the one-hex radius, while the Confederate mission at `scenario.py:80` does.
+- **Gergovia:** game 1's orders expired at turn 20. Game 2 delivered orders at turns 16, 17 and 18, and won with "122 of the forward force" at turn 38.
+- **Concord game 1:** the re-order was delivered at turn 9, and the battle ended at turn 11.
+- **Pegasus and Hill 223:** the scenario events match the doc.
+- **Tuning:** the options are framed for the owner, with no rule change.
+
+Credential scan over `origin/main...HEAD`: clean. The doc names the provider only as a code argument, with no key, key label or request id.
+
+One WARN, not fixed: the critic did not re-run the replay and control results. These are the control wins, the Little Round Top variants at 28 and 35, the Gergovia swaps and the Concord no-orders British win at 20. Nothing the critic could check contradicts them. The replay scripts were scratch files in `/tmp` and are not committed.
